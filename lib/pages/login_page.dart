@@ -1,3 +1,4 @@
+import 'package:asiimov/auth/auth_services.dart';
 import 'package:asiimov/components/my_button.dart';
 import 'package:asiimov/components/my_textfield.dart';
 import 'package:flutter/material.dart';
@@ -12,7 +13,27 @@ class LoginPage extends StatelessWidget {
   LoginPage({super.key, required this.onTap});
 
   //login
-  void login() {}
+  void login(BuildContext context) async {
+    //auth services
+    final authServices = AuthServices();
+
+    //try login
+    try {
+      await authServices.signInWithEmailAndPassword(
+          emailController.text, passwordController.text);
+    }
+
+    //catch errors
+    catch (e) {
+      //show error message
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(e.toString()),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +76,7 @@ class LoginPage extends StatelessWidget {
             //login button
             MyButton(
               text: "Go!",
-              onTap: login,
+              onTap: () => login(context),
             ),
 
             const SizedBox(height: 50),

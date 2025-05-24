@@ -1,3 +1,4 @@
+import 'package:asiimov/auth/auth_gate.dart';
 import 'package:asiimov/auth/login_or_register.dart';
 import 'package:asiimov/firebase_options.dart';
 import 'package:asiimov/themes/light_mode.dart';
@@ -19,7 +20,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: LoginOrRegister(),
+      home: const AuthGate(),
       theme: lightMode,
     );
   }
