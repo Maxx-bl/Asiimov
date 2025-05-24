@@ -1,4 +1,4 @@
-import 'package:asiimov/auth/auth_services.dart';
+import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/components/my_button.dart';
 import 'package:asiimov/components/my_textfield.dart';
 import 'package:flutter/material.dart';
@@ -15,7 +15,7 @@ class LoginPage extends StatelessWidget {
   //login
   void login(BuildContext context) async {
     //auth services
-    final authServices = AuthServices();
+    final authServices = AuthService();
 
     //try login
     try {

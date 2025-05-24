@@ -1,4 +1,4 @@
-import 'package:asiimov/auth/auth_services.dart';
+import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/components/my_button.dart';
 import 'package:asiimov/components/my_textfield.dart';
 import 'package:flutter/material.dart';
@@ -13,40 +13,58 @@ class RegisterPage extends StatelessWidget {
 
   RegisterPage({super.key, required this.onTap});
 
-  bool verifyPasswords() {
+  bool passwordSize() {
+    bool isValid = true;
+    if (passwordController.text.length < 6) {
+      isValid = false; // Password too short
+    }
+    return isValid;
+  }
+
+  bool passwordsMatch() {
     bool isValid = true;
     if (passwordController.text != confirmController.text) {
       isValid = false; // Passwords do not match
     }
-    return isValid; // Passwords match and are valid
+    return isValid;
   }
 
   //register
   void register(BuildContext context) {
     // auth servces
-    final auth = AuthServices();
+    final auth = AuthService();
 
-    if (verifyPasswords()) {
-      try {
-        auth.signUpWithEmailAndPassword(
-          emailController.text,
-          passwordController.text,
-        );
-      } catch (e) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(e.toString()),
-          ),
-        );
-      }
-    } else {
+    if (!passwordsMatch()) {
       showDialog(
         context: context,
         builder: (context) => const AlertDialog(
           title: Text('Passwords do not match!'),
         ),
       );
+    } else {
+      if (!passwordSize()) {
+        showDialog(
+          context: context,
+          builder: (context) => const AlertDialog(
+            title: Text('Your password must be at least 6 characters long!'),
+          ),
+        );
+      } else {
+        try {
+          auth.signUpWithEmailAndPassword(
+            emailController.text,
+            passwordController.text,
+            usernameController.text,
+          );
+        } catch (e) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(e.toString()),
+            ),
+          );
+        }
+      }
     }
   }
 
