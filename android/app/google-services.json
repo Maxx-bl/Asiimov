@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "264872610809",
+    "project_id": "asiimov-b3792",
+    "storage_bucket": "asiimov-b3792.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:264872610809:android:e39a9abbdee750ce67cb28",
+        "android_client_info": {
+          "package_name": "com.example.asiimov"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKVyz607LLtD-MZpt_V0n6lhemgW_9Lww"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
