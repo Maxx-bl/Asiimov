@@ -6,11 +6,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class ChatPage extends StatefulWidget {
-  final String receiverEmail;
+  final String receiverUsername;
   final String receiverID;
 
   const ChatPage(
-      {super.key, required this.receiverEmail, required this.receiverID});
+      {super.key, required this.receiverUsername, required this.receiverID});
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -77,7 +77,7 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.receiverEmail),
+        title: Text('@${widget.receiverUsername}'),
         foregroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: Column(
@@ -124,7 +124,12 @@ class _ChatPageState extends State<ChatPage> {
 
     return Container(
       alignment: alignment,
-      child: ChatBubble(message: data['message'], isCurrentUser: isCurrentUser),
+      child: ChatBubble(
+        message: data['message'],
+        isCurrentUser: isCurrentUser,
+        messageId: doc.id,
+        userId: data['senderID'],
+      ),
     );
   }
 

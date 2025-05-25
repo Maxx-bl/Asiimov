@@ -31,6 +31,11 @@ class AuthService {
     try {
       UserCredential userCredential = await auth.createUserWithEmailAndPassword(
           email: email, password: password);
+      userCredential.user!.updateProfile(
+        displayName: username,
+        photoURL:
+            'https://avatar.iran.liara.run/username?username=${username.toLowerCase()}',
+      );
 
       //save user data in a document
       firestore.collection('users').doc(userCredential.user!.uid).set({

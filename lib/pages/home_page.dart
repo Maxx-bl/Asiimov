@@ -15,7 +15,10 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Home"),
+        centerTitle: true,
+        title: Text(authService.getCurrentUser()!.displayName != null
+            ? '@${authService.getCurrentUser()!.displayName}'
+            : 'Home'),
         foregroundColor: Theme.of(context).colorScheme.primary,
       ),
       drawer: const MyDrawer(),
@@ -25,7 +28,7 @@ class HomePage extends StatelessWidget {
 
   Widget buildUserList() {
     return StreamBuilder(
-      stream: chatService.getUsersStream(),
+      stream: chatService.getUsersStreamExcludingBlocked(),
       builder: (context, snapshot) {
         //errors
         if (snapshot.hasError) {
@@ -51,13 +54,13 @@ class HomePage extends StatelessWidget {
       Map<String, dynamic> userData, BuildContext context) {
     if (userData['email'] != authService.getCurrentUser()!.email) {
       return UserTile(
-          text: userData['email'],
+          text: userData['username'],
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
                   builder: (context) => ChatPage(
-                        receiverEmail: userData['email'],
+                        receiverUsername: userData['username'],
                         receiverID: userData['uid'],
                       )),
             );
