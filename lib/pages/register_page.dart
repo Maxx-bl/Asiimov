@@ -73,77 +73,80 @@ class RegisterPage extends StatelessWidget {
     return Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
         body: Center(
-            child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            //logo
-            Icon(Icons.message,
-                size: 60, color: Theme.of(context).colorScheme.primary),
+            child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              //logo
+              Icon(Icons.message,
+                  size: 60, color: Theme.of(context).colorScheme.primary),
 
-            const SizedBox(height: 50),
+              const SizedBox(height: 50),
 
-            //text
-            Text("Sign Up",
-                style: TextStyle(
-                    fontSize: 24,
-                    color: Theme.of(context).colorScheme.primary)),
+              //text
+              Text("Sign Up",
+                  style: TextStyle(
+                      fontSize: 24,
+                      color: Theme.of(context).colorScheme.primary)),
 
-            const SizedBox(height: 50),
+              const SizedBox(height: 50),
 
-            //email field
-            MyTextField(
-                hintText: "Email",
-                obscureText: false,
-                controller: emailController),
+              //email field
+              MyTextField(
+                  hintText: "Email",
+                  obscureText: false,
+                  controller: emailController),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            //password field
-            MyTextField(
-                hintText: "Password",
-                obscureText: true,
-                controller: passwordController),
+              //password field
+              MyTextField(
+                  hintText: "Password",
+                  obscureText: true,
+                  controller: passwordController),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            //confirm password field
-            MyTextField(
-                hintText: "Confirm password",
-                obscureText: true,
-                controller: confirmController),
+              //confirm password field
+              MyTextField(
+                  hintText: "Confirm password",
+                  obscureText: true,
+                  controller: confirmController),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            MyTextField(
-                hintText: "Username",
-                obscureText: false,
-                controller: usernameController),
+              MyTextField(
+                  hintText: "Username",
+                  obscureText: false,
+                  controller: usernameController),
 
-            const SizedBox(height: 50),
+              const SizedBox(height: 50),
 
-            //login button
-            MyButton(
-              text: "Register",
-              onTap: () => register(context),
-            ),
-
-            const SizedBox(height: 50),
-
-            //register text
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text(
-                "Already have an account? ",
-                style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              //login button
+              MyButton(
+                text: "Register",
+                onTap: () => register(context),
               ),
-              GestureDetector(
-                onTap: onTap,
-                child: Text("Login now!",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary)),
-              )
-            ])
-          ],
+
+              const SizedBox(height: 50),
+
+              //register text
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(
+                  "Already have an account? ",
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.primary),
+                ),
+                GestureDetector(
+                  onTap: onTap,
+                  child: Text("Login now!",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary)),
+                )
+              ])
+            ],
+          ),
         )));
   }
 }

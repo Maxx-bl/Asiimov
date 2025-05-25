@@ -40,62 +40,65 @@ class LoginPage extends StatelessWidget {
     return Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
         body: Center(
-            child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            //logo
-            Icon(Icons.message,
-                size: 60, color: Theme.of(context).colorScheme.primary),
+            child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              //logo
+              Icon(Icons.message,
+                  size: 60, color: Theme.of(context).colorScheme.primary),
 
-            const SizedBox(height: 50),
+              const SizedBox(height: 50),
 
-            //text
-            Text("Login",
-                style: TextStyle(
-                    fontSize: 24,
-                    color: Theme.of(context).colorScheme.primary)),
+              //text
+              Text("Login",
+                  style: TextStyle(
+                      fontSize: 24,
+                      color: Theme.of(context).colorScheme.primary)),
 
-            const SizedBox(height: 50),
+              const SizedBox(height: 50),
 
-            //email field
-            MyTextField(
-                hintText: "Email",
-                obscureText: false,
-                controller: emailController),
+              //email field
+              MyTextField(
+                  hintText: "Email",
+                  obscureText: false,
+                  controller: emailController),
 
-            const SizedBox(height: 50),
+              const SizedBox(height: 50),
 
-            //password field
-            MyTextField(
-                hintText: "Password",
-                obscureText: true,
-                controller: passwordController),
+              //password field
+              MyTextField(
+                  hintText: "Password",
+                  obscureText: true,
+                  controller: passwordController),
 
-            const SizedBox(height: 50),
+              const SizedBox(height: 50),
 
-            //login button
-            MyButton(
-              text: "Go!",
-              onTap: () => login(context),
-            ),
-
-            const SizedBox(height: 50),
-
-            //register text
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text(
-                "Don't have an account? ",
-                style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              //login button
+              MyButton(
+                text: "Go!",
+                onTap: () => login(context),
               ),
-              GestureDetector(
-                onTap: onTap,
-                child: Text("Register now!",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary)),
-              )
-            ])
-          ],
+
+              const SizedBox(height: 50),
+
+              //register text
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(
+                  "Don't have an account? ",
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.primary),
+                ),
+                GestureDetector(
+                  onTap: onTap,
+                  child: Text("Register now!",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary)),
+                )
+              ])
+            ],
+          ),
         )));
   }
 }
