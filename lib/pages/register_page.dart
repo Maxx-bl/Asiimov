@@ -29,42 +29,64 @@ class RegisterPage extends StatelessWidget {
     return isValid;
   }
 
+  bool isValidUsername() {
+    final regex = RegExp(r'^[a-z0-9._-]{3,20}$');
+    return regex.hasMatch(usernameController.text);
+  }
+
   //register
-  void register(BuildContext context) {
-    // auth servces
+  void register(BuildContext context) async {
     final auth = AuthService();
 
-    if (!passwordsMatch()) {
-      showDialog(
-        context: context,
-        builder: (context) => const AlertDialog(
-          title: Text('Passwords do not match!'),
-        ),
+    String email = emailController.text.trim();
+    String password = passwordController.text;
+    String confirm = confirmController.text;
+    String username = usernameController.text.trim();
+
+    if (password != confirm) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Passwords do not match!')),
       );
-    } else {
-      if (!passwordSize()) {
-        showDialog(
-          context: context,
-          builder: (context) => const AlertDialog(
-            title: Text('Your password must be at least 6 characters long!'),
-          ),
-        );
-      } else {
-        try {
-          auth.signUpWithEmailAndPassword(
-            emailController.text,
-            passwordController.text,
-            usernameController.text,
-          );
-        } catch (e) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Text(e.toString()),
-            ),
-          );
-        }
+      return;
+    }
+
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Password must be at least 6 characters.')),
+      );
+      return;
+    }
+
+    if (!isValidUsername()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Username must be 3-20 characters, lowercase letters/numbers/._- only.')),
+      );
+      return;
+    }
+
+    try {
+      await auth.signUpWithEmailAndPassword(email, password, username);
+    } catch (e) {
+      final error = e.toString().replaceFirst('Exception: ', '');
+
+      String message;
+      switch (error) {
+        case 'email-already-in-use':
+          message = 'This email is already in use.';
+          break;
+        case 'username-already-in-use':
+          message = 'This username is already taken.';
+          break;
+        default:
+          message = 'Registration failed: $error';
       }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
     }
   }
 

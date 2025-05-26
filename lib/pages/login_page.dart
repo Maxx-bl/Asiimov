@@ -14,23 +14,35 @@ class LoginPage extends StatelessWidget {
 
   //login
   void login(BuildContext context) async {
-    //auth services
     final authServices = AuthService();
 
-    //try login
     try {
       await authServices.signInWithEmailAndPassword(
-          emailController.text, passwordController.text);
-    }
+          emailController.text.trim(), passwordController.text);
 
-    //catch errors
-    catch (e) {
-      //show error message
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(e.toString()),
-        ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Login successful!")),
+      );
+    } catch (e) {
+      final error = e.toString().replaceFirst('Exception: ', '');
+
+      String message;
+      switch (error) {
+        case 'user-not-found':
+          message = 'No user found for that email.';
+          break;
+        case 'wrong-password':
+          message = 'Incorrect password.';
+          break;
+        case 'invalid-email':
+          message = 'Invalid email address.';
+          break;
+        default:
+          message = 'Login failed.';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
       );
     }
   }

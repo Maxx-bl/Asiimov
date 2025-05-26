@@ -37,6 +37,49 @@ class ChatService extends ChangeNotifier {
     });
   }
 
+  //get contacts stream except blocked users
+  Stream<List<Map<String, dynamic>>>
+      getContactsStreamExcludingBlocked() async* {
+    final currentUser = auth.currentUser!;
+    final currentUserId = currentUser.uid;
+
+    final blockedSnapshot = await firestore
+        .collection('users')
+        .doc(currentUserId)
+        .collection('blockedUsers')
+        .get();
+    final blockedUserIds = blockedSnapshot.docs.map((doc) => doc.id).toSet();
+
+    yield* firestore
+        .collection('chats')
+        .snapshots()
+        .asyncMap((chatSnapshot) async {
+      final contactIds = <String>{};
+
+      for (final doc in chatSnapshot.docs) {
+        final chatId = doc.id;
+        final ids = chatId.split('_');
+
+        if (ids.length == 2 && ids.contains(currentUserId)) {
+          final otherUserId = ids.firstWhere((id) => id != currentUserId);
+
+          if (!blockedUserIds.contains(otherUserId)) {
+            contactIds.add(otherUserId);
+          }
+        }
+      }
+
+      if (contactIds.isEmpty) return [];
+
+      final usersSnapshot = await firestore
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: contactIds.toList())
+          .get();
+
+      return usersSnapshot.docs.map((doc) => doc.data()).toList();
+    });
+  }
+
   //send message
   Future<void> sendMessage(String receiverID, message) async {
     //get current user info

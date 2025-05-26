@@ -21,7 +21,18 @@ class AuthService {
       );
       return userCredential;
     } on FirebaseAuthException catch (e) {
-      throw Exception(e.code);
+      switch (e.code) {
+        case 'invalid-email':
+          throw Exception('invalid-email');
+        case 'user-disabled':
+          throw Exception('user-disabled');
+        case 'user-not-found':
+          throw Exception('user-not-found');
+        case 'wrong-password':
+          throw Exception('wrong-password');
+        default:
+          throw Exception('unknown-error');
+      }
     }
   }
 
@@ -29,16 +40,26 @@ class AuthService {
   Future<UserCredential> signUpWithEmailAndPassword(
       String email, password, username) async {
     try {
+      //username already exists?
+      final usernameQuery = await firestore
+          .collection('users')
+          .where('username', isEqualTo: username)
+          .get();
+
+      if (usernameQuery.docs.isNotEmpty) {
+        throw Exception('username-already-in-use');
+      }
+
       UserCredential userCredential = await auth.createUserWithEmailAndPassword(
           email: email, password: password);
-      userCredential.user!.updateProfile(
+
+      await userCredential.user!.updateProfile(
         displayName: username,
         photoURL:
             'https://avatar.iran.liara.run/username?username=${username.toLowerCase()}',
       );
 
-      //save user data in a document
-      firestore.collection('users').doc(userCredential.user!.uid).set({
+      await firestore.collection('users').doc(userCredential.user!.uid).set({
         'uid': userCredential.user!.uid,
         'email': email,
         'username': username,
@@ -46,6 +67,9 @@ class AuthService {
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        throw Exception('email-already-in-use');
+      }
       throw Exception(e.code);
     }
   }
