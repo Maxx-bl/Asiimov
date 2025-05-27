@@ -28,9 +28,32 @@ class _ChatPageState extends State<ChatPage> {
   // textfield focus
   FocusNode myFocusNode = FocusNode();
 
+  //mark all messages as read
+  void markMessagesAsRead() async {
+    final currentUserId = authService.getCurrentUser()!.uid;
+    final otherUserId = widget.receiverID;
+
+    List<String> ids = [currentUserId, otherUserId];
+    ids.sort();
+    String chatRoomID = ids.join('_');
+
+    final unreadMessagesSnapshot = await FirebaseFirestore.instance
+        .collection('chats')
+        .doc(chatRoomID)
+        .collection('messages')
+        .where('receiverID', isEqualTo: currentUserId)
+        .where('isRead', isEqualTo: false)
+        .get();
+
+    for (final doc in unreadMessagesSnapshot.docs) {
+      await doc.reference.update({'isRead': true});
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    markMessagesAsRead();
     myFocusNode.addListener(() {
       if (myFocusNode.hasFocus) {
         //delay keyboard time to show up

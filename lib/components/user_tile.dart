@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class UserTile extends StatelessWidget {
   final String text;
   final void Function()? onTap;
+  final Widget? trailing;
 
   const UserTile({
     super.key,
     required this.text,
     required this.onTap,
+    this.trailing,
   });
 
   @override
@@ -26,6 +28,8 @@ class UserTile extends StatelessWidget {
             const Icon(Icons.person),
             const SizedBox(width: 20),
             Text(text),
+            const Spacer(),
+            if (trailing != null) trailing!,
           ],
         ),
       ),

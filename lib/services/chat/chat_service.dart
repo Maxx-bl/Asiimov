@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:asiimov/models/message.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -38,45 +40,105 @@ class ChatService extends ChangeNotifier {
   }
 
   //get contacts stream except blocked users
-  Stream<List<Map<String, dynamic>>>
-      getContactsStreamExcludingBlocked() async* {
+  Stream<List<Map<String, dynamic>>> getContactsStreamExcludingBlocked() {
     final currentUser = auth.currentUser!;
     final currentUserId = currentUser.uid;
 
-    final blockedSnapshot = await firestore
+    final blockedStream = firestore
         .collection('users')
         .doc(currentUserId)
         .collection('blockedUsers')
-        .get();
-    final blockedUserIds = blockedSnapshot.docs.map((doc) => doc.id).toSet();
+        .snapshots();
 
-    yield* firestore
-        .collection('chats')
-        .snapshots()
-        .asyncMap((chatSnapshot) async {
+    final chatStream = firestore.collection('chats').snapshots();
+
+    // Combine les deux flux manuellement
+    late StreamController<List<Map<String, dynamic>>> controller;
+    List<String> currentBlockedIds = [];
+    QuerySnapshot? currentChatsSnapshot;
+
+    void update() async {
+      if (currentChatsSnapshot == null) return;
+
       final contactIds = <String>{};
 
-      for (final doc in chatSnapshot.docs) {
+      for (final doc in currentChatsSnapshot!.docs) {
         final chatId = doc.id;
         final ids = chatId.split('_');
+        if (ids.length != 2) continue;
 
-        if (ids.length == 2 && ids.contains(currentUserId)) {
+        if (ids.contains(currentUserId)) {
           final otherUserId = ids.firstWhere((id) => id != currentUserId);
-
-          if (!blockedUserIds.contains(otherUserId)) {
+          if (!currentBlockedIds.contains(otherUserId)) {
             contactIds.add(otherUserId);
           }
         }
       }
 
-      if (contactIds.isEmpty) return [];
+      if (contactIds.isEmpty) {
+        controller.add([]);
+        return;
+      }
 
-      final usersSnapshot = await firestore
+      final usersSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .where(FieldPath.documentId, whereIn: contactIds.toList())
           .get();
 
-      return usersSnapshot.docs.map((doc) => doc.data()).toList();
+      controller.add(usersSnapshot.docs.map((doc) => doc.data()).toList());
+    }
+
+    controller = StreamController<List<Map<String, dynamic>>>.broadcast(
+      onListen: () {
+        blockedStream.listen((blockedSnapshot) {
+          currentBlockedIds =
+              blockedSnapshot.docs.map((doc) => doc.id).toList();
+          update();
+        });
+
+        chatStream.listen((chatSnapshot) {
+          currentChatsSnapshot = chatSnapshot;
+          update();
+        });
+      },
+      onCancel: () {
+        controller.close();
+      },
+    );
+
+    return controller.stream;
+  }
+
+  //get information if user has new messages
+  Stream<Map<String, bool>> getUnreadStatusForContacts() {
+    final currentUserId = auth.currentUser!.uid;
+
+    return firestore
+        .collection('chats')
+        .snapshots()
+        .asyncMap((chatSnapshot) async {
+      Map<String, bool> unreadStatus = {};
+
+      for (final chatDoc in chatSnapshot.docs) {
+        final chatId = chatDoc.id;
+        final ids = chatId.split('_');
+        if (!ids.contains(currentUserId)) continue;
+
+        final otherUserId = ids.firstWhere((id) => id != currentUserId);
+
+        final unreadMessages = await firestore
+            .collection('chats')
+            .doc(chatId)
+            .collection('messages')
+            .where('receiverID', isEqualTo: currentUserId)
+            .where('isRead', isEqualTo: false)
+            .limit(1)
+            .get();
+
+        unreadStatus[otherUserId] = unreadMessages.docs.isNotEmpty;
+      }
+
+      return unreadStatus;
     });
   }
 
@@ -94,6 +156,7 @@ class ChatService extends ChangeNotifier {
       receiverID: receiverID,
       message: message,
       timestamp: timestamp,
+      isRead: false,
     );
 
     //create unique chat room ID
@@ -107,6 +170,11 @@ class ChatService extends ChangeNotifier {
         .doc(chatRoomID)
         .collection('messages')
         .add(newMessage.toMap());
+
+    await firestore
+        .collection('chats')
+        .doc(chatRoomID)
+        .set({'createdAt': FieldValue.serverTimestamp()});
   }
 
   //get messages
