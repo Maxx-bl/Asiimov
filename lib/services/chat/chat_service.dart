@@ -1,14 +1,18 @@
 import 'dart:async';
 
 import 'package:asiimov/models/message.dart';
+import 'package:asiimov/services/encryption/encryption_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ChatService extends ChangeNotifier {
   //get instance of firebase services
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
   final FirebaseAuth auth = FirebaseAuth.instance;
+  final EncryptionService encryption =
+      EncryptionService(dotenv.env['ENCRYPTION_KEY'] ?? '');
 
   //get all users stream
   Stream<List<Map<String, dynamic>>> getUsersStream() {
@@ -148,13 +152,14 @@ class ChatService extends ChangeNotifier {
     final String currentUserID = auth.currentUser!.uid;
     final String currentUserEmail = auth.currentUser!.email!;
     final Timestamp timestamp = Timestamp.now();
+    final encryptedMessage = encryption.encrypt(message);
 
     //create message
     Message newMessage = Message(
       senderID: currentUserID,
       senderEmail: currentUserEmail,
       receiverID: receiverID,
-      message: message,
+      message: encryptedMessage,
       timestamp: timestamp,
       isRead: false,
     );

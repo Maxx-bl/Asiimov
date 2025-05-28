@@ -2,8 +2,10 @@ import 'package:asiimov/components/chat_bubble.dart';
 import 'package:asiimov/components/my_textfield.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
+import 'package:asiimov/services/encryption/encryption_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ChatPage extends StatefulWidget {
   final String receiverUsername;
@@ -146,10 +148,20 @@ class _ChatPageState extends State<ChatPage> {
     var alignment =
         isCurrentUser ? Alignment.centerRight : Alignment.centerLeft;
 
+    final encryptionService =
+        EncryptionService(dotenv.env['ENCRYPTION_KEY'] ?? '');
+
+    String decryptedMessage;
+    try {
+      decryptedMessage = encryptionService.decrypt(data['message']);
+    } catch (e) {
+      decryptedMessage = data['message'];
+    }
+
     return Container(
       alignment: alignment,
       child: ChatBubble(
-        message: data['message'],
+        message: decryptedMessage,
         isCurrentUser: isCurrentUser,
         messageId: doc.id,
         userId: data['senderID'],
