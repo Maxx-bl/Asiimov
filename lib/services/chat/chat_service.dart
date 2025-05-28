@@ -197,6 +197,66 @@ class ChatService extends ChangeNotifier {
         .snapshots();
   }
 
+  //mark messages as read
+  void markMessagesAsRead(String otherUserId) async {
+    final currentUserId = auth.currentUser?.uid;
+
+    List<String> ids = [currentUserId ?? '', otherUserId];
+    ids.sort();
+    String chatRoomID = ids.join('_');
+
+    final unreadMessagesSnapshot = await FirebaseFirestore.instance
+        .collection('chats')
+        .doc(chatRoomID)
+        .collection('messages')
+        .where('receiverID', isEqualTo: currentUserId)
+        .where('isRead', isEqualTo: false)
+        .get();
+
+    for (final doc in unreadMessagesSnapshot.docs) {
+      await doc.reference.update({'isRead': true});
+    }
+  }
+
+  //delete old messages
+  Future<void> cleanUpOldMessages(String otherUserId) async {
+    final currentUserId = auth.currentUser?.uid;
+
+    List<String> ids = [currentUserId ?? '', otherUserId];
+    ids.sort();
+    String chatRoomID = ids.join('_');
+
+    final messagesSnapshot = await firestore
+        .collection('chats')
+        .doc(chatRoomID)
+        .collection('messages')
+        .orderBy('timestamp', descending: false)
+        .get();
+
+    final messages = messagesSnapshot.docs;
+
+    if (messages.length > 20) {
+      final toDelete = messages.take(messages.length - 20);
+      for (final doc in toDelete) {
+        await doc.reference.delete();
+      }
+      return;
+    }
+
+    final now = DateTime.now();
+    for (final doc in messages) {
+      final data = doc.data();
+      final isRead = data['isRead'] ?? false;
+      final timestamp = (data['timestamp'] as Timestamp).toDate();
+
+      final isOlderThan24h = now.difference(timestamp).inHours >= 24;
+
+      if (isRead && isOlderThan24h) {
+        await doc.reference.delete();
+      }
+    }
+  }
+
   //report user
   Future<void> reportUser(String messageId, String userId) async {
     final currentUser = auth.currentUser;
