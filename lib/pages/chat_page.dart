@@ -53,7 +53,6 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
-    markMessagesAsRead();
     myFocusNode.addListener(() {
       if (myFocusNode.hasFocus) {
         //delay keyboard time to show up
@@ -128,6 +127,8 @@ class _ChatPageState extends State<ChatPage> {
           return const Center(child: CircularProgressIndicator());
         }
 
+        //mark messages as read when loaded
+        markMessagesAsRead();
         return ListView(
           controller: scrollController,
           children:

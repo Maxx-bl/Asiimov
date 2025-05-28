@@ -117,7 +117,7 @@ class ChatService extends ChangeNotifier {
         .collection('chats')
         .snapshots()
         .asyncMap((chatSnapshot) async {
-      Map<String, bool> unreadStatus = {};
+      final Map<String, bool> unreadStatus = {};
 
       for (final chatDoc in chatSnapshot.docs) {
         final chatId = chatDoc.id;

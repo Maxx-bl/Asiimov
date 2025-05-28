@@ -23,7 +23,6 @@ class _HomePageState extends State<HomePage> {
   String _searchQuery = '';
   Timer? _debounce;
 
-  // Un key pour forcer le rebuild de StreamBuilder si besoin (optionnel)
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
       GlobalKey<RefreshIndicatorState>();
 
@@ -47,12 +46,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _refreshList() async {
-    // Ici tu peux faire des actions pour forcer le refresh,
-    // par exemple récupérer les derniers utilisateurs ou messages,
-    // mais comme tu utilises un Stream, Firestore se met à jour automatiquement.
-    // On simule un délai de 1 seconde pour l'effet refresh.
     await Future.delayed(const Duration(seconds: 1));
-    // Forcer rebuild si besoin
     setState(() {});
   }
 
@@ -181,6 +175,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         );
+        setState(() {});
       },
       trailing: hasUnread
           ? Container(
