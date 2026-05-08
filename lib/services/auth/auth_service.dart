@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class AuthService {
   //instance
@@ -19,6 +20,7 @@ class AuthService {
         email: email,
         password: password,
       );
+      saveUserToken();
       return userCredential;
     } on FirebaseAuthException catch (e) {
       switch (e.code) {
@@ -65,6 +67,7 @@ class AuthService {
         'username': username,
       });
 
+      saveUserToken();
       return userCredential;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
@@ -79,5 +82,19 @@ class AuthService {
     return await auth.signOut();
   }
 
-  //errors
+  //save user token for notifs
+  Future<void> saveUserToken() async {
+    final user = getCurrentUser();
+    if (user != null) {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
+          'fcmToken': token,
+        });
+      }
+    }
+  }
 }

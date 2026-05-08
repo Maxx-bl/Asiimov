@@ -20,6 +20,7 @@ class LoginPage extends StatelessWidget {
       await authServices.signInWithEmailAndPassword(
           emailController.text.trim(), passwordController.text);
 
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Login successful!")),
       );
@@ -41,6 +42,7 @@ class LoginPage extends StatelessWidget {
           message = 'Login failed.';
       }
 
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );

@@ -14,6 +14,8 @@ class ChatService extends ChangeNotifier {
   final EncryptionService encryption =
       EncryptionService(dotenv.env['ENCRYPTION_KEY'] ?? '');
 
+  dynamic get http => null;
+
   //get all users stream
   Stream<List<Map<String, dynamic>>> getUsersStream() {
     return firestore.collection('users').snapshots().map((snapshot) {
@@ -147,7 +149,7 @@ class ChatService extends ChangeNotifier {
   }
 
   //send message
-  Future<void> sendMessage(String receiverID, message) async {
+  Future<void> sendMessage(String receiverID, String message) async {
     //get current user info
     final String currentUserID = auth.currentUser!.uid;
     final String currentUserEmail = auth.currentUser!.email!;
@@ -183,7 +185,7 @@ class ChatService extends ChangeNotifier {
   }
 
   //get messages
-  Stream<QuerySnapshot> getMessages(String userID, otherUserID) {
+  Stream<QuerySnapshot> getMessages(String userID, String otherUserID) {
     //construct chatroom ID
     List<String> ids = [userID, otherUserID];
     ids.sort();

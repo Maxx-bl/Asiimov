@@ -84,6 +84,7 @@ class RegisterPage extends StatelessWidget {
           message = 'Registration failed: $error';
       }
 
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
