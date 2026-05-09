@@ -18,7 +18,22 @@ jobs:
           
       - name: Install dependencies
         run: flutter pub get
-        
+
+      - name: Create .env file
+        run: |
+          echo "WEB_API_KEY=${{ secrets.WEB_API_KEY }}" >> .env
+          echo "WEB_APP_ID=${{ secrets.WEB_APP_ID }}" >> .env
+          echo "WEB_MESSAGING_SENDER_ID=${{ secrets.WEB_MESSAGING_SENDER_ID }}" >> .env
+          echo "WEB_PROJECT_ID=${{ secrets.WEB_PROJECT_ID }}" >> .env
+          echo "WEB_AUTH_DOMAIN=${{ secrets.WEB_AUTH_DOMAIN }}" >> .env
+          echo "WEB_STORAGE_BUCKET=${{ secrets.WEB_STORAGE_BUCKET }}" >> .env
+          echo "ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}" >> .env
+
+      - name: Create dummy service account
+        run: |
+          mkdir -p assets
+          echo "{}" > assets/service-account.json
+
       - name: Build Web
         run: flutter build web --release --base-href "/Asiimov/"
         
