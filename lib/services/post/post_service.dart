@@ -216,4 +216,24 @@ class PostService extends ChangeNotifier {
       });
     });
   }
+
+  //delete a comment (only if author)
+  Future<void> deleteComment(String postId, String commentId) async {
+    final userId = _auth.currentUser!.uid;
+    final commentRef = _firestore
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId);
+
+    final doc = await commentRef.get();
+    if (doc.exists && doc['authorID'] == userId) {
+      await commentRef.delete();
+
+      // Decrement comment count on post
+      await _firestore.collection('posts').doc(postId).update({
+        'commentCount': FieldValue.increment(-1),
+      });
+    }
+  }
 }

@@ -12,6 +12,7 @@ class ChatBubble extends StatefulWidget {
   final String? replyToSenderID;
   final Map<String, String>? reactions;
   final String currentUserId;
+  final String otherUserId;
   final void Function(String emoji)? onReact;
   final VoidCallback? onSwipeReply;
 
@@ -22,6 +23,7 @@ class ChatBubble extends StatefulWidget {
     required this.messageId,
     required this.userId,
     required this.currentUserId,
+    required this.otherUserId,
     this.replyToMessage,
     this.replyToSenderID,
     this.reactions,
@@ -96,6 +98,53 @@ class _ChatBubbleState extends State<ChatBubble>
       }
     };
     return listener;
+  }
+
+  void showDeleteOptions(BuildContext context, String messageId, String userId) {
+    showModalBottomSheet(
+        context: context,
+        builder: (context) {
+          return SafeArea(
+              child: Wrap(children: [
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title:
+                  const Text('Delete', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                confirmDeleteMessage(context, messageId, userId);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.cancel),
+              title: const Text('Cancel'),
+              onTap: () => Navigator.pop(context),
+            ),
+          ]));
+        });
+  }
+
+  void confirmDeleteMessage(
+      BuildContext context, String messageId, String userId) {
+    showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text('Delete message'),
+              content:
+                  const Text('Are you sure you want to delete this message?'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel')),
+                TextButton(
+                    onPressed: () {
+                      ChatService().deleteMessage(widget.otherUserId, messageId);
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Delete',
+                        style: TextStyle(color: Colors.red))),
+              ],
+            ));
   }
 
   //show options
@@ -263,6 +312,8 @@ class _ChatBubbleState extends State<ChatBubble>
           onLongPress: () {
             if (!widget.isCurrentUser) {
               showOptions(context, widget.messageId, widget.userId);
+            } else {
+              showDeleteOptions(context, widget.messageId, widget.userId);
             }
           },
           onDoubleTap: () {

@@ -479,4 +479,20 @@ class ChatService extends ChangeNotifier {
       return userDocs.map((doc) => doc.data() as Map<String, dynamic>).toList();
     });
   }
+
+  //delete message
+  Future<void> deleteMessage(String otherUserId, String messageId) async {
+    final currentUserId = auth.currentUser!.uid;
+
+    List<String> ids = [currentUserId, otherUserId];
+    ids.sort();
+    String chatRoomID = ids.join('_');
+
+    await firestore
+        .collection('chats')
+        .doc(chatRoomID)
+        .collection('messages')
+        .doc(messageId)
+        .delete();
+  }
 }

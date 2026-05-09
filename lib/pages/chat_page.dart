@@ -265,6 +265,7 @@ class _ChatPageState extends State<ChatPage> {
       messageId: doc.id,
       userId: data['senderID'],
       currentUserId: currentUid,
+      otherUserId: widget.receiverID,
       replyToMessage: decryptedReply,
       replyToSenderID: data['replyToSenderID'],
       reactions: reactions,
