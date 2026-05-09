@@ -5,7 +5,7 @@
     <application
         android:label="asiimov"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon">
 
         <!-- FCM default notification channel -->
         <meta-data

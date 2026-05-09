@@ -101,8 +101,11 @@ class RegisterPage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               //logo
-              Icon(Icons.message,
-                  size: 60, color: Theme.of(context).colorScheme.primary),
+              Image.asset(
+                'assets/asiimov-logo.jpeg',
+                width: 100,
+                height: 100,
+              ),
 
               const SizedBox(height: 50),
 
