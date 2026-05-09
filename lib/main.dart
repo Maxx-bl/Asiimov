@@ -14,32 +14,52 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: "assets/env");
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Register background message handler
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  try {
+    await dotenv.load(fileName: "assets/env");
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Initialize notification service
-  final notificationService = NotificationService();
-  await notificationService.initialize();
+    // Register background message handler
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-  // Set up notification tap handler to navigate to chat
-  notificationService.onNotificationTap = (senderID, senderUsername) {
-    navigatorKey.currentState?.push(
-      MaterialPageRoute(
-        builder: (context) => ChatPage(
-          receiverUsername: senderUsername,
-          receiverID: senderID,
+    // Initialize notification service
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+
+    // Set up notification tap handler to navigate to chat
+    notificationService.onNotificationTap = (senderID, senderUsername) {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (context) => ChatPage(
+            receiverUsername: senderUsername,
+            receiverID: senderID,
+          ),
+        ),
+      );
+    };
+
+    runApp(ChangeNotifierProvider(
+      create: (context) => ThemeProvider(),
+      child: const MyApp(),
+    ));
+  } catch (e, stackTrace) {
+    runApp(MaterialApp(
+      home: Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Initialization Error:\n$e\n\n$stackTrace',
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          ),
         ),
       ),
-    );
-  };
-
-  runApp(ChangeNotifierProvider(
-    create: (context) => ThemeProvider(),
-    child: const MyApp(),
-  ));
+    ));
+  }
 }
 
 class MyApp extends StatelessWidget {
