@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:asiimov/components/my_drawer.dart';
 import 'package:asiimov/components/user_tile.dart';
 import 'package:asiimov/pages/chat_page.dart';
+import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
+import 'package:asiimov/services/user/user_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
@@ -107,9 +110,20 @@ class _HomePageState extends State<HomePage> {
     final Stream<Map<String, bool>> unreadStream =
         chatService.getUnreadStatusForContacts();
 
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: usersStream,
-      builder: (context, snapshotUsers) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: UserService().getUserStream(authService.getCurrentUser()!.uid),
+      builder: (context, userSnapshot) {
+        final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
+        final following = List<String>.from(userData?['following'] ?? []);
+
+        return StreamBuilder<List<Map<String, dynamic>>>(
+          stream: chatService.getContactsStreamExcludingBlocked(),
+          builder: (context, snapshotContacts) {
+            final contactIds = snapshotContacts.data?.map((u) => u['uid'] as String).toList() ?? [];
+
+            return StreamBuilder<List<Map<String, dynamic>>>(
+              stream: usersStream,
+              builder: (context, snapshotUsers) {
         if (snapshotUsers.hasError) {
           return const Center(child: Text("Error loading."));
         }
@@ -118,12 +132,15 @@ class _HomePageState extends State<HomePage> {
         }
         final users = snapshotUsers.data!
             .where((userData) =>
-                userData['email'] != authService.getCurrentUser()!.email &&
-                (_searchQuery.isEmpty ||
-                    userData['username']
-                        .toString()
-                        .toLowerCase()
-                        .contains(_searchQuery)))
+                userData['uid'] != authService.getCurrentUser()!.uid &&
+                (_isSearching
+                    ? (_searchQuery.isEmpty
+                        ? following.contains(userData['uid'])
+                        : userData['username']
+                            .toString()
+                            .toLowerCase()
+                            .contains(_searchQuery))
+                    : true))
             .toList();
 
         if (users.isEmpty) {
@@ -153,28 +170,48 @@ class _HomePageState extends State<HomePage> {
               physics: const AlwaysScrollableScrollPhysics(),
               children: users
                   .map((userData) => buildUserListItem(
-                      userData, unreadStatus[userData['uid']] ?? false))
+                        userData,
+                        unreadStatus[userData['uid']] ?? false,
+                        contactIds.contains(userData['uid']),
+                      ))
                   .toList(),
             );
           },
         );
       },
     );
+        },
+      );
+    },
+    );
   }
 
-  Widget buildUserListItem(Map<String, dynamic> userData, bool hasUnread) {
+  Widget buildUserListItem(
+      Map<String, dynamic> userData, bool hasUnread, bool isContact) {
     return UserTile(
       text: userData['username'],
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ChatPage(
-              receiverUsername: userData['username'],
-              receiverID: userData['uid'],
+        if (isContact) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChatPage(
+                receiverUsername: userData['username'],
+                receiverID: userData['uid'],
+              ),
             ),
-          ),
-        );
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProfilePage(
+                userId: userData['uid'],
+                username: userData['username'],
+              ),
+            ),
+          );
+        }
         setState(() {});
       },
       trailing: hasUnread
