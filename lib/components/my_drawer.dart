@@ -1,5 +1,6 @@
-import 'package:asiimov/services/auth/auth_service.dart';
+import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/pages/settings_page.dart';
+import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:flutter/material.dart';
 
 class MyDrawer extends StatelessWidget {
@@ -12,6 +13,8 @@ class MyDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = AuthService().getCurrentUser();
+
     return Drawer(
       backgroundColor: Theme.of(context).colorScheme.surface,
       child:
@@ -25,35 +28,49 @@ class MyDrawer extends StatelessWidget {
             ),
           ),
 
-          //home list tile
+          //profile
           Padding(
             padding: const EdgeInsets.only(left: 25),
             child: ListTile(
-              title: const Text('H O M E'),
-              leading: const Icon(Icons.home),
+              title: const Text('P R O F I L E'),
+              leading: const Icon(Icons.person),
               onTap: () {
                 Navigator.pop(context);
+                if (currentUser != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfilePage(
+                        userId: currentUser.uid,
+                        username: currentUser.displayName ?? 'User',
+                      ),
+                    ),
+                  );
+                }
               },
             ),
           ),
 
-          //settings list tile
+          //settings
           Padding(
             padding: const EdgeInsets.only(left: 25),
             child: ListTile(
               title: const Text('S E T T I N G S'),
               leading: const Icon(Icons.settings),
               onTap: () {
+                Navigator.pop(context);
                 Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const SettingsPage()));
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsPage(),
+                  ),
+                );
               },
             ),
           ),
         ]),
 
-        //logout list tile
+        //logout
         Padding(
           padding: const EdgeInsets.only(left: 25, bottom: 25),
           child: ListTile(

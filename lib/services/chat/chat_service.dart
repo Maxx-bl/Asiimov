@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:asiimov/models/message.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:googleapis_auth/auth_io.dart';
+import 'package:http/http.dart' as http;
 
 class ChatService extends ChangeNotifier {
   //get instance of firebase services
@@ -14,7 +18,8 @@ class ChatService extends ChangeNotifier {
   final EncryptionService encryption =
       EncryptionService(dotenv.env['ENCRYPTION_KEY'] ?? '');
 
-  dynamic get http => null;
+  // Cached OAuth2 access token for FCM V1 API
+  AccessCredentials? _cachedCredentials;
 
   //get all users stream
   Stream<List<Map<String, dynamic>>> getUsersStream() {
@@ -149,12 +154,22 @@ class ChatService extends ChangeNotifier {
   }
 
   //send message
-  Future<void> sendMessage(String receiverID, String message) async {
+  Future<void> sendMessage(
+    String receiverID,
+    String message, {
+    String? replyToMessageId,
+    String? replyToMessage,
+    String? replyToSenderID,
+  }) async {
     //get current user info
     final String currentUserID = auth.currentUser!.uid;
     final String currentUserEmail = auth.currentUser!.email!;
     final Timestamp timestamp = Timestamp.now();
     final encryptedMessage = encryption.encrypt(message);
+
+    // Encrypt reply preview if present
+    final String? encryptedReply =
+        replyToMessage != null ? encryption.encrypt(replyToMessage) : null;
 
     //create message
     Message newMessage = Message(
@@ -164,6 +179,9 @@ class ChatService extends ChangeNotifier {
       message: encryptedMessage,
       timestamp: timestamp,
       isRead: false,
+      replyToMessageId: replyToMessageId,
+      replyToMessage: encryptedReply,
+      replyToSenderID: replyToSenderID,
     );
 
     //create unique chat room ID
@@ -182,6 +200,158 @@ class ChatService extends ChangeNotifier {
         .collection('chats')
         .doc(chatRoomID)
         .set({'createdAt': FieldValue.serverTimestamp()});
+
+    //send push notification to receiver
+    await sendPushNotification(receiverID, message);
+  }
+
+  //add or toggle reaction on a message
+  Future<void> addReaction(
+      String otherUserId, String messageDocId, String emoji) async {
+    final currentUserId = auth.currentUser!.uid;
+
+    List<String> ids = [currentUserId, otherUserId];
+    ids.sort();
+    String chatRoomID = ids.join('_');
+
+    final docRef = firestore
+        .collection('chats')
+        .doc(chatRoomID)
+        .collection('messages')
+        .doc(messageDocId);
+
+    final doc = await docRef.get();
+    final data = doc.data();
+    if (data == null) return;
+
+    final reactions =
+        Map<String, String>.from(data['reactions'] as Map? ?? {});
+
+    // Toggle: if same emoji, remove it; otherwise set new one
+    if (reactions[currentUserId] == emoji) {
+      reactions.remove(currentUserId);
+    } else {
+      reactions[currentUserId] = emoji;
+    }
+
+    await docRef.update({'reactions': reactions});
+
+    // Send notification if adding a reaction (not removing)
+    if (reactions.containsKey(currentUserId)) {
+      final messageOwnerID = data['senderID'] as String;
+      // Only notify if reacting to someone else's message
+      if (messageOwnerID != currentUserId) {
+        final senderUsername = auth.currentUser?.displayName ?? 'Someone';
+        await sendPushNotification(
+            messageOwnerID, '$emoji $senderUsername reacted');
+      }
+    }
+  }
+
+  //remove reaction from a message
+  Future<void> removeReaction(String otherUserId, String messageDocId) async {
+    final currentUserId = auth.currentUser!.uid;
+
+    List<String> ids = [currentUserId, otherUserId];
+    ids.sort();
+    String chatRoomID = ids.join('_');
+
+    await firestore
+        .collection('chats')
+        .doc(chatRoomID)
+        .collection('messages')
+        .doc(messageDocId)
+        .update({'reactions.$currentUserId': FieldValue.delete()});
+  }
+
+  //send push notification via FCM V1 API
+  Future<void> sendPushNotification(String receiverID, String messageText, {String? title, String? type}) async {
+    try {
+      //get receiver's FCM token
+      final receiverDoc =
+          await firestore.collection('users').doc(receiverID).get();
+      final receiverData = receiverDoc.data();
+      if (receiverData == null) return;
+
+      final fcmToken = receiverData['fcmToken'];
+      if (fcmToken == null || fcmToken.isEmpty) return;
+
+      //get sender's username
+      final senderUsername = auth.currentUser?.displayName ?? 'Someone';
+
+      //truncate message preview
+      final preview = messageText.length > 50
+          ? '${messageText.substring(0, 50)}...'
+          : messageText;
+
+      //get OAuth2 access token
+      final accessToken = await _getAccessToken();
+      if (accessToken == null) return;
+
+      //send notification via FCM V1 API
+      await http.post(
+        Uri.parse(
+            'https://fcm.googleapis.com/v1/projects/asiimov-b3792/messages:send'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({
+          'message': {
+            'token': fcmToken,
+            'notification': {
+              'title': title ?? senderUsername,
+              'body': preview,
+            },
+            'data': {
+              'senderID': auth.currentUser!.uid,
+              'senderUsername': senderUsername,
+              'type': type ?? 'chat_message',
+            },
+            'android': {
+              'notification': {
+                'channel_id': 'chat_messages',
+                'tag': auth.currentUser!.uid,
+              },
+            },
+          },
+        }),
+      );
+    } catch (e) {
+      debugPrint('Error sending push notification: $e');
+    }
+  }
+
+  //get OAuth2 access token from service account
+  Future<String?> _getAccessToken() async {
+    try {
+      // Return cached token if still valid
+      if (_cachedCredentials != null &&
+          _cachedCredentials!.accessToken.expiry
+              .isAfter(DateTime.now().add(const Duration(minutes: 1)))) {
+        return _cachedCredentials!.accessToken.data;
+      }
+
+      // Load service account JSON from assets
+      final serviceAccountJson =
+          await rootBundle.loadString('assets/service-account.json');
+      final credentials =
+          ServiceAccountCredentials.fromJson(serviceAccountJson);
+
+      // Get access token with FCM scope
+      final client = http.Client();
+      _cachedCredentials = await obtainAccessCredentialsViaServiceAccount(
+        credentials,
+        ['https://www.googleapis.com/auth/firebase.messaging'],
+        client,
+      );
+      client.close();
+
+      return _cachedCredentials?.accessToken.data;
+    } catch (e) {
+      debugPrint('Error getting FCM access token: $e');
+      return null;
+    }
   }
 
   //get messages

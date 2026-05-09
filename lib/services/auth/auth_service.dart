@@ -79,6 +79,13 @@ class AuthService {
 
   //signout
   Future<void> signOut() async {
+    // Remove FCM token so user no longer receives notifications
+    final user = getCurrentUser();
+    if (user != null) {
+      await firestore.collection('users').doc(user.uid).update({
+        'fcmToken': null,
+      });
+    }
     return await auth.signOut();
   }
 
@@ -95,6 +102,19 @@ class AuthService {
           'fcmToken': token,
         });
       }
+
+      // Listen for token refresh and update Firestore
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+        final currentUser = getCurrentUser();
+        if (currentUser != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .update({
+            'fcmToken': newToken,
+          });
+        }
+      });
     }
   }
 }

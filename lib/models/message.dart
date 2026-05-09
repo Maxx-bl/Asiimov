@@ -8,6 +8,14 @@ class Message {
   final Timestamp timestamp;
   final bool isRead;
 
+  // Reply fields
+  final String? replyToMessageId;
+  final String? replyToMessage;
+  final String? replyToSenderID;
+
+  // Reactions: {userID: emoji}
+  final Map<String, String>? reactions;
+
   Message({
     required this.senderID,
     required this.senderEmail,
@@ -15,11 +23,15 @@ class Message {
     required this.message,
     required this.timestamp,
     required this.isRead,
+    this.replyToMessageId,
+    this.replyToMessage,
+    this.replyToSenderID,
+    this.reactions,
   });
 
   //convert to map
   Map<String, dynamic> toMap() {
-    return {
+    final map = <String, dynamic>{
       'senderID': senderID,
       'senderEmail': senderEmail,
       'receiverID': receiverID,
@@ -27,5 +39,17 @@ class Message {
       'timestamp': timestamp,
       'isRead': isRead,
     };
+
+    if (replyToMessageId != null) {
+      map['replyToMessageId'] = replyToMessageId;
+      map['replyToMessage'] = replyToMessage;
+      map['replyToSenderID'] = replyToSenderID;
+    }
+
+    if (reactions != null) {
+      map['reactions'] = reactions;
+    }
+
+    return map;
   }
 }

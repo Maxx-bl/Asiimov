@@ -1,5 +1,5 @@
 import 'package:asiimov/services/auth/login_or_register.dart';
-import 'package:asiimov/pages/home_page.dart';
+import 'package:asiimov/pages/main_scaffold.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -14,7 +14,7 @@ class AuthGate extends StatelessWidget {
             builder: (context, snapshot) {
               //if logged in
               if (snapshot.hasData) {
-                return const HomePage();
+                return const MainScaffold();
               }
               //if not logged in
               else {

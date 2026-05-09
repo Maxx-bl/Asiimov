@@ -84,6 +84,7 @@ class LoginPage extends StatelessWidget {
               MyTextField(
                   hintText: "Password",
                   obscureText: true,
+                  canToggleVisibility: true,
                   controller: passwordController),
 
               const SizedBox(height: 50),

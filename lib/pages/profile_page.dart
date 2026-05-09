@@ -1,0 +1,313 @@
+import 'package:asiimov/components/profile_post_card.dart';
+import 'package:asiimov/models/post.dart';
+import 'package:asiimov/pages/chat_page.dart';
+import 'package:asiimov/pages/follow_list_page.dart';
+import 'package:asiimov/pages/post_detail_page.dart';
+import 'package:asiimov/services/auth/auth_service.dart';
+import 'package:asiimov/services/post/post_service.dart';
+import 'package:asiimov/services/user/user_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
+class ProfilePage extends StatelessWidget {
+  final String userId;
+  final String username;
+
+  const ProfilePage({
+    super.key,
+    required this.userId,
+    required this.username,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUserId = AuthService().getCurrentUser()!.uid;
+    final isOwnProfile = currentUserId == userId;
+    final userService = UserService();
+    final postService = PostService();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('@$username'),
+        foregroundColor: Theme.of(context).colorScheme.primary,
+      ),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: userService.getUserStream(userId),
+        builder: (context, userSnapshot) {
+          if (userSnapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+            return const Center(child: Text('User not found.'));
+          }
+
+          final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+          final followers =
+              List<String>.from(userData['followers'] ?? []);
+          final following =
+              List<String>.from(userData['following'] ?? []);
+          final photoUrl = FirebaseAuth.instance.currentUser?.photoURL;
+
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 24),
+
+                // Profile picture
+                CircleAvatar(
+                  radius: 45,
+                  backgroundColor: Colors.orange.withValues(alpha: 0.2),
+                  backgroundImage:
+                      photoUrl != null && isOwnProfile
+                          ? NetworkImage(photoUrl)
+                          : null,
+                  child: (photoUrl == null || !isOwnProfile)
+                      ? Text(
+                          username.isNotEmpty
+                              ? username[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        )
+                      : null,
+                ),
+
+                const SizedBox(height: 12),
+
+                // Username
+                Text(
+                  '@$username',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Followers / Following counts
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => FollowListPage(
+                              userId: userId,
+                              title: 'Followers',
+                              isFollowers: true,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          Text(
+                            '${followers.length}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'followers',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 30,
+                      color: Theme.of(context).colorScheme.secondary,
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => FollowListPage(
+                              userId: userId,
+                              title: 'Following',
+                              isFollowers: false,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          Text(
+                            '${following.length}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'following',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Follow/Unfollow button (only on other profiles)
+                if (!isOwnProfile)
+                  StreamBuilder<bool>(
+                    stream: userService.isFollowing(userId),
+                    builder: (context, followSnapshot) {
+                      final isFollowing = followSnapshot.data ?? false;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 40),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  if (isFollowing) {
+                                    userService.unfollowUser(userId);
+                                  } else {
+                                    userService.followUser(userId);
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isFollowing
+                                      ? Theme.of(context).colorScheme.secondary
+                                      : Colors.orange,
+                                  foregroundColor:
+                                      isFollowing ? null : Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                                child: Text(
+                                  isFollowing ? 'Unfollow' : 'Follow',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.secondary,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: IconButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ChatPage(
+                                        receiverUsername: username,
+                                        receiverID: userId,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.mail_outline),
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
+                const SizedBox(height: 20),
+
+                // Divider
+                Divider(
+                  color: Theme.of(context).colorScheme.secondary,
+                  height: 1,
+                ),
+
+                // Posts
+                StreamBuilder(
+                  stream: postService.getUserPostsStream(userId),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text('Error loading posts.'),
+                      );
+                    }
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+
+                    final posts = snapshot.data!.docs
+                        .map((doc) => Post.fromFirestore(doc))
+                        .toList();
+                    
+                    posts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+                    if (posts.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Text(
+                          'No posts yet.',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: posts.length,
+                      itemBuilder: (context, index) {
+                        return ProfilePostCard(
+                          post: posts[index],
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    PostDetailPage(post: posts[index]),
+                              ),
+                            );
+                          },
+                          onDelete: isOwnProfile
+                              ? () => postService.deletePost(posts[index].id)
+                              : null,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}

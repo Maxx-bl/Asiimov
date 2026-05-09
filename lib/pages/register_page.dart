@@ -126,6 +126,7 @@ class RegisterPage extends StatelessWidget {
               MyTextField(
                   hintText: "Password",
                   obscureText: true,
+                  canToggleVisibility: true,
                   controller: passwordController),
 
               const SizedBox(height: 20),
@@ -134,6 +135,7 @@ class RegisterPage extends StatelessWidget {
               MyTextField(
                   hintText: "Confirm password",
                   obscureText: true,
+                  canToggleVisibility: true,
                   controller: confirmController),
 
               const SizedBox(height: 20),
