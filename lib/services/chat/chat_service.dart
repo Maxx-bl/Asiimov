@@ -585,7 +585,7 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-  //delete old messages
+  //delete old messages with specific conditions
   Future<void> cleanUpOldMessages(String otherUserId) async {
     final currentUserId = auth.currentUser?.uid;
 
@@ -593,31 +593,30 @@ class ChatService extends ChangeNotifier {
     ids.sort();
     String chatRoomID = ids.join('_');
 
+    // Get all messages sorted by newest first
     final messagesSnapshot = await firestore
         .collection('chats')
         .doc(chatRoomID)
         .collection('messages')
-        .orderBy('timestamp', descending: false)
+        .orderBy('timestamp', descending: true)
         .get();
 
     final messages = messagesSnapshot.docs;
-
-    if (messages.length > 20) {
-      final toDelete = messages.take(messages.length - 20);
-      for (final doc in toDelete) {
-        await doc.reference.delete();
-      }
-      return;
-    }
-
     final now = DateTime.now();
-    for (final doc in messages) {
+
+    // Loop through messages, skipping the first 30 (the most recent ones)
+    for (int i = 30; i < messages.length; i++) {
+      final doc = messages[i];
       final data = doc.data();
-      final isRead = data['isRead'] ?? false;
-      final timestamp = (data['timestamp'] as Timestamp).toDate();
+      
+      final bool isRead = data['isRead'] ?? false;
+      final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
 
-      final isOlderThan24h = now.difference(timestamp).inHours >= 24;
+      if (timestamp == null) continue;
 
+      final bool isOlderThan24h = now.difference(timestamp).inHours >= 24;
+
+      // Condition: Read AND Older than 24h AND (already guaranteed) not in top 30
       if (isRead && isOlderThan24h) {
         await doc.reference.delete();
       }

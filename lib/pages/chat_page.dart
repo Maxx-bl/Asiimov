@@ -39,16 +39,40 @@ class _ChatPageState extends State<ChatPage> {
   // scroll controller — using reverse ListView so index 0 = newest
   final ScrollController scrollController = ScrollController();
 
+  // Pagination state
+  int _limit = 30;
+  bool _isLoadingMore = false;
+
   @override
   void initState() {
     super.initState();
     NotificationService().setActiveChatUser(widget.receiverID);
     chatService.markMessagesAsRead(widget.receiverID);
+    chatService.cleanUpOldMessages(widget.receiverID);
+    scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    // Since reverse: true, scroll top is actually maxScrollExtent
+    if (scrollController.hasClients && 
+        scrollController.position.pixels >= scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoadingMore) {
+        setState(() {
+          _isLoadingMore = true;
+          _limit += 30;
+        });
+        // Tiny delay to reset the flag after the stream has time to update
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) setState(() => _isLoadingMore = false);
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
     NotificationService().setActiveChatUser(null);
+    scrollController.removeListener(_onScroll);
     myFocusNode.dispose();
     messageController.dispose();
     scrollController.dispose();
@@ -225,7 +249,7 @@ class _ChatPageState extends State<ChatPage> {
   Widget buildMessageList() {
     String senderID = authService.getCurrentUser()!.uid;
     return StreamBuilder(
-      stream: chatService.getMessages(widget.receiverID, senderID),
+      stream: chatService.getMessagesWithLimit(widget.receiverID, senderID, _limit),
       builder: (context, snapshot) {
         //errors
         if (snapshot.hasError) {
