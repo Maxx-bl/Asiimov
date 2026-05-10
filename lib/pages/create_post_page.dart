@@ -23,9 +23,23 @@ class _CreatePostPageState extends State<CreatePostPage> {
     if (_controller.text.trim().isEmpty || _isPosting) return;
 
     setState(() => _isPosting = true);
-    await PostService().createPost(_controller.text.trim());
-
-    if (mounted) Navigator.pop(context);
+    // Collapse multiple newlines into a single one to prevent abuse while allowing line breaks
+    final cleanContent = _controller.text.trim().replaceAll(RegExp(r'(\r?\n){2,}'), '\n');
+    
+    try {
+      await PostService().createPost(cleanContent);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      setState(() => _isPosting = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -80,6 +94,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
               child: TextField(
                 controller: _controller,
                 autofocus: true,
+                textCapitalization: TextCapitalization.sentences,
                 maxLength: _maxLength,
                 maxLines: null,
                 expands: true,

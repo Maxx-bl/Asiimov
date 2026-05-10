@@ -1,6 +1,10 @@
 import 'package:asiimov/pages/chat_page.dart';
+import 'package:asiimov/pages/profile_page.dart';
+import 'package:asiimov/pages/post_detail_page.dart';
+import 'package:asiimov/models/post.dart';
 import 'package:asiimov/services/auth/auth_gate.dart';
 import 'package:asiimov/services/notifications/notification_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:asiimov/firebase_options.dart';
 import 'package:asiimov/themes/theme_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -26,16 +30,49 @@ Future<void> main() async {
     final notificationService = NotificationService();
     await notificationService.initialize();
 
-    // Set up notification tap handler to navigate to chat
-    notificationService.onNotificationTap = (senderID, senderUsername) {
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(
-          builder: (context) => ChatPage(
-            receiverUsername: senderUsername,
-            receiverID: senderID,
+    // Set up notification tap handler to navigate to correct page
+    notificationService.onNotificationTap = (data) async {
+      final type = data['type'];
+      final context = navigatorKey.currentContext;
+      if (context == null) return;
+
+      if (type == 'chat_message') {
+        final senderID = data['senderID'];
+        final senderUsername = data['senderUsername'] ?? '';
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) => ChatPage(
+              receiverUsername: senderUsername,
+              receiverID: senderID,
+            ),
           ),
-        ),
-      );
+        );
+      } else if (type == 'follow') {
+        final senderID = data['senderID'];
+        final senderUsername = data['senderUsername'] ?? '';
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) => ProfilePage(
+              userId: senderID,
+              username: senderUsername,
+            ),
+          ),
+        );
+      } else if (type == 'comment') {
+        final postId = data['postId'];
+        if (postId != null) {
+          // Fetch the post first to pass it to PostDetailPage
+          final postDoc = await FirebaseFirestore.instance.collection('posts').doc(postId).get();
+          if (postDoc.exists) {
+            final post = Post.fromFirestore(postDoc);
+            navigatorKey.currentState?.push(
+              MaterialPageRoute(
+                builder: (context) => PostDetailPage(post: post),
+              ),
+            );
+          }
+        }
+      }
     };
 
     runApp(ChangeNotifierProvider(

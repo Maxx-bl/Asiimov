@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
@@ -22,8 +23,8 @@ class NotificationService {
   /// The ID of the user whose chat is currently open (to suppress notifications)
   String? _activeChatUserId;
 
-  /// Callback when user taps a notification — receives senderID and senderUsername
-  void Function(String senderID, String senderUsername)? onNotificationTap;
+  /// Callback when user taps a notification — receives the full data map
+  void Function(Map<String, dynamic> data)? onNotificationTap;
 
   /// Android notification channel for chat messages
   static const AndroidNotificationChannel _chatChannel =
@@ -103,17 +104,23 @@ class NotificationService {
   /// Handle foreground messages — show notification unless we're in that conversation
   void _handleForegroundMessage(RemoteMessage message) {
     final senderID = message.data['senderID'];
+    final type = message.data['type'];
 
     // Don't show notification if we're already chatting with this person
-    if (senderID != null && senderID == _activeChatUserId) {
+    if (type == 'chat_message' && senderID != null && senderID == _activeChatUserId) {
       return;
     }
 
     final notification = message.notification;
     if (notification == null) return;
 
+    // Use same tagging logic as sender side
+    final String tag = type == 'chat_message' && senderID != null
+        ? senderID 
+        : DateTime.now().millisecondsSinceEpoch.toString();
+
     _localNotifications.show(
-      senderID.hashCode,
+      senderID?.hashCode ?? 0,
       notification.title,
       notification.body,
       NotificationDetails(
@@ -124,20 +131,17 @@ class NotificationService {
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
-          tag: senderID,
+          tag: tag,
         ),
       ),
-      payload: '${message.data['senderID']}|${message.data['senderUsername']}',
+      payload: jsonEncode(message.data),
     );
   }
 
   /// Handle notification tap when app is in background/foreground
   void _handleNotificationOpen(RemoteMessage message) {
-    final senderID = message.data['senderID'];
-    final senderUsername = message.data['senderUsername'] ?? '';
-
-    if (senderID != null && onNotificationTap != null) {
-      onNotificationTap!(senderID, senderUsername);
+    if (onNotificationTap != null) {
+      onNotificationTap!(message.data);
     }
   }
 
@@ -146,9 +150,13 @@ class NotificationService {
     final payload = response.payload;
     if (payload == null) return;
 
-    final parts = payload.split('|');
-    if (parts.length >= 2 && onNotificationTap != null) {
-      onNotificationTap!(parts[0], parts[1]);
+    try {
+      final data = jsonDecode(payload) as Map<String, dynamic>;
+      if (onNotificationTap != null) {
+        onNotificationTap!(data);
+      }
+    } catch (e) {
+      debugPrint('Error decoding notification payload: $e');
     }
   }
 }

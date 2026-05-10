@@ -53,7 +53,7 @@ class UserService {
         targetUserId, 
         'started following you!', 
         title: '@$senderUsername', 
-        type: 'follow'
+        type: 'follow' 
       );
     }
   }
@@ -112,6 +112,11 @@ class UserService {
     return _firestore.collection('users').doc(userId).snapshots();
   }
 
+  //get user data future
+  Future<DocumentSnapshot> getUserFuture(String userId) {
+    return _firestore.collection('users').doc(userId).get();
+  }
+
   //get followers list (user data for each follower)
   Future<List<Map<String, dynamic>>> getFollowers(String userId) async {
     final doc = await _firestore.collection('users').doc(userId).get();
@@ -144,5 +149,10 @@ class UserService {
       }
     }
     return following;
+  }
+
+  //get user profile by ID
+  Future<DocumentSnapshot> getUserProfile(String userId) {
+    return _firestore.collection('users').doc(userId).get();
   }
 }

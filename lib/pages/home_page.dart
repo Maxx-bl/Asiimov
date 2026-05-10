@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:asiimov/components/my_drawer.dart';
 import 'package:asiimov/components/user_tile.dart';
+import 'package:asiimov/components/username_display.dart';
+import 'package:asiimov/models/conversation.dart';
 import 'package:asiimov/pages/chat_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
@@ -23,33 +25,65 @@ class _HomePageState extends State<HomePage> {
 
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
-  String _searchQuery = '';
+  String _searchQuery = "";
   Timer? _debounce;
+  final FocusNode _searchFocusNode = FocusNode();
+
+  final ScrollController _searchScrollController = ScrollController();
+  int _searchLimit = 20;
+  bool _isLoadingMoreSearch = false;
 
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
       GlobalKey<RefreshIndicatorState>();
 
   @override
+  void initState() {
+    super.initState();
+    _searchScrollController.addListener(_onSearchScroll);
+  }
+
+  void _onSearchScroll() {
+    if (_searchScrollController.position.pixels >=
+        _searchScrollController.position.maxScrollExtent - 200) {
+      if (!_isLoadingMoreSearch && _isSearching) {
+        setState(() {
+          _isLoadingMoreSearch = true;
+          _searchLimit += 20;
+        });
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) setState(() => _isLoadingMoreSearch = false);
+        });
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _debounce?.cancel();
     _searchController.dispose();
+    _searchFocusNode.dispose();
+    _searchScrollController.dispose();
     super.dispose();
   }
 
   void _startSearch() {
-    setState(() => _isSearching = true);
+    setState(() {
+      _isSearching = true;
+      _searchLimit = 20;
+    });
+    Future.microtask(() => _searchFocusNode.requestFocus());
   }
 
   void _stopSearch() {
     setState(() {
       _isSearching = false;
-      _searchQuery = '';
+      _searchQuery = "";
       _searchController.clear();
+      _searchLimit = 20;
     });
   }
 
   Future<void> _refreshList() async {
-    await Future.delayed(const Duration(seconds: 1));
     setState(() {});
   }
 
@@ -63,23 +97,50 @@ class _HomePageState extends State<HomePage> {
         title: _isSearching
             ? TextField(
                 controller: _searchController,
-                autofocus: true,
-                decoration: const InputDecoration(
+                focusNode: _searchFocusNode,
+                decoration: InputDecoration(
                   hintText: 'Search user...',
                   border: InputBorder.none,
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
                 ),
                 onChanged: (value) {
                   if (_debounce?.isActive ?? false) _debounce!.cancel();
                   _debounce = Timer(const Duration(milliseconds: 300), () {
                     setState(() {
                       _searchQuery = value.trim().toLowerCase();
+                      _searchLimit = 20; // Reset limit on new search
                     });
                   });
                 },
               )
-            : Text(currentUser?.displayName != null
-                ? '@${currentUser!.displayName}'
-                : 'Home'),
+            : (currentUser?.displayName != null
+                ? GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProfilePage(
+                            userId: currentUser!.uid,
+                            username: currentUser.displayName!,
+                          ),
+                        ),
+                      );
+                    },
+                    child: UsernameDisplay(
+                      userId: currentUser!.uid,
+                      username: currentUser.displayName!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontSize: 20),
+                      iconSize: 20,
+                    ),
+                  )
+                : const Text('Home')),
         foregroundColor: Theme.of(context).colorScheme.primary,
         actions: [
           _isSearching
@@ -103,130 +164,196 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget buildUserList() {
-    final Stream<List<Map<String, dynamic>>> usersStream = _isSearching
-        ? chatService.getUsersStreamExcludingBlocked()
-        : chatService.getContactsStreamExcludingBlocked();
+    // If searching, we use a simpler stream that fetches all users
+    if (_isSearching) {
+      return StreamBuilder<DocumentSnapshot>(
+        stream: UserService().getUserStream(authService.getCurrentUser()!.uid),
+        builder: (context, userSnapshot) {
+          final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
+          final following = List<String>.from(userData?['following'] ?? []);
 
-    final Stream<Map<String, bool>> unreadStream =
-        chatService.getUnreadStatusForContacts();
+          return StreamBuilder<List<Map<String, dynamic>>>(
+            stream: chatService.getUsersStreamExcludingBlocked(limit: _searchLimit),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) return const Center(child: Text("Error"));
+              if (snapshot.connectionState == ConnectionState.waiting && _searchLimit == 20) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-    return StreamBuilder<DocumentSnapshot>(
-      stream: UserService().getUserStream(authService.getCurrentUser()!.uid),
-      builder: (context, userSnapshot) {
-        final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
-        final following = List<String>.from(userData?['following'] ?? []);
+              final users = snapshot.data ?? [];
+              final filteredUsers = users.where((u) {
+                final username = u['username'].toString().toLowerCase();
+                final matchesQuery = _searchQuery.isEmpty || username.contains(_searchQuery);
+                final isFollowing = following.contains(u['uid']);
+                return (_searchQuery.isEmpty ? isFollowing : matchesQuery);
+              }).toList();
 
-        return StreamBuilder<List<Map<String, dynamic>>>(
-          stream: chatService.getContactsStreamExcludingBlocked(),
-          builder: (context, snapshotContacts) {
-            final contactIds = snapshotContacts.data?.map((u) => u['uid'] as String).toList() ?? [];
+              if (filteredUsers.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
+                return _buildEmptyState();
+              }
 
-            return StreamBuilder<List<Map<String, dynamic>>>(
-              stream: usersStream,
-              builder: (context, snapshotUsers) {
-        if (snapshotUsers.hasError) {
-          return const Center(child: Text("Error loading."));
-        }
-        if (snapshotUsers.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final users = snapshotUsers.data!
-            .where((userData) =>
-                userData['uid'] != authService.getCurrentUser()!.uid &&
-                (_isSearching
-                    ? (_searchQuery.isEmpty
-                        ? following.contains(userData['uid'])
-                        : userData['username']
-                            .toString()
-                            .toLowerCase()
-                            .contains(_searchQuery))
-                    : true))
-            .toList();
+              return ListView.builder(
+                controller: _searchScrollController,
+                itemCount: filteredUsers.length + (_isLoadingMoreSearch ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == filteredUsers.length) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  final u = filteredUsers[index];
+                  return UserTile(
+                    text: u['username'],
+                    userId: u['uid'],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProfilePage(
+                            userId: u['uid'],
+                            username: u['username'],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          );
+        },
+      );
+    }
 
-        if (users.isEmpty) {
+    // HIGH PERFORMANCE: Main conversation list with optimized single stream
+    return StreamBuilder<List<Conversation>>(
+      stream: chatService.getConversationsStream(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.search_off, size: 48, color: Colors.grey),
-                const SizedBox(height: 8),
-                Text(
-                  _searchQuery.isEmpty
-                      ? "No contact available."
-                      : "No user found for \"$_searchQuery\"",
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                "Error: ${snapshot.error}",
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
             ),
           );
         }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-        return StreamBuilder<Map<String, bool>>(
-          stream: unreadStream,
-          builder: (context, snapshotUnread) {
-            final unreadStatus = snapshotUnread.data ?? {};
+        final conversations = snapshot.data ?? [];
+        if (conversations.isEmpty) return _buildEmptyState();
 
-            return ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: users
-                  .map((userData) => buildUserListItem(
-                        userData,
-                        unreadStatus[userData['uid']] ?? false,
-                        contactIds.contains(userData['uid']),
-                      ))
-                  .toList(),
-            );
+        return ListView.builder(
+          itemCount: conversations.length,
+          itemBuilder: (context, index) {
+            return buildConversationItem(conversations[index]);
           },
         );
       },
     );
-        },
-      );
-    },
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey),
+          const SizedBox(height: 8),
+          Text(
+            _isSearching ? "No user found" : "No conversations yet",
+            style: const TextStyle(color: Colors.grey),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget buildUserListItem(
-      Map<String, dynamic> userData, bool hasUnread, bool isContact) {
+  Widget buildConversationItem(Conversation conv) {
+    // Format date
+    String dateString = '';
+    final DateTime date = conv.lastActive;
+    final DateTime now = DateTime.now();
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      dateString = '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } else {
+      dateString = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
+    }
+
+    // Decrypt preview
+    String messagePreview = "Start chatting...";
+    if (conv.lastMessage != null) {
+      try {
+        final rawMsg = conv.lastMessage!['message'];
+        final decrypted = chatService.encryption.decrypt(rawMsg);
+        messagePreview = conv.lastMessage!['senderID'] == authService.getCurrentUser()!.uid
+            ? 'You: $decrypted'
+            : decrypted;
+      } catch (e) {
+        messagePreview = "Encrypted message";
+      }
+    }
+
     return UserTile(
-      text: userData['username'],
+      text: conv.otherUsername,
+      userId: conv.otherUserId,
+      subtitle: Text(
+        messagePreview,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: conv.unreadCount > 0
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.primary.withOpacity(0.6),
+          fontSize: 13,
+          fontWeight: conv.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      trailing: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            dateString,
+            style: TextStyle(
+              color: conv.unreadCount > 0 ? Colors.orange : Colors.grey,
+              fontSize: 11,
+              fontWeight: conv.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          if (conv.unreadCount > 0) ...[
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '+${conv.unreadCount}',
+                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ],
+      ),
       onTap: () {
-        if (isContact) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChatPage(
-                receiverUsername: userData['username'],
-                receiverID: userData['uid'],
-              ),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatPage(
+              receiverUsername: conv.otherUsername,
+              receiverID: conv.otherUserId,
             ),
-          );
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ProfilePage(
-                userId: userData['uid'],
-                username: userData['username'],
-              ),
-            ),
-          );
-        }
-        setState(() {});
+          ),
+        );
       },
-      trailing: hasUnread
-          ? Container(
-              padding: const EdgeInsets.all(6),
-              decoration: const BoxDecoration(
-                color: Colors.green,
-                shape: BoxShape.circle,
-              ),
-              child: const Text(
-                '!',
-                style: TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            )
-          : null,
     );
   }
 }

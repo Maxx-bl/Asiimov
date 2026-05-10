@@ -1,4 +1,5 @@
 import 'package:asiimov/components/profile_post_card.dart';
+import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/models/post.dart';
 import 'package:asiimov/pages/chat_page.dart';
 import 'package:asiimov/pages/follow_list_page.dart';
@@ -6,6 +7,7 @@ import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
+import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -29,8 +31,62 @@ class ProfilePage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('@$username'),
+        title: UsernameDisplay(
+          userId: userId,
+          username: username,
+          style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 20),
+          iconSize: 20,
+        ),
         foregroundColor: Theme.of(context).colorScheme.primary,
+        actions: [
+          if (!isOwnProfile)
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'block') {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Block User'),
+                      content: Text('Are you sure you want to block @$username?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            final chatService = ChatService();
+                            await chatService.blockUser(userId);
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('User blocked!')),
+                              );
+                              // Pop the profile page to go back
+                              Navigator.pop(context);
+                            }
+                          },
+                          child: const Text('Block', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
+                  value: 'block',
+                  child: Row(
+                    children: [
+                      Icon(Icons.block, color: Colors.red, size: 20),
+                      SizedBox(width: 8),
+                      Text('Block User', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: userService.getUserStream(userId),
@@ -79,12 +135,14 @@ class ProfilePage extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 // Username
-                Text(
-                  '@$username',
+                UsernameDisplay(
+                  userId: userId,
+                  username: username,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
+                  iconSize: 20,
                 ),
 
                 const SizedBox(height: 16),

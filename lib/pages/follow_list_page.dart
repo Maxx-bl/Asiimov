@@ -1,6 +1,7 @@
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
+import 'package:asiimov/components/username_display.dart';
 import 'package:flutter/material.dart';
 
 class FollowListPage extends StatefulWidget {
@@ -74,8 +75,9 @@ class _FollowListPageState extends State<FollowListPage> {
                     ),
                   ),
                 ),
-                title: Text(
-                  '@$username',
+                title: UsernameDisplay(
+                  userId: uid,
+                  username: username,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 onTap: () {

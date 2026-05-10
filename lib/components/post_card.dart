@@ -1,3 +1,5 @@
+import 'package:asiimov/components/username_display.dart';
+import 'package:asiimov/components/voters_list_sheet.dart';
 import 'package:asiimov/models/post.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/post/post_service.dart';
@@ -114,8 +116,9 @@ class PostCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      Text(
-                        '@${post.authorUsername}',
+                      UsernameDisplay(
+                        userId: post.authorID,
+                        username: post.authorUsername,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -153,6 +156,16 @@ class PostCard extends StatelessWidget {
                   // Upvote
                   GestureDetector(
                     onTap: () => postService.upvotePost(post.id),
+                    onLongPress: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => VotersListSheet(
+                          userIds: post.upvotes,
+                          title: 'Upvotes',
+                        ),
+                      );
+                    },
                     child: Icon(
                       Icons.arrow_upward_rounded,
                       size: 20,
@@ -176,6 +189,16 @@ class PostCard extends StatelessWidget {
                   // Downvote
                   GestureDetector(
                     onTap: () => postService.downvotePost(post.id),
+                    onLongPress: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => VotersListSheet(
+                          userIds: post.downvotes,
+                          title: 'Downvotes',
+                        ),
+                      );
+                    },
                     child: Icon(
                       Icons.arrow_downward_rounded,
                       size: 20,

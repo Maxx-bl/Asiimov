@@ -3,6 +3,8 @@ import 'package:asiimov/themes/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ChatBubble extends StatefulWidget {
   final String message;
   final bool isCurrentUser;
@@ -13,6 +15,8 @@ class ChatBubble extends StatefulWidget {
   final Map<String, String>? reactions;
   final String currentUserId;
   final String otherUserId;
+  final Timestamp? timestamp;
+  final bool showSeen;
   final void Function(String emoji)? onReact;
   final VoidCallback? onSwipeReply;
 
@@ -27,6 +31,8 @@ class ChatBubble extends StatefulWidget {
     this.replyToMessage,
     this.replyToSenderID,
     this.reactions,
+    this.timestamp,
+    this.showSeen = false,
     this.onReact,
     this.onSwipeReply,
   });
@@ -62,17 +68,23 @@ class _ChatBubbleState extends State<ChatBubble>
   }
 
   void _onDragUpdate(DragUpdateDetails details) {
-    if (details.delta.dx < 0 && _dragOffset <= 0) return; // no left swipe
+    if (details.delta.dx < 0 && _dragOffset <= 0) return; // no left swipe from rest
     setState(() {
       _dragOffset = (_dragOffset + details.delta.dx).clamp(0.0, _maxDrag);
-      if (_dragOffset >= _triggerThreshold && !_replyTriggered) {
+      // Set triggered when reaching threshold
+      if (_dragOffset >= _triggerThreshold) {
         _replyTriggered = true;
+      }
+      // Cancel if user pulls back below threshold
+      if (_dragOffset < _triggerThreshold) {
+        _replyTriggered = false;
       }
     });
   }
 
   void _onDragEnd(DragEndDetails details) {
-    if (_replyTriggered) {
+    // Only fire reply if still past threshold when finger lifts
+    if (_replyTriggered && _dragOffset >= _triggerThreshold) {
       widget.onSwipeReply?.call();
     }
     _replyTriggered = false;
@@ -264,6 +276,16 @@ class _ChatBubbleState extends State<ChatBubble>
     );
   }
 
+  String _formatTimestamp(Timestamp timestamp) {
+    final DateTime date = timestamp.toDate();
+    final DateTime now = DateTime.now();
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } else {
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isDarkMode =
@@ -280,16 +302,16 @@ class _ChatBubbleState extends State<ChatBubble>
         if (widget.replyToMessage != null && widget.replyToMessage!.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(bottom: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: isDarkMode
-                  ? Colors.grey.shade700.withValues(alpha: 0.5)
-                  : Colors.grey.shade300.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(8),
-              border: Border(
+                  ? Colors.grey.shade700.withOpacity(0.5)
+                  : Colors.grey.shade300.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(16),
+              border: const Border(
                 left: BorderSide(
-                  color: Colors.orange.shade300,
-                  width: 3,
+                  color: Colors.orange,
+                  width: 4,
                 ),
               ),
             ),
@@ -299,7 +321,7 @@ class _ChatBubbleState extends State<ChatBubble>
                   : widget.replyToMessage!,
               style: TextStyle(
                 fontSize: 12,
-                color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
                 fontStyle: FontStyle.italic,
               ),
               maxLines: 2,
@@ -328,14 +350,33 @@ class _ChatBubbleState extends State<ChatBubble>
                     : (isDarkMode
                         ? Colors.grey.shade800
                         : Colors.grey.shade200),
-                borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.all(12),
-            child: Text(
-              widget.message,
-              style: TextStyle(
-                  color: widget.isCurrentUser
-                      ? Colors.white
-                      : (isDarkMode ? Colors.white : Colors.black)),
+                borderRadius: BorderRadius.circular(18)),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.end,
+              alignment: WrapAlignment.end,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8, bottom: 2, top: 2),
+                  child: Text(
+                    widget.message,
+                    style: TextStyle(
+                        color: widget.isCurrentUser
+                            ? Colors.white
+                            : (isDarkMode ? Colors.white : Colors.black)),
+                  ),
+                ),
+                if (widget.timestamp != null)
+                  Text(
+                    _formatTimestamp(widget.timestamp!) + (widget.showSeen ? ' • seen' : ''),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: widget.isCurrentUser
+                          ? Colors.white70
+                          : (isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),

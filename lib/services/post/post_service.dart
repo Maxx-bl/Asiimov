@@ -10,6 +10,26 @@ class PostService extends ChangeNotifier {
   //create a new post
   Future<void> createPost(String content) async {
     final user = _auth.currentUser!;
+
+    // Check for cooldown (120 seconds)
+    final lastPost = await _firestore
+        .collection('posts')
+        .where('authorID', isEqualTo: user.uid)
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .get();
+
+    if (lastPost.docs.isNotEmpty) {
+      final timestamp = lastPost.docs.first['timestamp'] as Timestamp?;
+      if (timestamp != null) {
+        final diff = DateTime.now().difference(timestamp.toDate()).inSeconds;
+        if (diff < 120) {
+          throw Exception(
+              'Please wait ${120 - diff} more seconds before posting again.');
+        }
+      }
+    }
+
     await _firestore.collection('posts').add({
       'authorID': user.uid,
       'authorUsername': user.displayName ?? 'Anonymous',
@@ -21,12 +41,29 @@ class PostService extends ChangeNotifier {
     });
   }
 
-  //get posts stream (newest first)
-  Stream<QuerySnapshot> getPostsStream() {
+  //get posts future (for manual refresh)
+  Future<QuerySnapshot> getPostsFuture(int limit) {
     return _firestore
         .collection('posts')
         .orderBy('timestamp', descending: true)
-        .snapshots();
+        .limit(limit)
+        .get();
+  }
+
+  //get a single post stream (keep live for vote updates on specific post)
+  Stream<DocumentSnapshot> getPostStream(String postId) {
+    return _firestore.collection('posts').doc(postId).snapshots();
+  }
+
+  //get comments future for a post
+  Future<QuerySnapshot> getCommentsFuture(String postId, int limit) {
+    return _firestore
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .orderBy('timestamp', descending: true)
+        .limit(limit)
+        .get();
   }
 
   //get posts stream for a specific user
@@ -34,7 +71,6 @@ class PostService extends ChangeNotifier {
     return _firestore
         .collection('posts')
         .where('authorID', isEqualTo: userId)
-        // Removed orderBy to prevent composite index error. Sorting is done client-side.
         .snapshots();
   }
 
@@ -142,19 +178,10 @@ class PostService extends ChangeNotifier {
           content,
           title: '$senderUsername commented on your post',
           type: 'comment',
+          extraData: {'postId': postId},
         );
       }
     }
-  }
-
-  //get comments stream for a post
-  Stream<QuerySnapshot> getCommentsStream(String postId) {
-    return _firestore
-        .collection('posts')
-        .doc(postId)
-        .collection('comments')
-        .orderBy('timestamp', descending: false)
-        .snapshots();
   }
 
   //toggle upvote on a comment

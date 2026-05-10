@@ -1,5 +1,7 @@
+import 'dart:async';
+
 import 'package:asiimov/components/chat_bubble.dart';
-import 'package:asiimov/components/my_textfield.dart';
+import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
@@ -8,6 +10,7 @@ import 'package:asiimov/services/notifications/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:rxdart/rxdart.dart';
 
 class ChatPage extends StatefulWidget {
   final String receiverUsername;
@@ -33,52 +36,23 @@ class _ChatPageState extends State<ChatPage> {
   // textfield focus
   FocusNode myFocusNode = FocusNode();
 
-  // Reply state
-  String? _replyToMessageId;
-  String? _replyToMessage;
-  String? _replyToSenderID;
+  // scroll controller — using reverse ListView so index 0 = newest
+  final ScrollController scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    // Mute notifications for this conversation
     NotificationService().setActiveChatUser(widget.receiverID);
-    chatService.cleanUpOldMessages(widget.receiverID);
-    myFocusNode.addListener(() {
-      if (myFocusNode.hasFocus) {
-        //delay keyboard time to show up
-        Future.delayed(
-          const Duration(milliseconds: 500),
-          () => scrollDown(),
-        );
-      }
-    });
-
-    Future.delayed(
-      const Duration(milliseconds: 500),
-      () => scrollDown(),
-    );
+    chatService.markMessagesAsRead(widget.receiverID);
   }
 
   @override
   void dispose() {
-    // Re-enable notifications when leaving the chat
     NotificationService().setActiveChatUser(null);
     myFocusNode.dispose();
     messageController.dispose();
+    scrollController.dispose();
     super.dispose();
-  }
-
-  //scroll down methode
-  final ScrollController scrollController = ScrollController();
-  void scrollDown() {
-    if (scrollController.hasClients) {
-      scrollController.animateTo(
-        scrollController.position.maxScrollExtent,
-        duration: const Duration(seconds: 1),
-        curve: Curves.fastOutSlowIn,
-      );
-    }
   }
 
   //set reply
@@ -105,18 +79,26 @@ class _ChatPageState extends State<ChatPage> {
 
   //send message
   void sendMessage() async {
-    if (messageController.text.isNotEmpty) {
-      await chatService.sendMessage(
-        widget.receiverID,
-        messageController.text,
-        replyToMessageId: _replyToMessageId,
-        replyToMessage: _replyToMessage,
-        replyToSenderID: _replyToSenderID,
-      );
+    final String message = messageController.text.trim();
+    if (message.isNotEmpty) {
+      // Capture reply data before clearing
+      final String? replyId = _replyToMessageId;
+      final String? replyText = _replyToMessage;
+      final String? replySender = _replyToSenderID;
+
+      // Clear immediately for better UX
       messageController.clear();
       cancelReply();
+
+      // Send in background
+      await chatService.sendMessage(
+        widget.receiverID,
+        message,
+        replyToMessageId: replyId,
+        replyToMessage: replyText,
+        replyToSenderID: replySender,
+      );
     }
-    scrollDown();
   }
 
   @override
@@ -135,7 +117,12 @@ class _ChatPageState extends State<ChatPage> {
               ),
             );
           },
-          child: Text('@${widget.receiverUsername}'),
+          child: UsernameDisplay(
+            userId: widget.receiverID,
+            username: widget.receiverUsername,
+            style: const TextStyle(fontSize: 20),
+            iconSize: 20,
+          ),
         ),
         foregroundColor: Theme.of(context).colorScheme.primary,
       ),
@@ -154,39 +141,60 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget buildReplyBanner() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondary,
-        border: const Border(
-          top: BorderSide(color: Colors.orange, width: 2),
+        color: Theme.of(context).colorScheme.secondary.withOpacity(0.9),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          const Icon(Icons.reply, color: Colors.orange, size: 20),
-          const SizedBox(width: 8),
+          Container(
+            width: 4,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.orange,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  _replyToSenderID == authService.getCurrentUser()!.uid
-                      ? 'Replying to yourself'
-                      : 'Replying to @${widget.receiverUsername}',
-                  style: const TextStyle(
-                    color: Colors.orange,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+                Row(
+                  children: [
+                    const Icon(Icons.reply, size: 14, color: Colors.orange),
+                    const SizedBox(width: 4),
+                    Text(
+                      _replyToSenderID == authService.getCurrentUser()!.uid
+                          ? 'You'
+                          : widget.receiverUsername,
+                      style: const TextStyle(
+                        color: Colors.orange,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  _replyToMessage!.length > 50
-                      ? '${_replyToMessage!.substring(0, 50)}...'
-                      : _replyToMessage!,
+                  _replyToMessage!,
                   style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.primary,
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -194,15 +202,25 @@ class _ChatPageState extends State<ChatPage> {
               ],
             ),
           ),
-          GestureDetector(
-            onTap: cancelReply,
-            child: Icon(Icons.close,
-                size: 20, color: Theme.of(context).colorScheme.primary),
+          IconButton(
+            onPressed: cancelReply,
+            icon: Icon(
+              Icons.close_rounded,
+              size: 20,
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+            ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
           ),
         ],
       ),
     );
   }
+
+  // Reply state
+  String? _replyToMessageId;
+  String? _replyToMessage;
+  String? _replyToSenderID;
 
   Widget buildMessageList() {
     String senderID = authService.getCurrentUser()!.uid;
@@ -211,25 +229,29 @@ class _ChatPageState extends State<ChatPage> {
       builder: (context, snapshot) {
         //errors
         if (snapshot.hasError) {
-          return const Text("Error");
+          return const Center(child: Text("Error"));
         }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        //loading (Only show if no data yet)
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        //mark messages as read when loaded
-        chatService.markMessagesAsRead(widget.receiverID);
-        return ListView(
+        //return listview
+        final docs = snapshot.data?.docs ?? [];
+        return ListView.builder(
           controller: scrollController,
-          children:
-              snapshot.data!.docs.map((doc) => buildMessageItem(doc)).toList(),
+          itemCount: docs.length,
+          reverse: true,
+          itemBuilder: (context, index) {
+            return buildMessageItem(docs[index], index == 0);
+          },
         );
       },
     );
   }
 
-  Widget buildMessageItem(DocumentSnapshot doc) {
+  Widget buildMessageItem(DocumentSnapshot doc, bool isLast) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
     //display message based on sender
@@ -259,6 +281,8 @@ class _ChatPageState extends State<ChatPage> {
       reactions = Map<String, String>.from(data['reactions'] as Map);
     }
 
+    bool showSeen = isLast && isCurrentUser && (data['isRead'] == true);
+
     return ChatBubble(
       message: decryptedMessage,
       isCurrentUser: isCurrentUser,
@@ -269,6 +293,8 @@ class _ChatPageState extends State<ChatPage> {
       replyToMessage: decryptedReply,
       replyToSenderID: data['replyToSenderID'],
       reactions: reactions,
+      timestamp: data['timestamp'] as Timestamp?,
+      showSeen: showSeen,
       onSwipeReply: () {
         setReplyTo(doc.id, decryptedMessage, data['senderID']);
       },
@@ -284,26 +310,78 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget buildUserInput() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 50),
-      child: Row(children: [
-        Expanded(
-            child: MyTextField(
-                hintText: 'Message...',
-                obscureText: false,
-                focusNode: myFocusNode,
-                controller: messageController)),
-        Container(
-            decoration: const BoxDecoration(
-              color: Colors.orange,
-              shape: BoxShape.circle,
-            ),
-            margin: const EdgeInsets.only(right: 25),
-            child: IconButton(
-              onPressed: sendMessage,
-              icon: const Icon(Icons.arrow_upward, color: Colors.white),
-            ))
-      ]),
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondary,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.tertiary.withOpacity(0.3),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextField(
+                    controller: messageController,
+                    focusNode: myFocusNode,
+                    maxLines: 4,
+                    minLines: 1,
+                    textInputAction: TextInputAction.newline,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: 'Message...',
+                      hintStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: sendMessage,
+                child: Container(
+                  height: 48,
+                  width: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.orange.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 26),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

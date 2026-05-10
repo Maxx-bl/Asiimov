@@ -1,3 +1,5 @@
+import 'package:asiimov/components/username_display.dart';
+import 'package:asiimov/components/voters_list_sheet.dart';
 import 'package:asiimov/models/comment.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/post/post_service.dart';
@@ -5,14 +7,14 @@ import 'package:flutter/material.dart';
 
 class CommentTile extends StatelessWidget {
   final Comment comment;
-  final String postId;
   final String currentUserId;
+  final String postId;
 
   const CommentTile({
     super.key,
     required this.comment,
-    required this.postId,
     required this.currentUserId,
+    required this.postId,
   });
 
   String _timeAgo(DateTime dateTime) {
@@ -27,14 +29,13 @@ class CommentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final postService = PostService();
-    final score = comment.score;
     final hasUpvoted = comment.upvotes.contains(currentUserId);
     final hasDownvoted = comment.downvotes.contains(currentUserId);
-
+    
     Color scoreColor;
-    if (score > 0) {
+    if (comment.score > 0) {
       scoreColor = Colors.orange;
-    } else if (score < 0) {
+    } else if (comment.score < 0) {
       scoreColor = Colors.blue.shade400;
     } else {
       scoreColor = Colors.grey;
@@ -73,7 +74,7 @@ class CommentTile extends StatelessWidget {
           border: Border(
             bottom: BorderSide(
               color: Theme.of(context).colorScheme.secondary,
-              width: 0.3,
+              width: 0.5,
             ),
           ),
         ),
@@ -94,18 +95,23 @@ class CommentTile extends StatelessWidget {
                 );
               },
               child: CircleAvatar(
-                radius: 14,
-                backgroundColor: Colors.grey.withValues(alpha: 0.2),
+                radius: 16,
+                backgroundColor: Colors.orange.withValues(alpha: 0.2),
                 child: Text(
                   comment.authorUsername.isNotEmpty
                       ? comment.authorUsername[0].toUpperCase()
                       : '?',
-                  style:
-                      const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.orange,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            
+            const SizedBox(width: 12),
+            
             // Content
             Expanded(
               child: Column(
@@ -126,8 +132,9 @@ class CommentTile extends StatelessWidget {
                             ),
                           );
                         },
-                        child: Text(
-                          '@${comment.authorUsername}',
+                        child: UsernameDisplay(
+                          userId: comment.authorID,
+                          username: comment.authorUsername,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -156,6 +163,16 @@ class CommentTile extends StatelessWidget {
                       GestureDetector(
                         onTap: () =>
                             postService.upvoteComment(postId, comment.id),
+                        onLongPress: () {
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => VotersListSheet(
+                              userIds: comment.upvotes,
+                              title: 'Upvotes',
+                            ),
+                          );
+                        },
                         child: Icon(
                           Icons.arrow_upward_rounded,
                           size: 16,
@@ -165,7 +182,7 @@ class CommentTile extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Text(
-                          '$score',
+                          '${comment.score}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: scoreColor,
@@ -176,6 +193,16 @@ class CommentTile extends StatelessWidget {
                       GestureDetector(
                         onTap: () =>
                             postService.downvoteComment(postId, comment.id),
+                        onLongPress: () {
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => VotersListSheet(
+                              userIds: comment.downvotes,
+                              title: 'Downvotes',
+                            ),
+                          );
+                        },
                         child: Icon(
                           Icons.arrow_downward_rounded,
                           size: 16,

@@ -1,5 +1,6 @@
 import 'package:asiimov/pages/feed_page.dart';
 import 'package:asiimov/pages/home_page.dart';
+import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:flutter/material.dart';
 
 class MainScaffold extends StatefulWidget {
@@ -11,6 +12,14 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   int _currentIndex = 0;
+  final PageController _pageController = PageController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Ensure FCM token is updated in Firestore
+    AuthService().saveUserToken();
+  }
 
   final List<Widget> _pages = const [
     FeedPage(),
@@ -18,15 +27,32 @@ class _MainScaffoldState extends State<MainScaffold> {
   ];
 
   @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
         children: _pages,
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) {
+          _pageController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        },
         selectedItemColor: Colors.orange,
         unselectedItemColor: Theme.of(context).colorScheme.primary,
         backgroundColor: Theme.of(context).colorScheme.surface,

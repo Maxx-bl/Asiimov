@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:asiimov/models/conversation.dart';
 import 'package:asiimov/models/message.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
+import 'package:rxdart/rxdart.dart';
 
 class ChatService extends ChangeNotifier {
   //get instance of firebase services
@@ -31,8 +33,8 @@ class ChatService extends ChangeNotifier {
     });
   }
 
-  //get users stream except blocked users
-  Stream<List<Map<String, dynamic>>> getUsersStreamExcludingBlocked() {
+  //get users stream except blocked users with limit
+  Stream<List<Map<String, dynamic>>> getUsersStreamExcludingBlocked({int limit = 20}) {
     return firestore
         .collection('users')
         .doc(auth.currentUser!.uid)
@@ -40,12 +42,13 @@ class ChatService extends ChangeNotifier {
         .snapshots()
         .asyncMap((snapshot) async {
       final blockedUserIds = snapshot.docs.map((doc) => doc.id).toList();
-      final usersSnapshot = await firestore.collection('users').get();
+      final usersSnapshot = await firestore.collection('users').limit(limit + blockedUserIds.length + 1).get();
       return usersSnapshot.docs
           .where((doc) =>
               doc.data()['email'] != auth.currentUser!.email &&
               !blockedUserIds.contains(doc.id))
           .map((doc) => doc.data())
+          .take(limit)
           .toList();
     });
   }
@@ -67,52 +70,78 @@ class ChatService extends ChangeNotifier {
     late StreamController<List<Map<String, dynamic>>> controller;
     List<String> currentBlockedIds = [];
     QuerySnapshot? currentChatsSnapshot;
+    StreamSubscription? blockedSub;
+    StreamSubscription? chatSub;
 
     void update() async {
-      if (currentChatsSnapshot == null) return;
+      if (currentChatsSnapshot == null || controller.isClosed) return;
 
-      final contactIds = <String>{};
+      final chatDocs = currentChatsSnapshot!.docs.toList();
+      chatDocs.sort((a, b) {
+        final aData = a.data() as Map<String, dynamic>? ?? {};
+        final bData = b.data() as Map<String, dynamic>? ?? {};
+        final aTime = aData['updatedAt'] as Timestamp? ??
+            aData['createdAt'] as Timestamp? ??
+            Timestamp.fromMillisecondsSinceEpoch(0);
+        final bTime = bData['updatedAt'] as Timestamp? ??
+            bData['createdAt'] as Timestamp? ??
+            Timestamp.fromMillisecondsSinceEpoch(0);
+        return bTime.compareTo(aTime);
+      });
 
-      for (final doc in currentChatsSnapshot!.docs) {
+      final orderedContactIds = <String>[];
+
+      for (final doc in chatDocs) {
         final chatId = doc.id;
         final ids = chatId.split('_');
         if (ids.length != 2) continue;
 
         if (ids.contains(currentUserId)) {
           final otherUserId = ids.firstWhere((id) => id != currentUserId);
-          if (!currentBlockedIds.contains(otherUserId)) {
-            contactIds.add(otherUserId);
+          if (!currentBlockedIds.contains(otherUserId) &&
+              !orderedContactIds.contains(otherUserId)) {
+            orderedContactIds.add(otherUserId);
           }
         }
       }
 
-      if (contactIds.isEmpty) {
-        controller.add([]);
+      if (orderedContactIds.isEmpty) {
+        if (!controller.isClosed) controller.add([]);
         return;
       }
 
       final usersSnapshot = await FirebaseFirestore.instance
           .collection('users')
-          .where(FieldPath.documentId, whereIn: contactIds.toList())
+          .where(FieldPath.documentId, whereIn: orderedContactIds)
           .get();
 
-      controller.add(usersSnapshot.docs.map((doc) => doc.data()).toList());
+      final usersMap = {
+        for (final doc in usersSnapshot.docs) doc.id: doc.data()
+      };
+      final orderedUsers = orderedContactIds
+          .where((id) => usersMap.containsKey(id))
+          .map((id) => usersMap[id]!)
+          .toList();
+
+      if (!controller.isClosed) controller.add(orderedUsers);
     }
 
     controller = StreamController<List<Map<String, dynamic>>>.broadcast(
       onListen: () {
-        blockedStream.listen((blockedSnapshot) {
+        blockedSub = blockedStream.listen((blockedSnapshot) {
           currentBlockedIds =
               blockedSnapshot.docs.map((doc) => doc.id).toList();
           update();
         });
 
-        chatStream.listen((chatSnapshot) {
+        chatSub = chatStream.listen((chatSnapshot) {
           currentChatsSnapshot = chatSnapshot;
           update();
         });
       },
       onCancel: () {
+        blockedSub?.cancel();
+        chatSub?.cancel();
         controller.close();
       },
     );
@@ -120,37 +149,98 @@ class ChatService extends ChangeNotifier {
     return controller.stream;
   }
 
-  //get information if user has new messages
-  Stream<Map<String, bool>> getUnreadStatusForContacts() {
+  //get information if user has new messages (Optimized with collectionGroup)
+  Stream<Map<String, int>> getUnreadStatusForContacts() {
     final currentUserId = auth.currentUser!.uid;
 
     return firestore
-        .collection('chats')
+        .collectionGroup('messages')
+        .where('receiverID', isEqualTo: currentUserId)
+        .where('isRead', isEqualTo: false)
         .snapshots()
-        .asyncMap((chatSnapshot) async {
-      final Map<String, bool> unreadStatus = {};
-
-      for (final chatDoc in chatSnapshot.docs) {
-        final chatId = chatDoc.id;
-        final ids = chatId.split('_');
-        if (!ids.contains(currentUserId)) continue;
-
-        final otherUserId = ids.firstWhere((id) => id != currentUserId);
-
-        final unreadMessages = await firestore
-            .collection('chats')
-            .doc(chatId)
-            .collection('messages')
-            .where('receiverID', isEqualTo: currentUserId)
-            .where('isRead', isEqualTo: false)
-            .limit(1)
-            .get();
-
-        unreadStatus[otherUserId] = unreadMessages.docs.isNotEmpty;
+        .map((snapshot) {
+      final Map<String, int> unreadStatus = {};
+      for (final doc in snapshot.docs) {
+        final senderID = doc['senderID'] as String;
+        unreadStatus[senderID] = (unreadStatus[senderID] ?? 0) + 1;
       }
-
       return unreadStatus;
     });
+  }
+
+  // NEW: High-performance stream for the main conversation list
+  Stream<List<Conversation>> getConversationsStream() {
+    final currentUserId = auth.currentUser!.uid;
+
+    // Stream 1: All chats I am part of
+    final chatsStream = firestore
+        .collection('chats')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .where((doc) => doc.id.contains(currentUserId))
+            .toList());
+
+    // Stream 2: Unread counts
+    final unreadStream = getUnreadStatusForContacts();
+
+    // Stream 3: All users (to avoid fetching each one separately)
+    final usersStream = firestore.collection('users').snapshots();
+
+    // Stream 4: Blocked users
+    final blockedStream = firestore
+        .collection('users')
+        .doc(currentUserId)
+        .collection('blockedUsers')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => doc.id).toList());
+
+    return CombineLatestStream.combine4(
+      chatsStream,
+      unreadStream,
+      usersStream,
+      blockedStream,
+      (chatDocs, unreadMap, usersSnapshot, blockedIds) {
+        final usersMap = {
+          for (final doc in usersSnapshot.docs) doc.id: doc.data()
+        };
+
+        final List<Conversation> conversations = [];
+
+        for (final chatDoc in chatDocs) {
+          final chatId = chatDoc.id;
+          final ids = chatId.split('_');
+          if (ids.length != 2) continue;
+
+          final otherUserId = ids.firstWhere((id) => id != currentUserId);
+          
+          // Skip if blocked
+          if (blockedIds.contains(otherUserId)) continue;
+
+          final otherUserData = usersMap[otherUserId];
+          if (otherUserData == null) continue;
+
+          final chatData = chatDoc.data();
+          final lastTimestamp = chatData['lastTimestamp'] as Timestamp? ?? 
+                              chatData['updatedAt'] as Timestamp? ?? 
+                              Timestamp.fromMillisecondsSinceEpoch(0);
+
+          conversations.add(Conversation(
+            userData: otherUserData,
+            unreadCount: unreadMap[otherUserId] ?? 0,
+            lastActive: lastTimestamp.toDate(),
+            lastMessage: chatData['lastMessage'] != null ? {
+              'message': chatData['lastMessage'],
+              'senderID': chatData['lastSenderID'],
+              'timestamp': chatData['lastTimestamp'],
+            } : null,
+          ));
+        }
+
+        // Sort by last active (newest first)
+        conversations.sort((a, b) => b.lastActive.compareTo(a.lastActive));
+        return conversations;
+      },
+    );
   }
 
   //send message
@@ -199,10 +289,49 @@ class ChatService extends ChangeNotifier {
     await firestore
         .collection('chats')
         .doc(chatRoomID)
-        .set({'createdAt': FieldValue.serverTimestamp()});
+        .set({
+          'updatedAt': FieldValue.serverTimestamp(),
+          'lastMessage': encryptedMessage,
+          'lastSenderID': currentUserID,
+          'lastTimestamp': timestamp,
+        }, SetOptions(merge: true));
 
     //send push notification to receiver
-    await sendPushNotification(receiverID, message);
+    // Get last 3 unread messages from current user to receiver for notification stacking
+    final unreadSnapshot = await firestore
+        .collection('chats')
+        .doc(chatRoomID)
+        .collection('messages')
+        .where('receiverID', isEqualTo: receiverID)
+        .where('isRead', isEqualTo: false)
+        .where('senderID', isEqualTo: currentUserID)
+        .get();
+
+    String notificationBody = message;
+    if (unreadSnapshot.docs.length > 1) {
+      // Sort in memory to avoid needing a composite index in Firestore
+      final docs = unreadSnapshot.docs.toList();
+      docs.sort((a, b) {
+        final aTime = a.data()['timestamp'] as Timestamp? ?? Timestamp.now();
+        final bTime = b.data()['timestamp'] as Timestamp? ?? Timestamp.now();
+        return bTime.compareTo(aTime); // Descending
+      });
+
+      final latest3 = docs.take(3).toList();
+      final unreadTexts = latest3.map((doc) {
+        final data = doc.data();
+        try {
+          return encryption.decrypt(data['message']);
+        } catch (e) {
+          return "New message";
+        }
+      }).toList();
+
+      // Join with newlines, newest at the bottom
+      notificationBody = unreadTexts.reversed.join('\n');
+    }
+
+    await sendPushNotification(receiverID, notificationBody);
   }
 
   //add or toggle reaction on a message
@@ -241,9 +370,9 @@ class ChatService extends ChangeNotifier {
       final messageOwnerID = data['senderID'] as String;
       // Only notify if reacting to someone else's message
       if (messageOwnerID != currentUserId) {
-        final senderUsername = auth.currentUser?.displayName ?? 'Someone';
+
         await sendPushNotification(
-            messageOwnerID, '$emoji $senderUsername reacted');
+            messageOwnerID, 'reacted $emoji to your message');
       }
     }
   }
@@ -265,7 +394,8 @@ class ChatService extends ChangeNotifier {
   }
 
   //send push notification via FCM V1 API
-  Future<void> sendPushNotification(String receiverID, String messageText, {String? title, String? type}) async {
+  Future<void> sendPushNotification(String receiverID, String messageText,
+      {String? title, String? type, Map<String, dynamic>? extraData}) async {
     try {
       //get receiver's FCM token
       final receiverDoc =
@@ -279,17 +409,25 @@ class ChatService extends ChangeNotifier {
       //get sender's username
       final senderUsername = auth.currentUser?.displayName ?? 'Someone';
 
-      //truncate message preview
-      final preview = messageText.length > 50
-          ? '${messageText.substring(0, 50)}...'
+      //truncate message preview (increased for stacked messages)
+      final preview = messageText.length > 200
+          ? '${messageText.substring(0, 200)}...'
           : messageText;
 
       //get OAuth2 access token
       final accessToken = await _getAccessToken();
       if (accessToken == null) return;
 
+      final notificationType = type ?? 'chat_message';
+
+      // Use senderID as tag for chats to stack/replace.
+      // For others, use unique tag (timestamp) to keep them separate.
+      final String tag = notificationType == 'chat_message'
+          ? auth.currentUser!.uid
+          : DateTime.now().millisecondsSinceEpoch.toString();
+
       //send notification via FCM V1 API
-      await http.post(
+      final response = await http.post(
         Uri.parse(
             'https://fcm.googleapis.com/v1/projects/asiimov-b3792/messages:send'),
         headers: {
@@ -304,19 +442,28 @@ class ChatService extends ChangeNotifier {
               'body': preview,
             },
             'data': {
-              'senderID': auth.currentUser!.uid,
-              'senderUsername': senderUsername,
-              'type': type ?? 'chat_message',
+              'senderID': auth.currentUser!.uid.toString(),
+              'senderUsername': senderUsername.toString(),
+              'type': notificationType.toString(),
+              if (extraData != null)
+                ...extraData
+                    .map((key, value) => MapEntry(key, value.toString())),
             },
             'android': {
               'notification': {
                 'channel_id': 'chat_messages',
-                'tag': auth.currentUser!.uid,
+                'tag': tag,
               },
             },
           },
         }),
       );
+
+      if (response.statusCode != 200) {
+        debugPrint('FCM error: ${response.statusCode} - ${response.body}');
+      } else {
+        debugPrint('Notification sent successfully');
+      }
     } catch (e) {
       debugPrint('Error sending push notification: $e');
     }
@@ -356,7 +503,7 @@ class ChatService extends ChangeNotifier {
 
   //get messages
   Stream<QuerySnapshot> getMessages(String userID, String otherUserID) {
-    //construct chatroom ID
+    //construct chat room ID from user IDs (sorted to ensure it is the same for both users)
     List<String> ids = [userID, otherUserID];
     ids.sort();
     String chatRoomID = ids.join('_');
@@ -365,8 +512,56 @@ class ChatService extends ChangeNotifier {
         .collection('chats')
         .doc(chatRoomID)
         .collection('messages')
-        .orderBy('timestamp', descending: false)
+        .orderBy('timestamp', descending: true)
         .snapshots();
+  }
+
+  //get messages with limit (Added back as helper if needed, but not used by simple getMessages)
+  Stream<QuerySnapshot> getMessagesWithLimit(String userID, String otherUserID, int limit) {
+    List<String> ids = [userID, otherUserID];
+    ids.sort();
+    String chatRoomID = ids.join('_');
+
+    return firestore
+        .collection('chats')
+        .doc(chatRoomID)
+        .collection('messages')
+        .orderBy('timestamp', descending: true)
+        .limit(limit)
+        .snapshots();
+  }
+
+  //get older messages as a future (pagination)
+  Future<QuerySnapshot> getOldMessagesFuture(String userID, String otherUserID, DocumentSnapshot lastDoc, int limit) {
+    List<String> ids = [userID, otherUserID];
+    ids.sort();
+    String chatRoomID = ids.join('_');
+
+    return firestore
+        .collection('chats')
+        .doc(chatRoomID)
+        .collection('messages')
+        .orderBy('timestamp', descending: true)
+        .startAfterDocument(lastDoc)
+        .limit(limit)
+        .get();
+  }
+
+  //get last message for a conversation
+  Stream<DocumentSnapshot?> getLastMessageStream(String otherUserId) {
+    final currentUserId = auth.currentUser!.uid;
+    List<String> ids = [currentUserId, otherUserId];
+    ids.sort();
+    String chatRoomID = ids.join('_');
+
+    return firestore
+        .collection('chats')
+        .doc(chatRoomID)
+        .collection('messages')
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.isNotEmpty ? snapshot.docs.first : null);
   }
 
   //mark messages as read

@@ -1,38 +1,46 @@
+import 'package:asiimov/components/username_display.dart';
 import 'package:flutter/material.dart';
 
 class UserTile extends StatelessWidget {
   final String text;
+  final String? userId;
   final void Function()? onTap;
   final Widget? trailing;
+  final Widget? subtitle;
 
   const UserTile({
     super.key,
     required this.text,
+    this.userId,
     required this.onTap,
     this.trailing,
+    this.subtitle,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return ListTile(
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.secondary,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 25),
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            const Icon(Icons.person),
-            const SizedBox(width: 20),
-            Text(text),
-            const Spacer(),
-            if (trailing != null) trailing!,
-          ],
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: CircleAvatar(
+        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+        child: Icon(
+          Icons.person,
+          color: Theme.of(context).colorScheme.primary,
         ),
       ),
+      title: userId != null
+          ? UsernameDisplay(
+              userId: userId!,
+              username: text,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            )
+          : Text(
+              text,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+      subtitle: subtitle,
+      trailing: trailing,
     );
   }
 }
