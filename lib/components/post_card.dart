@@ -1,3 +1,4 @@
+import 'package:asiimov/components/share_sheet.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/components/voters_list_sheet.dart';
 import 'package:asiimov/models/post.dart';
@@ -218,6 +219,44 @@ class PostCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           '${post.commentCount}',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(width: 24),
+
+                  // Share
+                  GestureDetector(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => ShareSheet(post: post),
+                      );
+                    },
+                    onLongPress: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => VotersListSheet(
+                          userIds: post.sharedBy,
+                          title: 'Shares',
+                        ),
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        const Icon(Icons.send_rounded,
+                            size: 18, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${post.shareCount}',
                           style: const TextStyle(
                             color: Colors.grey,
                             fontSize: 13,

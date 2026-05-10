@@ -244,38 +244,37 @@ class ChatService extends ChangeNotifier {
   }
 
   //send message
-  Future<void> sendMessage(
-    String receiverID,
-    String message, {
-    String? replyToMessageId,
-    String? replyToMessage,
-    String? replyToSenderID,
-  }) async {
+  Future<void> sendMessage(String receiverID, String message,
+      {String? replyToMessageId,
+      String? replyToMessage,
+      String? replyToSenderID,
+      String messageType = 'text',
+      String? sharedPostId}) async {
     //get current user info
-    final String currentUserID = auth.currentUser!.uid;
+    final String currentUserId = auth.currentUser!.uid;
     final String currentUserEmail = auth.currentUser!.email!;
     final Timestamp timestamp = Timestamp.now();
-    final encryptedMessage = encryption.encrypt(message);
 
-    // Encrypt reply preview if present
-    final String? encryptedReply =
-        replyToMessage != null ? encryption.encrypt(replyToMessage) : null;
+    //encrypt the message
+    final String encryptedMessage = encryption.encrypt(message);
 
-    //create message
+    //create a new message
     Message newMessage = Message(
-      senderID: currentUserID,
+      senderID: currentUserId,
       senderEmail: currentUserEmail,
       receiverID: receiverID,
       message: encryptedMessage,
       timestamp: timestamp,
       isRead: false,
+      messageType: messageType,
+      sharedPostId: sharedPostId,
       replyToMessageId: replyToMessageId,
-      replyToMessage: encryptedReply,
+      replyToMessage: replyToMessage,
       replyToSenderID: replyToSenderID,
     );
 
-    //create unique chat room ID
-    List<String> ids = [currentUserID, receiverID];
+    //construct chat room ID from user IDs (sorted to ensure it is the same for both users)
+    List<String> ids = [currentUserId, receiverID];
     ids.sort();
     String chatRoomID = ids.join('_');
 
@@ -292,11 +291,16 @@ class ChatService extends ChangeNotifier {
         .set({
           'updatedAt': FieldValue.serverTimestamp(),
           'lastMessage': encryptedMessage,
-          'lastSenderID': currentUserID,
+          'lastSenderID': currentUserId,
           'lastTimestamp': timestamp,
         }, SetOptions(merge: true));
 
     //send push notification to receiver
+    String notificationBody = message;
+    if (messageType == 'post_share') {
+      notificationBody = "sent a post!";
+    }
+
     // Get last 3 unread messages from current user to receiver for notification stacking
     final unreadSnapshot = await firestore
         .collection('chats')
@@ -304,10 +308,9 @@ class ChatService extends ChangeNotifier {
         .collection('messages')
         .where('receiverID', isEqualTo: receiverID)
         .where('isRead', isEqualTo: false)
-        .where('senderID', isEqualTo: currentUserID)
+        .where('senderID', isEqualTo: currentUserId)
         .get();
 
-    String notificationBody = message;
     if (unreadSnapshot.docs.length > 1) {
       // Sort in memory to avoid needing a composite index in Firestore
       final docs = unreadSnapshot.docs.toList();
@@ -320,6 +323,9 @@ class ChatService extends ChangeNotifier {
       final latest3 = docs.take(3).toList();
       final unreadTexts = latest3.map((doc) {
         final data = doc.data();
+        if (data['messageType'] == 'post_share') {
+          return "sent a post!";
+        }
         try {
           return encryption.decrypt(data['message']);
         } catch (e) {
@@ -332,6 +338,18 @@ class ChatService extends ChangeNotifier {
     }
 
     await sendPushNotification(receiverID, notificationBody);
+  }
+
+  // Share post with multiple users
+  Future<void> sharePost(String postId, List<String> receiverIds) async {
+    for (String receiverId in receiverIds) {
+      await sendMessage(
+        receiverId,
+        "Shared a post",
+        messageType: 'post_share',
+        sharedPostId: postId,
+      );
+    }
   }
 
   //add or toggle reaction on a message

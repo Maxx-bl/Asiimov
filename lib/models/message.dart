@@ -7,6 +7,8 @@ class Message {
   final String message;
   final Timestamp timestamp;
   final bool isRead;
+  final String messageType; // 'text', 'post_share'
+  final String? sharedPostId;
 
   // Reply fields
   final String? replyToMessageId;
@@ -23,6 +25,8 @@ class Message {
     required this.message,
     required this.timestamp,
     required this.isRead,
+    this.messageType = 'text',
+    this.sharedPostId,
     this.replyToMessageId,
     this.replyToMessage,
     this.replyToSenderID,
@@ -38,7 +42,12 @@ class Message {
       'message': message,
       'timestamp': timestamp,
       'isRead': isRead,
+      'messageType': messageType,
     };
+
+    if (sharedPostId != null) {
+      map['sharedPostId'] = sharedPostId;
+    }
 
     if (replyToMessageId != null) {
       map['replyToMessageId'] = replyToMessageId;

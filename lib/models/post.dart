@@ -9,6 +9,8 @@ class Post {
   final List<String> upvotes;
   final List<String> downvotes;
   final int commentCount;
+  final int shareCount;
+  final List<String> sharedBy;
 
   Post({
     required this.id,
@@ -19,6 +21,8 @@ class Post {
     required this.upvotes,
     required this.downvotes,
     required this.commentCount,
+    required this.shareCount,
+    required this.sharedBy,
   });
 
   int get score => upvotes.length - downvotes.length;
@@ -34,6 +38,8 @@ class Post {
       upvotes: List<String>.from(data['upvotes'] ?? []),
       downvotes: List<String>.from(data['downvotes'] ?? []),
       commentCount: data['commentCount'] ?? 0,
+      shareCount: data['shareCount'] ?? 0,
+      sharedBy: List<String>.from(data['sharedBy'] ?? []),
     );
   }
 
@@ -46,6 +52,8 @@ class Post {
       'upvotes': upvotes,
       'downvotes': downvotes,
       'commentCount': commentCount,
+      'shareCount': shareCount,
+      'sharedBy': sharedBy,
     };
   }
 }

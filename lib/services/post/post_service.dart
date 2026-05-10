@@ -38,6 +38,16 @@ class PostService extends ChangeNotifier {
       'upvotes': [],
       'downvotes': [],
       'commentCount': 0,
+      'shareCount': 0,
+      'sharedBy': [],
+    });
+  }
+
+  // Increment share count and record who shared it
+  Future<void> incrementShareCount(String postId, String userId) async {
+    await _firestore.collection('posts').doc(postId).update({
+      'shareCount': FieldValue.increment(1),
+      'sharedBy': FieldValue.arrayUnion([userId]),
     });
   }
 

@@ -314,6 +314,8 @@ class _ChatPageState extends State<ChatPage> {
       userId: data['senderID'],
       currentUserId: currentUid,
       otherUserId: widget.receiverID,
+      messageType: data['messageType'] ?? 'text',
+      sharedPostId: data['sharedPostId'],
       replyToMessage: decryptedReply,
       replyToSenderID: data['replyToSenderID'],
       reactions: reactions,

@@ -1,8 +1,9 @@
+import 'package:asiimov/models/post.dart';
+import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/themes/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatBubble extends StatefulWidget {
@@ -12,9 +13,11 @@ class ChatBubble extends StatefulWidget {
   final String userId;
   final String? replyToMessage;
   final String? replyToSenderID;
-  final Map<String, String>? reactions;
   final String currentUserId;
   final String otherUserId;
+  final String messageType;
+  final String? sharedPostId;
+  final Map<String, String>? reactions;
   final Timestamp? timestamp;
   final bool showSeen;
   final void Function(String emoji)? onReact;
@@ -28,6 +31,8 @@ class ChatBubble extends StatefulWidget {
     required this.userId,
     required this.currentUserId,
     required this.otherUserId,
+    this.messageType = 'text',
+    this.sharedPostId,
     this.replyToMessage,
     this.replyToSenderID,
     this.reactions,
@@ -358,13 +363,15 @@ class _ChatBubbleState extends State<ChatBubble>
               children: [
                 Padding(
                   padding: const EdgeInsets.only(right: 8, bottom: 2, top: 2),
-                  child: Text(
-                    widget.message,
-                    style: TextStyle(
-                        color: widget.isCurrentUser
-                            ? Colors.white
-                            : (isDarkMode ? Colors.white : Colors.black)),
-                  ),
+                  child: widget.messageType == 'post_share'
+                    ? _buildPostShare(isDarkMode)
+                    : Text(
+                        widget.message,
+                        style: TextStyle(
+                            color: widget.isCurrentUser
+                                ? Colors.white
+                                : (isDarkMode ? Colors.white : Colors.black)),
+                      ),
                 ),
                 if (widget.timestamp != null)
                   Text(
@@ -480,5 +487,69 @@ class _ChatBubbleState extends State<ChatBubble>
         ),
       );
     }).toList();
+  }
+
+  Widget _buildPostShare(bool isDarkMode) {
+    if (widget.sharedPostId == null) return const SizedBox.shrink();
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('posts').doc(widget.sharedPostId).get(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const Text("Post unavailable", style: TextStyle(fontStyle: FontStyle.italic));
+        }
+
+        final post = Post.fromFirestore(snapshot.data!);
+        
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => PostDetailPage(post: post)),
+            );
+          },
+          child: Container(
+            width: 200,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.grey.shade900 : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade400, width: 0.5),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.person, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      post.authorUsername,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  post.content,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("View post", style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold)),
+                    Icon(Icons.arrow_forward_ios, size: 10, color: Colors.blue),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
