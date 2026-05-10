@@ -21,6 +21,16 @@ class _ShareSheetState extends State<ShareSheet> {
   final Set<String> _selectedUserIds = {};
   String _searchQuery = "";
 
+  late Stream<List<Map<String, dynamic>>> _recentChatsStream;
+  late Stream<List<Map<String, dynamic>>> _allUsersStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _recentChatsStream = _chatService.getContactsStreamExcludingBlocked();
+    _allUsersStream = _chatService.getUsersStream();
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -41,18 +51,16 @@ class _ShareSheetState extends State<ShareSheet> {
     if (_selectedUserIds.isEmpty) return;
 
     final List<String> userIds = _selectedUserIds.toList();
-    
+
     // Close sheet first for better UX
     Navigator.pop(context);
 
     // Share post
     await _chatService.sharePost(widget.post.id, userIds);
-    
+
     // Increment share count and record who shared it
     await _postService.incrementShareCount(
-      widget.post.id, 
-      AuthService().getCurrentUser()!.uid
-    );
+        widget.post.id, AuthService().getCurrentUser()!.uid);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -106,9 +114,9 @@ class _ShareSheetState extends State<ShareSheet> {
 
           // User list
           Expanded(
-            child: _searchQuery.isEmpty 
-              ? _buildRecentChatsList() 
-              : _buildSearchList(),
+            child: _searchQuery.isEmpty
+                ? _buildRecentChatsList()
+                : _buildSearchList(),
           ),
 
           // Send button
@@ -123,7 +131,8 @@ class _ShareSheetState extends State<ShareSheet> {
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Theme.of(context).colorScheme.surface,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangle_border(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   child: Text("Send (${_selectedUserIds.length})"),
                 ),
@@ -136,7 +145,7 @@ class _ShareSheetState extends State<ShareSheet> {
 
   Widget _buildRecentChatsList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: _chatService.getContactsStreamExcludingBlocked(),
+      stream: _recentChatsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -163,7 +172,7 @@ class _ShareSheetState extends State<ShareSheet> {
 
   Widget _buildSearchList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: _chatService.getUsersStream(),
+      stream: _allUsersStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -211,19 +220,19 @@ class _ShareSheetState extends State<ShareSheet> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
-            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
+            color:
+                isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
             width: 2,
           ),
-          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Colors.transparent,
         ),
-        child: isSelected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+        child: isSelected
+            ? const Icon(Icons.check, size: 16, color: Colors.white)
+            : null,
       ),
       onTap: () => _toggleUserSelection(userId),
     );
   }
-}
-
-// Fixed a typo in the class name if it existed in the prompt (RoundedRectangleBorder)
-class RoundedRectangle_border extends RoundedRectangleBorder {
-  const RoundedRectangle_border({super.borderRadius});
 }

@@ -11,6 +11,7 @@ class ChatBubble extends StatefulWidget {
   final bool isCurrentUser;
   final String messageId;
   final String userId;
+  final String? replyToMessageId;
   final String? replyToMessage;
   final String? replyToSenderID;
   final String currentUserId;
@@ -22,6 +23,7 @@ class ChatBubble extends StatefulWidget {
   final bool showSeen;
   final void Function(String emoji)? onReact;
   final VoidCallback? onSwipeReply;
+  final void Function(String messageId)? onReplyTap;
 
   const ChatBubble({
     super.key,
@@ -33,6 +35,7 @@ class ChatBubble extends StatefulWidget {
     required this.otherUserId,
     this.messageType = 'text',
     this.sharedPostId,
+    this.replyToMessageId,
     this.replyToMessage,
     this.replyToSenderID,
     this.reactions,
@@ -40,22 +43,25 @@ class ChatBubble extends StatefulWidget {
     this.showSeen = false,
     this.onReact,
     this.onSwipeReply,
+    this.onReplyTap,
   });
 
   static const List<String> quickEmojis = ['❤️', '😂', '😮', '😢', '😡', '👍'];
 
   @override
-  State<ChatBubble> createState() => _ChatBubbleState();
+  State<ChatBubble> createState() => ChatBubbleState();
 }
 
-class _ChatBubbleState extends State<ChatBubble>
-    with SingleTickerProviderStateMixin {
+class ChatBubbleState extends State<ChatBubble>
+    with TickerProviderStateMixin {
   double _dragOffset = 0;
   bool _replyTriggered = false;
   static const double _maxDrag = 80;
   static const double _triggerThreshold = 60;
 
   late AnimationController _animController;
+  late AnimationController _highlightController;
+  late Animation<Color?> _highlightAnimation;
 
   @override
   void initState() {
@@ -64,11 +70,34 @@ class _ChatBubbleState extends State<ChatBubble>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
+
+    _highlightController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    _highlightAnimation = ColorTween(
+      begin: Colors.transparent,
+      end: Colors.white.withOpacity(0.15),
+    ).animate(CurvedAnimation(
+      parent: _highlightController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  // Method to trigger the highlight flash
+  void flash() {
+    _highlightController.forward().then((_) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _highlightController.reverse();
+      });
+    });
   }
 
   @override
   void dispose() {
     _animController.dispose();
+    _highlightController.dispose();
     super.dispose();
   }
 
@@ -305,32 +334,40 @@ class _ChatBubbleState extends State<ChatBubble>
       children: [
         // Reply citation
         if (widget.replyToMessage != null && widget.replyToMessage!.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(bottom: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: isDarkMode
-                  ? Colors.grey.shade700.withOpacity(0.5)
-                  : Colors.grey.shade300.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(16),
-              border: const Border(
-                left: BorderSide(
-                  color: Colors.orange,
-                  width: 4,
+          GestureDetector(
+            onTap: () {
+              if (widget.replyToMessageId != null) {
+                widget.onReplyTap?.call(widget.replyToMessageId!);
+              }
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? Colors.grey.shade700.withOpacity(0.5)
+                    : Colors.grey.shade300.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(16),
+                border: const Border(
+                  left: BorderSide(
+                    color: Colors.orange,
+                    width: 4,
+                  ),
                 ),
               ),
-            ),
-            child: Text(
-              widget.replyToMessage!.length > 60
-                  ? '${widget.replyToMessage!.substring(0, 60)}...'
-                  : widget.replyToMessage!,
-              style: TextStyle(
-                fontSize: 12,
-                color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
-                fontStyle: FontStyle.italic,
+              child: Text(
+                widget.replyToMessage!.length > 60
+                    ? '${widget.replyToMessage!.substring(0, 60)}...'
+                    : widget.replyToMessage!,
+                style: TextStyle(
+                  fontSize: 12,
+                  color:
+                      isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+                  fontStyle: FontStyle.italic,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
 
@@ -364,23 +401,26 @@ class _ChatBubbleState extends State<ChatBubble>
                 Padding(
                   padding: const EdgeInsets.only(right: 8, bottom: 2, top: 2),
                   child: widget.messageType == 'post_share'
-                    ? _buildPostShare(isDarkMode)
-                    : Text(
-                        widget.message,
-                        style: TextStyle(
-                            color: widget.isCurrentUser
-                                ? Colors.white
-                                : (isDarkMode ? Colors.white : Colors.black)),
-                      ),
+                      ? _buildPostShare(isDarkMode)
+                      : Text(
+                          widget.message,
+                          style: TextStyle(
+                              color: widget.isCurrentUser
+                                  ? Colors.white
+                                  : (isDarkMode ? Colors.white : Colors.black)),
+                        ),
                 ),
                 if (widget.timestamp != null)
                   Text(
-                    _formatTimestamp(widget.timestamp!) + (widget.showSeen ? ' • seen' : ''),
+                    _formatTimestamp(widget.timestamp!) +
+                        (widget.showSeen ? ' • seen' : ''),
                     style: TextStyle(
                       fontSize: 10,
                       color: widget.isCurrentUser
                           ? Colors.white70
-                          : (isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600),
+                          : (isDarkMode
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600),
                     ),
                   ),
               ],
@@ -406,6 +446,18 @@ class _ChatBubbleState extends State<ChatBubble>
       onHorizontalDragEnd: _onDragEnd,
       child: Stack(
         children: [
+          // Flash Overlay (Full width)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _highlightAnimation,
+                builder: (context, child) => Container(
+                  color: _highlightAnimation.value,
+                ),
+              ),
+            ),
+          ),
+
           // Reply icon behind the message
           if (_dragOffset > 10)
             Positioned(

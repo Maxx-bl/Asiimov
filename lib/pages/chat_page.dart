@@ -79,6 +79,66 @@ class _ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
+  // Reply state
+  String? _replyToMessageId;
+  String? _replyToMessage;
+  String? _replyToSenderID;
+
+  // GlobalKeys for each message to allow scrolling to them
+  final Map<String, GlobalKey<ChatBubbleState>> _messageKeys = {};
+  int _totalMessagesLoaded = 0;
+  List<String> _loadedMessageIds = [];
+
+  // Scroll to a specific message by ID
+  void _scrollToMessage(String messageId, {int retryCount = 0}) {
+    final key = _messageKeys[messageId];
+
+    if (key != null && key.currentContext != null) {
+      // Message found and rendered
+      Scrollable.ensureVisible(
+        key.currentContext!,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutQuart,
+        alignment: 1.0, // Top
+      );
+
+      Future.delayed(const Duration(milliseconds: 650), () {
+        key.currentState?.flash();
+      });
+    } else {
+      // Not rendered yet. Check if it's at least loaded in memory
+      int index = _loadedMessageIds.indexOf(messageId);
+
+      if (index != -1 && retryCount < 2) {
+        // It's in memory but off-screen. 
+        // Quick jump to force rendering
+        double estimatedOffset = (index * 110.0).clamp(
+          scrollController.offset,
+          scrollController.position.maxScrollExtent,
+        );
+
+        scrollController.animateTo(
+          estimatedOffset,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        );
+
+        // One quick retry to see if it's rendered now
+        Future.delayed(const Duration(milliseconds: 350), () {
+          if (mounted) _scrollToMessage(messageId, retryCount: retryCount + 1);
+        });
+      } else {
+        // Not loaded in current view or deleted
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Message unavailable or too old"),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   //set reply
   void setReplyTo(String messageId, String message, String senderID) {
     setState(() {
@@ -241,15 +301,11 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  // Reply state
-  String? _replyToMessageId;
-  String? _replyToMessage;
-  String? _replyToSenderID;
-
   Widget buildMessageList() {
     String senderID = authService.getCurrentUser()!.uid;
     return StreamBuilder(
-      stream: chatService.getMessagesWithLimit(widget.receiverID, senderID, _limit),
+      stream: chatService.getMessagesWithLimit(
+          widget.receiverID, senderID, _limit),
       builder: (context, snapshot) {
         //errors
         if (snapshot.hasError) {
@@ -257,12 +313,16 @@ class _ChatPageState extends State<ChatPage> {
         }
 
         //loading (Only show if no data yet)
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
         //return listview
         final docs = snapshot.data?.docs ?? [];
+        _totalMessagesLoaded = docs.length;
+        _loadedMessageIds = docs.map((doc) => doc.id).toList();
+
         return ListView.builder(
           controller: scrollController,
           itemCount: docs.length,
@@ -277,6 +337,11 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget buildMessageItem(DocumentSnapshot doc, bool isLast) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+    // Ensure we have a GlobalKey for this message ID for scrolling
+    final messageId = doc.id;
+    final key =
+        _messageKeys.putIfAbsent(messageId, () => GlobalKey<ChatBubbleState>());
 
     //display message based on sender
     final currentUid = authService.getCurrentUser()!.uid;
@@ -308,25 +373,30 @@ class _ChatPageState extends State<ChatPage> {
     bool showSeen = isLast && isCurrentUser && (data['isRead'] == true);
 
     return ChatBubble(
+      key: key,
       message: decryptedMessage,
       isCurrentUser: isCurrentUser,
-      messageId: doc.id,
+      messageId: messageId,
       userId: data['senderID'],
       currentUserId: currentUid,
       otherUserId: widget.receiverID,
       messageType: data['messageType'] ?? 'text',
       sharedPostId: data['sharedPostId'],
+      replyToMessageId: data['replyToMessageId'],
       replyToMessage: decryptedReply,
       replyToSenderID: data['replyToSenderID'],
       reactions: reactions,
       timestamp: data['timestamp'] as Timestamp?,
       showSeen: showSeen,
       onSwipeReply: () {
-        setReplyTo(doc.id, decryptedMessage, data['senderID']);
+        setReplyTo(messageId, decryptedMessage, data['senderID']);
+      },
+      onReplyTap: (repliedId) {
+        _scrollToMessage(repliedId);
       },
       onReact: (emoji) {
         myFocusNode.unfocus();
-        chatService.addReaction(widget.receiverID, doc.id, emoji);
+        chatService.addReaction(widget.receiverID, messageId, emoji);
         // Ensure keyboard stays closed after popup closes
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) myFocusNode.unfocus();

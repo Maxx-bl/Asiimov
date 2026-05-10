@@ -285,15 +285,14 @@ class ChatService extends ChangeNotifier {
         .collection('messages')
         .add(newMessage.toMap());
 
-    await firestore
-        .collection('chats')
-        .doc(chatRoomID)
-        .set({
-          'updatedAt': FieldValue.serverTimestamp(),
-          'lastMessage': encryptedMessage,
-          'lastSenderID': currentUserId,
-          'lastTimestamp': timestamp,
-        }, SetOptions(merge: true));
+    // Update conversation metadata
+    await firestore.collection('chats').doc(chatRoomID).set({
+      'lastMessage': encryptedMessage,
+      'lastSenderID': currentUserId,
+      'lastTimestamp': timestamp,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'users': ids, // Crucial for queries and visibility
+    }, SetOptions(merge: true));
 
     //send push notification to receiver
     String notificationBody = message;
