@@ -297,43 +297,7 @@ class ChatService extends ChangeNotifier {
     //send push notification to receiver
     String notificationBody = message;
     if (messageType == 'post_share') {
-      notificationBody = "sent a post!";
-    }
-
-    // Get last 3 unread messages from current user to receiver for notification stacking
-    final unreadSnapshot = await firestore
-        .collection('chats')
-        .doc(chatRoomID)
-        .collection('messages')
-        .where('receiverID', isEqualTo: receiverID)
-        .where('isRead', isEqualTo: false)
-        .where('senderID', isEqualTo: currentUserId)
-        .get();
-
-    if (unreadSnapshot.docs.length > 1) {
-      // Sort in memory to avoid needing a composite index in Firestore
-      final docs = unreadSnapshot.docs.toList();
-      docs.sort((a, b) {
-        final aTime = a.data()['timestamp'] as Timestamp? ?? Timestamp.now();
-        final bTime = b.data()['timestamp'] as Timestamp? ?? Timestamp.now();
-        return bTime.compareTo(aTime); // Descending
-      });
-
-      final latest3 = docs.take(3).toList();
-      final unreadTexts = latest3.map((doc) {
-        final data = doc.data();
-        if (data['messageType'] == 'post_share') {
-          return "sent a post!";
-        }
-        try {
-          return encryption.decrypt(data['message']);
-        } catch (e) {
-          return "New message";
-        }
-      }).toList();
-
-      // Join with newlines, newest at the bottom
-      notificationBody = unreadTexts.reversed.join('\n');
+      notificationBody = "📜 sent a post!";
     }
 
     await sendPushNotification(receiverID, notificationBody);

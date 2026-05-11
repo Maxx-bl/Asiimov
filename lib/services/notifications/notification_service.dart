@@ -19,12 +19,16 @@ class NotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
-
+  
   /// The ID of the user whose chat is currently open (to suppress notifications)
   String? _activeChatUserId;
 
   /// Callback when user taps a notification — receives the full data map
   void Function(Map<String, dynamic> data)? onNotificationTap;
+
+  /// Store message history for active notifications to support MessagingStyle
+  /// senderID -> List of messages
+  final Map<String, List<Message>> _messageHistory = {};
 
   /// Android notification channel for chat messages
   static const AndroidNotificationChannel _chatChannel =
@@ -97,45 +101,95 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     if (androidPlugin != null) {
-      await androidPlugin.cancel(0, tag: senderUserId);
+      await androidPlugin.cancel(senderUserId.hashCode);
+      _messageHistory.remove(senderUserId);
     }
   }
 
   /// Handle foreground messages — show notification unless we're in that conversation
   void _handleForegroundMessage(RemoteMessage message) {
     final senderID = message.data['senderID'];
+    final senderUsername = message.data['senderUsername'] ?? 'Someone';
     final type = message.data['type'];
 
+    // Treat post_share like a chat_message for notification stacking
+    final isChat = type == 'chat_message' || type == 'post_share';
+
     // Don't show notification if we're already chatting with this person
-    if (type == 'chat_message' && senderID != null && senderID == _activeChatUserId) {
+    if (isChat && senderID != null && senderID == _activeChatUserId) {
       return;
     }
 
     final notification = message.notification;
     if (notification == null) return;
 
-    // Use same tagging logic as sender side
-    final String tag = type == 'chat_message' && senderID != null
-        ? senderID 
-        : DateTime.now().millisecondsSinceEpoch.toString();
+    // MessagingStyle logic for chat messages
+    if (isChat && senderID != null) {
+      // Get the raw message text
+      final bodyText = notification.body ?? '';
 
-    _localNotifications.show(
-      senderID?.hashCode ?? 0,
-      notification.title,
-      notification.body,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _chatChannel.id,
-          _chatChannel.name,
-          channelDescription: _chatChannel.description,
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-          tag: tag,
+      // Add message to history
+      final messages = _messageHistory.putIfAbsent(senderID, () => []);
+      messages.add(
+        Message(
+          bodyText,
+          DateTime.now(),
+          Person(
+            name: senderUsername,
+            key: senderID,
+          ),
         ),
-      ),
-      payload: jsonEncode(message.data),
-    );
+      );
+
+      // Limit history to last 10 messages
+      if (messages.length > 10) messages.removeAt(0);
+
+      // Truncate the latest message to 50 chars for collapsed view
+      final truncatedBody = bodyText.length > 50
+          ? '${bodyText.substring(0, 50)}...'
+          : bodyText;
+
+      final messagingStyle = MessagingStyleInformation(
+        Person(name: 'Me', key: 'me'),
+        conversationTitle: senderUsername,
+        messages: messages, // Already in chronological order (oldest first, newest last)
+      );
+
+      _localNotifications.show(
+        senderID.hashCode,
+        senderUsername,
+        truncatedBody, // Shown when collapsed
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _chatChannel.id,
+            _chatChannel.name,
+            channelDescription: _chatChannel.description,
+            importance: Importance.high,
+            priority: Priority.high,
+            styleInformation: messagingStyle,
+            groupKey: senderID,
+          ),
+        ),
+        payload: jsonEncode(message.data),
+      );
+    } else {
+      // Non-chat notifications (standard)
+      _localNotifications.show(
+        DateTime.now().millisecondsSinceEpoch.hashCode,
+        notification.title,
+        notification.body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _chatChannel.id,
+            _chatChannel.name,
+            channelDescription: _chatChannel.description,
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+        ),
+        payload: jsonEncode(message.data),
+      );
+    }
   }
 
   /// Handle notification tap when app is in background/foreground

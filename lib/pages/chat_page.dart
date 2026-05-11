@@ -301,6 +301,50 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  // Overscroll pull-to-info state
+  double _overscrollAmount = 0.0;
+  static const double _overscrollThreshold = 250.0; // 2.5x longer pull
+  bool _showingInfoDialog = false;
+  bool _isPulling = false; // Track sustained pull vs flick
+
+  /// Show the message deletion info dialog
+  // ──────────────────────────────────────────────
+  // 📝 TO CHANGE THE INFO TEXT: Edit the string below
+  // ──────────────────────────────────────────────
+  void _showDeletionInfoDialog() {
+    if (_showingInfoDialog) return;
+    _showingInfoDialog = true;
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.orange, size: 24),
+            const SizedBox(width: 8),
+            const Text(
+              'Private Messages',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Messages are automatically deleted after 24 hours once they have been read, '
+          'unless they are among the 30 most recent messages in the conversation.',
+          style: TextStyle(fontSize: 14, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(foregroundColor: Colors.orange),
+            child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    ).then((_) => _showingInfoDialog = false);
+  }
+
   Widget buildMessageList() {
     String senderID = authService.getCurrentUser()!.uid;
     return StreamBuilder(
@@ -323,13 +367,74 @@ class _ChatPageState extends State<ChatPage> {
         _totalMessagesLoaded = docs.length;
         _loadedMessageIds = docs.map((doc) => doc.id).toList();
 
-        return ListView.builder(
-          controller: scrollController,
-          itemCount: docs.length,
-          reverse: true,
-          itemBuilder: (context, index) {
-            return buildMessageItem(docs[index], index == 0);
-          },
+        // Calculate how much to push the content down (capped at 80px visual displacement)
+        final double displacement = (_overscrollAmount / _overscrollThreshold * 80).clamp(0.0, 80.0);
+        final double progress = (_overscrollAmount / _overscrollThreshold).clamp(0.0, 1.0);
+
+        return Column(
+          children: [
+            // Indicator area that pushes content down (native refresh feel)
+            AnimatedContainer(
+              duration: _isPulling ? Duration.zero : const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              height: displacement,
+              child: displacement > 10
+                  ? Center(
+                      child: SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: CircularProgressIndicator(
+                          value: progress,
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            progress >= 1.0 ? Colors.orange : Colors.grey.shade400,
+                          ),
+                          backgroundColor: Colors.grey.shade200,
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            // Message list
+            Expanded(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (notification is OverscrollNotification) {
+                    // In reverse mode, overscroll > 0 = top of conversation
+                    // Ignore small flicks (< 2px per event)
+                    if (notification.overscroll > 2.0) {
+                      _isPulling = true;
+                      setState(() {
+                        _overscrollAmount = (_overscrollAmount + notification.overscroll * 0.5)
+                            .clamp(0.0, _overscrollThreshold);
+                      });
+                    }
+                  } else if (notification is ScrollEndNotification) {
+                    if (_overscrollAmount >= _overscrollThreshold) {
+                      _showDeletionInfoDialog();
+                    }
+                    _isPulling = false;
+                    setState(() => _overscrollAmount = 0.0);
+                  } else if (notification is ScrollUpdateNotification) {
+                    // Reset overscroll if user scrolls back down
+                    if (_overscrollAmount > 0 && (notification.scrollDelta ?? 0) < -1) {
+                      _isPulling = false;
+                      setState(() => _overscrollAmount = 0.0);
+                    }
+                  }
+                  return false;
+                },
+                child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: docs.length,
+                  reverse: true,
+                  itemBuilder: (context, index) {
+                    return buildMessageItem(docs[index], index == 0);
+                  },
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
