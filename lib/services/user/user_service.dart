@@ -155,4 +155,132 @@ class UserService {
   Future<DocumentSnapshot> getUserProfile(String userId) {
     return _firestore.collection('users').doc(userId).get();
   }
+
+  // --- PRIVACY & FOLLOW REQUESTS ---
+
+  // Toggle account privacy
+  Future<void> togglePrivacy(bool isPublic) async {
+    final currentUserId = _auth.currentUser!.uid;
+    await _firestore.collection('users').doc(currentUserId).set({
+      'public_account': isPublic,
+    }, SetOptions(merge: true));
+    
+    // We intentionally do NOT auto-accept pending requests when switching to public (Option B)
+  }
+
+  // Request to follow a private account
+  Future<void> requestFollow(String targetUserId) async {
+    final currentUserId = _auth.currentUser!.uid;
+    if (currentUserId == targetUserId) return;
+
+    final batch = _firestore.batch();
+    batch.update(_firestore.collection('users').doc(targetUserId), {
+      'follow_requests': FieldValue.arrayUnion([currentUserId]),
+    });
+    await batch.commit();
+
+    // Notification with 1-hour cooldown to prevent spam
+    final cooldownDocRef = _firestore
+        .collection('users')
+        .doc(currentUserId)
+        .collection('follow_cooldowns')
+        .doc(targetUserId);
+
+    final cooldownDoc = await cooldownDocRef.get();
+
+    bool canSendNotif = true;
+    if (cooldownDoc.exists) {
+      final lastSentData = cooldownDoc.data();
+      if (lastSentData != null && lastSentData['timestamp'] != null) {
+        final lastSent = (lastSentData['timestamp'] as Timestamp).toDate();
+        if (DateTime.now().difference(lastSent).inHours < 1) {
+          canSendNotif = false;
+        }
+      }
+    }
+
+    if (canSendNotif) {
+      await cooldownDocRef.set({'timestamp': FieldValue.serverTimestamp()});
+      
+      final senderUsername = _auth.currentUser?.displayName ?? 'Someone';
+      await ChatService().sendPushNotification(
+        targetUserId,
+        'wants to follow you!',
+        title: '@$senderUsername',
+        type: 'follow_request',
+      );
+    }
+  }
+
+  // Cancel a follow request sent to a private account
+  Future<void> cancelFollowRequest(String targetUserId) async {
+    final currentUserId = _auth.currentUser!.uid;
+    await _firestore.collection('users').doc(targetUserId).update({
+      'follow_requests': FieldValue.arrayRemove([currentUserId]),
+    });
+  }
+
+  // Accept a follow request
+  Future<void> acceptFollowRequest(String requesterId) async {
+    final currentUserId = _auth.currentUser!.uid;
+    final batch = _firestore.batch();
+
+    // Remove from follow_requests
+    batch.update(_firestore.collection('users').doc(currentUserId), {
+      'follow_requests': FieldValue.arrayRemove([requesterId]),
+    });
+
+    // Add requester to my followers
+    batch.update(_firestore.collection('users').doc(currentUserId), {
+      'followers': FieldValue.arrayUnion([requesterId]),
+    });
+
+    // Add me to requester's following
+    batch.update(_firestore.collection('users').doc(requesterId), {
+      'following': FieldValue.arrayUnion([currentUserId]),
+    });
+
+    await batch.commit();
+    
+    // Optional: Send notification back to requester that request was accepted
+    final myUsername = _auth.currentUser?.displayName ?? 'Someone';
+    await ChatService().sendPushNotification(
+      requesterId,
+      'accepted your follow request!',
+      title: '@$myUsername',
+      type: 'follow_accept',
+    );
+  }
+
+  // Decline a follow request
+  Future<void> declineFollowRequest(String requesterId) async {
+    final currentUserId = _auth.currentUser!.uid;
+    await _firestore.collection('users').doc(currentUserId).update({
+      'follow_requests': FieldValue.arrayRemove([requesterId]),
+    });
+  }
+
+  // Stream to check if current user has requested to follow target
+  Stream<bool> hasRequestedFollow(String targetUserId) {
+    final currentUserId = _auth.currentUser!.uid;
+    return _firestore
+        .collection('users')
+        .doc(targetUserId)
+        .snapshots()
+        .map((doc) {
+      final requests = List<String>.from(doc.data()?['follow_requests'] ?? []);
+      return requests.contains(currentUserId);
+    });
+  }
+
+  // Stream to get follow requests for a user
+  Stream<List<String>> getFollowRequestsStream(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .snapshots()
+        .map((doc) {
+      return List<String>.from(doc.data()?['follow_requests'] ?? []);
+    });
+  }
 }

@@ -3,6 +3,7 @@ import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/models/post.dart';
 import 'package:asiimov/pages/chat_page.dart';
 import 'package:asiimov/pages/follow_list_page.dart';
+import 'package:asiimov/pages/follow_requests_page.dart';
 import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
@@ -39,6 +40,27 @@ class ProfilePage extends StatelessWidget {
         ),
         foregroundColor: Theme.of(context).colorScheme.primary,
         actions: [
+          if (isOwnProfile)
+            StreamBuilder<List<String>>(
+              stream: userService.getFollowRequestsStream(currentUserId),
+              builder: (context, snapshot) {
+                final requests = snapshot.data ?? [];
+                return IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const FollowRequestsPage(),
+                      ),
+                    );
+                  },
+                  icon: Badge(
+                    isLabelVisible: requests.isNotEmpty,
+                    child: const Icon(Icons.notifications_outlined),
+                  ),
+                );
+              },
+            ),
           if (!isOwnProfile)
             PopupMenuButton<String>(
               onSelected: (value) {
@@ -104,6 +126,9 @@ class ProfilePage extends StatelessWidget {
           final following =
               List<String>.from(userData['following'] ?? []);
           final photoUrl = FirebaseAuth.instance.currentUser?.photoURL;
+          
+          final isPublic = userData['public_account'] ?? false;
+          final isFollowing = followers.contains(currentUserId);
 
           return SingleChildScrollView(
             child: Column(
@@ -229,9 +254,24 @@ class ProfilePage extends StatelessWidget {
                 // Follow/Unfollow button (only on other profiles)
                 if (!isOwnProfile)
                   StreamBuilder<bool>(
-                    stream: userService.isFollowing(userId),
-                    builder: (context, followSnapshot) {
-                      final isFollowing = followSnapshot.data ?? false;
+                    stream: userService.hasRequestedFollow(userId),
+                    builder: (context, requestSnapshot) {
+                      final hasRequested = requestSnapshot.data ?? false;
+
+                      String buttonText = 'Follow';
+                      Color buttonColor = Colors.orange;
+                      Color textColor = Colors.white;
+
+                      if (isFollowing) {
+                        buttonText = 'Unfollow';
+                        buttonColor = Theme.of(context).colorScheme.secondary;
+                        textColor = Theme.of(context).colorScheme.inversePrimary;
+                      } else if (hasRequested) {
+                        buttonText = 'Requested';
+                        buttonColor = Theme.of(context).colorScheme.secondary;
+                        textColor = Theme.of(context).colorScheme.inversePrimary;
+                      }
+
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 40),
                         child: Row(
@@ -241,24 +281,26 @@ class ProfilePage extends StatelessWidget {
                                 onPressed: () {
                                   if (isFollowing) {
                                     userService.unfollowUser(userId);
+                                  } else if (hasRequested) {
+                                    userService.cancelFollowRequest(userId);
                                   } else {
-                                    userService.followUser(userId);
+                                    if (isPublic) {
+                                      userService.followUser(userId);
+                                    } else {
+                                      userService.requestFollow(userId);
+                                    }
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: isFollowing
-                                      ? Theme.of(context).colorScheme.secondary
-                                      : Colors.orange,
-                                  foregroundColor:
-                                      isFollowing ? null : Colors.white,
+                                  backgroundColor: buttonColor,
+                                  foregroundColor: textColor,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 12),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
                                 child: Text(
-                                  isFollowing ? 'Unfollow' : 'Follow',
+                                  buttonText,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
@@ -274,6 +316,12 @@ class ProfilePage extends StatelessWidget {
                               ),
                               child: IconButton(
                                 onPressed: () {
+                                  if (!isPublic && !isFollowing) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('This account is private. Follow them to send messages.')),
+                                    );
+                                    return;
+                                  }
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -303,7 +351,39 @@ class ProfilePage extends StatelessWidget {
                 ),
 
                 // Posts
-                StreamBuilder(
+                if (!isOwnProfile && !isPublic && !isFollowing)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 40),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.lock_outline_rounded,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Private Account',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Follow this account to see their posts and send them messages.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  StreamBuilder(
                   stream: postService.getUserPostsStream(userId),
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
