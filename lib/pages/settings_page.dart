@@ -67,12 +67,25 @@ class SettingsPage extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Column(
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Public Account'),
-                            SizedBox(height: 4),
-                            Text(
+                            Row(
+                              children: [
+                                const Text('Public Account'),
+                                const SizedBox(width: 8),
+                                Text(
+                                  isPublic ? '(Public)' : '(Private)',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isPublic ? Colors.green : Colors.orange,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
                               'Anyone can see your posts and follow you',
                               style: TextStyle(fontSize: 11, color: Colors.grey),
                             ),
@@ -80,7 +93,7 @@ class SettingsPage extends StatelessWidget {
                         ),
                         CupertinoSwitch(
                           value: isPublic,
-                          activeColor: Colors.orange,
+                          activeTrackColor: Colors.orange,
                           onChanged: (value) async {
                             final shouldChange = await showDialog<bool>(
                               context: context,

@@ -84,6 +84,14 @@ class PostService extends ChangeNotifier {
         .snapshots();
   }
 
+  //get posts future for a specific user
+  Future<QuerySnapshot> getUserPostsFuture(String userId) {
+    return _firestore
+        .collection('posts')
+        .where('authorID', isEqualTo: userId)
+        .get();
+  }
+
   //toggle upvote on a post
   Future<void> upvotePost(String postId) async {
     final userId = _auth.currentUser!.uid;

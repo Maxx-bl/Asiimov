@@ -273,6 +273,14 @@ class UserService {
     });
   }
 
+  // Future to check if current user has requested to follow target
+  Future<bool> hasRequestedFollowFuture(String targetUserId) async {
+    final currentUserId = _auth.currentUser!.uid;
+    final doc = await _firestore.collection('users').doc(targetUserId).get();
+    final requests = List<String>.from(doc.data()?['follow_requests'] ?? []);
+    return requests.contains(currentUserId);
+  }
+
   // Stream to get follow requests for a user
   Stream<List<String>> getFollowRequestsStream(String userId) {
     return _firestore
@@ -282,5 +290,11 @@ class UserService {
         .map((doc) {
       return List<String>.from(doc.data()?['follow_requests'] ?? []);
     });
+  }
+
+  // Future to get follow requests for a user
+  Future<List<String>> getFollowRequestsFuture(String userId) async {
+    final doc = await _firestore.collection('users').doc(userId).get();
+    return List<String>.from(doc.data()?['follow_requests'] ?? []);
   }
 }
