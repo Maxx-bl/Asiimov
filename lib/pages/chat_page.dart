@@ -38,6 +38,9 @@ class _ChatPageState extends State<ChatPage> {
   // scroll controller — using reverse ListView so index 0 = newest
   final ScrollController scrollController = ScrollController();
 
+  // Stream for live read status
+  StreamSubscription? _messageSubscription;
+
   // Pagination state
   int _limit = 30;
   bool _isLoadingMore = false;
@@ -49,6 +52,20 @@ class _ChatPageState extends State<ChatPage> {
     chatService.markMessagesAsRead(widget.receiverID);
     chatService.cleanUpOldMessages(widget.receiverID);
     scrollController.addListener(_onScroll);
+
+    // Listen for new messages while the page is open to mark them as read automatically
+    _messageSubscription = chatService
+        .getMessages(authService.getCurrentUser()!.uid, widget.receiverID)
+        .listen((snapshot) {
+      if (snapshot.docs.isNotEmpty) {
+        final lastMessageData = snapshot.docs.first.data() as Map<String, dynamic>;
+        // If the newest message is from the other user and is unread, mark all as read
+        if (lastMessageData['senderID'] == widget.receiverID &&
+            lastMessageData['isRead'] == false) {
+          chatService.markMessagesAsRead(widget.receiverID);
+        }
+      }
+    });
   }
 
   void _onScroll() {
@@ -70,6 +87,7 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    _messageSubscription?.cancel();
     NotificationService().setActiveChatUser(null);
     scrollController.removeListener(_onScroll);
     myFocusNode.dispose();

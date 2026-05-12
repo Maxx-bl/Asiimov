@@ -24,7 +24,17 @@ class NotificationService {
   String? _activeChatUserId;
 
   /// Callback when user taps a notification — receives the full data map
-  void Function(Map<String, dynamic> data)? onNotificationTap;
+  void Function(Map<String, dynamic> data)? _onNotificationTap;
+  Map<String, dynamic>? _initialData;
+
+  set onNotificationTap(void Function(Map<String, dynamic> data) handler) {
+    _onNotificationTap = handler;
+    // If we have initial data waiting, handle it now
+    if (_initialData != null) {
+      _onNotificationTap!(_initialData!);
+      _initialData = null;
+    }
+  }
 
   /// Store message history for active notifications to support MessagingStyle
   /// senderID -> List of messages
@@ -194,8 +204,10 @@ class NotificationService {
 
   /// Handle notification tap when app is in background/foreground
   void _handleNotificationOpen(RemoteMessage message) {
-    if (onNotificationTap != null) {
-      onNotificationTap!(message.data);
+    if (_onNotificationTap != null) {
+      _onNotificationTap!(message.data);
+    } else {
+      _initialData = message.data;
     }
   }
 
@@ -206,8 +218,10 @@ class NotificationService {
 
     try {
       final data = jsonDecode(payload) as Map<String, dynamic>;
-      if (onNotificationTap != null) {
-        onNotificationTap!(data);
+      if (_onNotificationTap != null) {
+        _onNotificationTap!(data);
+      } else {
+        _initialData = data;
       }
     } catch (e) {
       debugPrint('Error decoding notification payload: $e');

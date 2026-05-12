@@ -33,6 +33,14 @@ Future<void> main() async {
     // Set up notification tap handler to navigate to correct page
     notificationService.onNotificationTap = (data) async {
       final type = data['type'];
+      
+      // Wait for navigator to be ready (especially for terminated state start)
+      int retryCount = 0;
+      while (navigatorKey.currentContext == null && retryCount < 10) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        retryCount++;
+      }
+      
       final context = navigatorKey.currentContext;
       if (context == null) return;
 

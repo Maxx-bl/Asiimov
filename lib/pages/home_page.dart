@@ -302,6 +302,15 @@ class _HomePageState extends State<HomePage> {
         messagePreview = "Encrypted message";
       }
     }
+    
+    // Determine status (sent/seen) if I am the sender
+    String? status;
+    if (conv.lastMessage != null) {
+      final isMyMessage = conv.lastMessage!['senderID'] == authService.getCurrentUser()!.uid;
+      if (isMyMessage) {
+        status = conv.lastMessage!['isRead'] == true ? 'seen' : 'sent';
+      }
+    }
 
     return UserTile(
       text: conv.otherUsername,
@@ -322,6 +331,18 @@ class _HomePageState extends State<HomePage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          if (status != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Text(
+                status,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: status == 'seen' ? Colors.orange : Colors.grey.shade500,
+                  fontWeight: status == 'seen' ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ),
           Text(
             dateString,
             style: TextStyle(

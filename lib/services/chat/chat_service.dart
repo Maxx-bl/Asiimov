@@ -232,6 +232,7 @@ class ChatService extends ChangeNotifier {
               'message': chatData['lastMessage'],
               'senderID': chatData['lastSenderID'],
               'timestamp': chatData['lastTimestamp'],
+              'isRead': chatData['lastMessageRead'] ?? false,
             } : null,
           ));
         }
@@ -290,6 +291,7 @@ class ChatService extends ChangeNotifier {
       'lastMessage': encryptedMessage,
       'lastSenderID': currentUserId,
       'lastTimestamp': timestamp,
+      'lastMessageRead': false,
       'updatedAt': FieldValue.serverTimestamp(),
       'users': ids, // Crucial for queries and visibility
     }, SetOptions(merge: true));
@@ -564,6 +566,11 @@ class ChatService extends ChangeNotifier {
     for (final doc in unreadMessagesSnapshot.docs) {
       await doc.reference.update({'isRead': true});
     }
+
+    // Also update the lastMessageRead status in the conversation metadata
+    await FirebaseFirestore.instance.collection('chats').doc(chatRoomID).update({
+      'lastMessageRead': true,
+    }).catchError((_) {}); // Ignore if document doesn't exist yet
   }
 
   //delete old messages with specific conditions
