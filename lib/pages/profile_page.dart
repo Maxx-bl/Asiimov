@@ -9,7 +9,7 @@ import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 

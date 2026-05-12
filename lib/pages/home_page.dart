@@ -119,27 +119,30 @@ class _HomePageState extends State<HomePage> {
                 },
               )
             : (currentUser?.displayName != null
-                ? GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ProfilePage(
-                            userId: currentUser!.uid,
-                            username: currentUser.displayName!,
+                ? Builder(builder: (context) {
+                    final user = currentUser!;
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfilePage(
+                              userId: user.uid,
+                              username: user.displayName!,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                    child: UsernameDisplay(
-                      userId: currentUser!.uid,
-                      username: currentUser.displayName!,
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: 20),
-                      iconSize: 20,
-                    ),
-                  )
+                        );
+                      },
+                      child: UsernameDisplay(
+                        userId: user.uid,
+                        username: user.displayName!,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 20),
+                        iconSize: 20,
+                      ),
+                    );
+                  })
                 : const Text('Home')),
         foregroundColor: Theme.of(context).colorScheme.primary,
         actions: [
@@ -310,7 +313,7 @@ class _HomePageState extends State<HomePage> {
         style: TextStyle(
           color: conv.unreadCount > 0
               ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.primary.withOpacity(0.6),
+              : Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
           fontSize: 13,
           fontWeight: conv.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
         ),

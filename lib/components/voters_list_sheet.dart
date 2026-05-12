@@ -70,7 +70,7 @@ class VotersListSheet extends StatelessWidget {
                           height: 12,
                           width: 100,
                           decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.2),
+                            color: Colors.grey.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -95,7 +95,7 @@ class VotersListSheet extends StatelessWidget {
                       },
                       leading: CircleAvatar(
                         radius: 16,
-                        backgroundColor: Colors.orange.withOpacity(0.2),
+                        backgroundColor: Colors.orange.withValues(alpha: 0.2),
                         child: Text(
                           username[0].toUpperCase(),
                           style: const TextStyle(

@@ -10,7 +10,6 @@ import 'package:asiimov/services/notifications/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:rxdart/rxdart.dart';
 
 class ChatPage extends StatefulWidget {
   final String receiverUsername;
@@ -86,7 +85,6 @@ class _ChatPageState extends State<ChatPage> {
 
   // GlobalKeys for each message to allow scrolling to them
   final Map<String, GlobalKey<ChatBubbleState>> _messageKeys = {};
-  int _totalMessagesLoaded = 0;
   List<String> _loadedMessageIds = [];
 
   // Scroll to a specific message by ID
@@ -228,14 +226,14 @@ class _ChatPageState extends State<ChatPage> {
       margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondary.withOpacity(0.9),
+        color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.9),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -278,7 +276,7 @@ class _ChatPageState extends State<ChatPage> {
                   _replyToMessage!,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -291,7 +289,7 @@ class _ChatPageState extends State<ChatPage> {
             icon: Icon(
               Icons.close_rounded,
               size: 20,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
             ),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -364,7 +362,6 @@ class _ChatPageState extends State<ChatPage> {
 
         //return listview
         final docs = snapshot.data?.docs ?? [];
-        _totalMessagesLoaded = docs.length;
         _loadedMessageIds = docs.map((doc) => doc.id).toList();
 
         // Calculate how much to push the content down (capped at 80px visual displacement)
@@ -516,7 +513,7 @@ class _ChatPageState extends State<ChatPage> {
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -534,7 +531,7 @@ class _ChatPageState extends State<ChatPage> {
                     color: Theme.of(context).colorScheme.secondary,
                     borderRadius: BorderRadius.circular(28),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.tertiary.withOpacity(0.3),
+                      color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3),
                     ),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -548,7 +545,7 @@ class _ChatPageState extends State<ChatPage> {
                     decoration: InputDecoration(
                       hintText: 'Message...',
                       hintStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
                       ),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -570,7 +567,7 @@ class _ChatPageState extends State<ChatPage> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.orange.withOpacity(0.3),
+                        color: Colors.orange.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),

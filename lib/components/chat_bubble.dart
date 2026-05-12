@@ -78,7 +78,7 @@ class ChatBubbleState extends State<ChatBubble>
 
     _highlightAnimation = ColorTween(
       begin: Colors.transparent,
-      end: Colors.white.withOpacity(0.15),
+      end: Colors.white.withValues(alpha: 0.15),
     ).animate(CurvedAnimation(
       parent: _highlightController,
       curve: Curves.easeInOut,
@@ -345,8 +345,8 @@ class ChatBubbleState extends State<ChatBubble>
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: isDarkMode
-                    ? Colors.grey.shade700.withOpacity(0.5)
-                    : Colors.grey.shade300.withOpacity(0.7),
+                    ? Colors.grey.shade700.withValues(alpha: 0.5)
+                    : Colors.grey.shade300.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(16),
                 border: const Border(
                   left: BorderSide(
