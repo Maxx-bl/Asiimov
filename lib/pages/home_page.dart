@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:asiimov/components/group_creation_sheet.dart';
 import 'package:asiimov/components/my_drawer.dart';
+import 'package:asiimov/components/group_icon.dart';
 import 'package:asiimov/components/user_tile.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/models/conversation.dart';
@@ -83,6 +85,20 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _openGroupCreation() async {
+    final result = await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const GroupCreationSheet(),
+    );
+
+    if (result != null && result is String && mounted) {
+      // result is the groupId
+      // The conversation stream will pick it up and display it in the list.
+    }
+  }
+
   Future<void> _refreshList() async {
     setState(() {});
   }
@@ -146,6 +162,11 @@ class _HomePageState extends State<HomePage> {
                 : const Text('Home')),
         foregroundColor: Theme.of(context).colorScheme.primary,
         actions: [
+          if (!_isSearching)
+            IconButton(
+              onPressed: _openGroupCreation,
+              icon: const Icon(Icons.add),
+            ),
           _isSearching
               ? IconButton(
                   icon: const Icon(Icons.close),
@@ -293,11 +314,23 @@ class _HomePageState extends State<HomePage> {
     String messagePreview = "Start chatting...";
     if (conv.lastMessage != null) {
       try {
-        final rawMsg = conv.lastMessage!['message'];
-        final decrypted = chatService.encryption.decrypt(rawMsg);
-        messagePreview = conv.lastMessage!['senderID'] == authService.getCurrentUser()!.uid
-            ? 'You: $decrypted'
-            : decrypted;
+        final lastMsg = conv.lastMessage!;
+        final rawMsg = lastMsg['message'];
+        
+        if (lastMsg['isSystemMessage'] == true) {
+          messagePreview = rawMsg;
+        } else {
+          final decrypted = chatService.encryption.decrypt(rawMsg);
+          final senderName = lastMsg['senderID'] == authService.getCurrentUser()!.uid ? 'You' : lastMsg['senderUsername'];
+          
+          if (conv.isGroup) {
+            messagePreview = '$senderName: $decrypted';
+          } else {
+            messagePreview = lastMsg['senderID'] == authService.getCurrentUser()!.uid
+                ? 'You: $decrypted'
+                : decrypted;
+          }
+        }
       } catch (e) {
         messagePreview = "Encrypted message";
       }
@@ -314,7 +347,8 @@ class _HomePageState extends State<HomePage> {
 
     return UserTile(
       text: conv.otherUsername,
-      userId: conv.otherUserId,
+      userId: conv.isGroup ? '' : conv.otherUserId,
+      leading: conv.isGroup ? GroupIcon(size: 40) : null,
       subtitle: Text(
         messagePreview,
         maxLines: 1,
@@ -374,6 +408,8 @@ class _HomePageState extends State<HomePage> {
             builder: (context) => ChatPage(
               receiverUsername: conv.otherUsername,
               receiverID: conv.otherUserId,
+              isGroup: conv.isGroup,
+              creatorId: conv.creatorId,
             ),
           ),
         );

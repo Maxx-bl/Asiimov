@@ -73,9 +73,13 @@ class _UsernameDisplayState extends State<UsernameDisplay> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          '@${widget.username}',
-          style: appliedStyle,
+        Flexible(
+          child: Text(
+            '@${widget.username}',
+            style: appliedStyle,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
         ),
         if (_isVerified == true) ...[
           const SizedBox(width: 4),

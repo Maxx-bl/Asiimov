@@ -1,18 +1,30 @@
 
 
 class Conversation {
-  final Map<String, dynamic> userData;
+  final String id;
+  final Map<String, dynamic> userData; // In groups, this will be empty or generic
   final Map<String, dynamic>? lastMessage;
   final int unreadCount;
   final DateTime lastActive;
+  
+  // Group specific
+  final bool isGroup;
+  final String? groupName;
+  final List<String>? members;
+  final String? creatorId;
 
   Conversation({
+    required this.id,
     required this.userData,
     this.lastMessage,
     required this.unreadCount,
     required this.lastActive,
+    this.isGroup = false,
+    this.groupName,
+    this.members,
+    this.creatorId,
   });
 
-  String get otherUserId => userData['uid'] ?? '';
-  String get otherUsername => userData['username'] ?? 'Unknown';
+  String get otherUserId => id;
+  String get otherUsername => isGroup ? (groupName ?? 'Group') : (userData['username'] ?? 'Unknown');
 }

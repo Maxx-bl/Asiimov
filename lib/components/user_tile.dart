@@ -7,6 +7,7 @@ class UserTile extends StatelessWidget {
   final void Function()? onTap;
   final Widget? trailing;
   final Widget? subtitle;
+  final Widget? leading;
 
   const UserTile({
     super.key,
@@ -15,6 +16,7 @@ class UserTile extends StatelessWidget {
     required this.onTap,
     this.trailing,
     this.subtitle,
+    this.leading,
   });
 
   @override
@@ -22,14 +24,14 @@ class UserTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: CircleAvatar(
+      leading: leading ?? CircleAvatar(
         backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
         child: Icon(
           Icons.person,
           color: Theme.of(context).colorScheme.primary,
         ),
       ),
-      title: userId != null
+      title: (userId != null && userId!.isNotEmpty)
           ? UsernameDisplay(
               userId: userId!,
               username: text,
@@ -37,6 +39,8 @@ class UserTile extends StatelessWidget {
             )
           : Text(
               text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
       subtitle: subtitle,

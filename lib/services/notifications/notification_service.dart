@@ -121,54 +121,71 @@ class NotificationService {
     final senderID = message.data['senderID'];
     final senderUsername = message.data['senderUsername'] ?? 'Someone';
     final type = message.data['type'];
-
+    final isGroup = message.data['isGroup'] == 'true';
+    final groupName = message.data['groupName'];
+    
     // Treat post_share like a chat_message for notification stacking
     final isChat = type == 'chat_message' || type == 'post_share';
 
-    // Don't show notification if we're already chatting with this person
-    if (isChat && senderID != null && senderID == _activeChatUserId) {
-      return;
+    // Don't show notification if we're already chatting with this person or group
+    if (isChat) {
+      final chatTargetID = isGroup ? message.data['groupId'] : senderID;
+      if (chatTargetID != null && chatTargetID == _activeChatUserId) {
+        return;
+      }
     }
 
     final notification = message.notification;
     if (notification == null) return;
 
+    // Determine displayed title (Group Name or Sender Username)
+    final displayTitle = (isGroup && groupName != null && groupName.isNotEmpty) 
+        ? groupName 
+        : senderUsername;
+
     // MessagingStyle logic for chat messages
     if (isChat && senderID != null) {
       // Get the raw message text
-      final bodyText = notification.body ?? '';
+      String bodyText = notification.body ?? '';
+      
+      // Use Regex to remove "Username: " prefix more reliably (lazy match until first colon)
+      String cleanBodyText = bodyText.replaceFirst(RegExp(r'^.*?: '), '');
+      if (cleanBodyText == bodyText && bodyText.contains(': ')) {
+         cleanBodyText = bodyText.split(': ').sublist(1).join(': ');
+      }
 
       // Add message to history
-      final messages = _messageHistory.putIfAbsent(senderID, () => []);
-      messages.add(
-        Message(
-          bodyText,
-          DateTime.now(),
-          Person(
-            name: senderUsername,
-            key: senderID,
+      final historyKey = isGroup ? (message.data['groupId'] ?? senderID) : senderID;
+      final messages = _messageHistory.putIfAbsent(historyKey, () => []);
+      
+      // To avoid old test data doubling, we ensure we don't add the same message twice in history
+      if (messages.isEmpty || messages.last.text != cleanBodyText) {
+        messages.add(
+          Message(
+            cleanBodyText,
+            DateTime.now(),
+            Person(
+              name: senderUsername,
+              key: senderID,
+            ),
           ),
-        ),
-      );
+        );
+      }
 
       // Limit history to last 10 messages
       if (messages.length > 10) messages.removeAt(0);
 
-      // Truncate the latest message to 50 chars for collapsed view
-      final truncatedBody = bodyText.length > 50
-          ? '${bodyText.substring(0, 50)}...'
-          : bodyText;
-
       final messagingStyle = MessagingStyleInformation(
         Person(name: 'Me', key: 'me'),
-        conversationTitle: senderUsername,
-        messages: messages, // Already in chronological order (oldest first, newest last)
+        conversationTitle: displayTitle,
+        groupConversation: isGroup,
+        messages: messages,
       );
 
       _localNotifications.show(
-        senderID.hashCode,
-        senderUsername,
-        truncatedBody, // Shown when collapsed
+        historyKey.hashCode,
+        displayTitle,
+        isGroup ? "$senderUsername: $cleanBodyText" : cleanBodyText, // This is the collapsed summary
         NotificationDetails(
           android: AndroidNotificationDetails(
             _chatChannel.id,
@@ -177,7 +194,9 @@ class NotificationService {
             importance: Importance.high,
             priority: Priority.high,
             styleInformation: messagingStyle,
-            groupKey: senderID,
+            groupKey: historyKey,
+            // We set the ticker to the full message for accessibility
+            ticker: bodyText,
           ),
         ),
         payload: jsonEncode(message.data),

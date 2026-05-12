@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:asiimov/components/chat_bubble.dart';
 import 'package:asiimov/components/username_display.dart';
+import 'package:asiimov/pages/group_settings_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
@@ -14,9 +15,16 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class ChatPage extends StatefulWidget {
   final String receiverUsername;
   final String receiverID;
+  final bool isGroup;
+  final String? creatorId;
 
-  const ChatPage(
-      {super.key, required this.receiverUsername, required this.receiverID});
+  const ChatPage({
+    super.key,
+    required this.receiverUsername,
+    required this.receiverID,
+    this.isGroup = false,
+    this.creatorId,
+  });
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -49,20 +57,24 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     NotificationService().setActiveChatUser(widget.receiverID);
-    chatService.markMessagesAsRead(widget.receiverID);
-    chatService.cleanUpOldMessages(widget.receiverID);
+    chatService.markMessageAsRead(widget.receiverID, isGroup: widget.isGroup);
+    // cleanUpOldMessages needs update in ChatService to handle group IDs correctly
+    chatService.cleanUpOldMessages(widget.receiverID, isGroup: widget.isGroup);
     scrollController.addListener(_onScroll);
 
     // Listen for new messages while the page is open to mark them as read automatically
     _messageSubscription = chatService
-        .getMessages(authService.getCurrentUser()!.uid, widget.receiverID)
+        .getMessages(authService.getCurrentUser()!.uid, widget.receiverID, isGroup: widget.isGroup)
         .listen((snapshot) {
       if (snapshot.docs.isNotEmpty) {
         final lastMessageData = snapshot.docs.first.data() as Map<String, dynamic>;
-        // If the newest message is from the other user and is unread, mark all as read
-        if (lastMessageData['senderID'] == widget.receiverID &&
+        
+        // Mark as read if it's a private chat from the other user OR if it's a group chat
+        if (widget.isGroup) {
+          chatService.markMessageAsRead(widget.receiverID, isGroup: true);
+        } else if (lastMessageData['senderID'] == widget.receiverID &&
             lastMessageData['isRead'] == false) {
-          chatService.markMessagesAsRead(widget.receiverID);
+          chatService.markMessageAsRead(widget.receiverID, isGroup: false);
         }
       }
     });
@@ -194,6 +206,7 @@ class _ChatPageState extends State<ChatPage> {
       await chatService.sendMessage(
         widget.receiverID,
         message,
+        isGroup: widget.isGroup,
         replyToMessageId: replyId,
         replyToMessage: replyText,
         replyToSenderID: replySender,
@@ -205,25 +218,50 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProfilePage(
+        title: widget.isGroup
+            ? Text(
+                widget.receiverUsername,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              )
+            : GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfilePage(
+                        userId: widget.receiverID,
+                        username: widget.receiverUsername,
+                      ),
+                    ),
+                  );
+                },
+                child: UsernameDisplay(
                   userId: widget.receiverID,
                   username: widget.receiverUsername,
+                  style: const TextStyle(fontSize: 20),
+                  iconSize: 20,
                 ),
               ),
-            );
-          },
-          child: UsernameDisplay(
-            userId: widget.receiverID,
-            username: widget.receiverUsername,
-            style: const TextStyle(fontSize: 20),
-            iconSize: 20,
-          ),
-        ),
+        centerTitle: true,
+        actions: [
+          if (widget.isGroup)
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => GroupSettingsPage(
+                      groupId: widget.receiverID,
+                      groupName: widget.receiverUsername,
+                      creatorId: widget.creatorId ?? '',
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.settings),
+            ),
+        ],
         foregroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: Column(
@@ -362,10 +400,9 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget buildMessageList() {
-    String senderID = authService.getCurrentUser()!.uid;
     return StreamBuilder(
       stream: chatService.getMessagesWithLimit(
-          widget.receiverID, senderID, _limit),
+          authService.getCurrentUser()!.uid, widget.receiverID, _limit, isGroup: widget.isGroup),
       builder: (context, snapshot) {
         //errors
         if (snapshot.hasError) {
@@ -444,7 +481,18 @@ class _ChatPageState extends State<ChatPage> {
                   itemCount: docs.length,
                   reverse: true,
                   itemBuilder: (context, index) {
-                    return buildMessageItem(docs[index], index == 0);
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    bool showUsername = widget.isGroup;
+                    
+                    // Don't show username if previous message (index + 1) was from same sender
+                    if (widget.isGroup && index < docs.length - 1) {
+                      final prevData = docs[index + 1].data() as Map<String, dynamic>;
+                      if (prevData['senderID'] == data['senderID'] && prevData['isSystemMessage'] != true) {
+                        showUsername = false;
+                      }
+                    }
+
+                    return buildMessageItem(docs[index], isLast: index == 0, showUsername: showUsername);
                   },
                 ),
               ),
@@ -455,8 +503,26 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget buildMessageItem(DocumentSnapshot doc, bool isLast) {
+  Widget buildMessageItem(DocumentSnapshot doc, {required bool isLast, required bool showUsername}) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+    // Handle System Messages
+    if (data['isSystemMessage'] == true) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
+        child: Center(
+          child: Text(
+            data['message'],
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+      );
+    }
 
     // Ensure we have a GlobalKey for this message ID for scrolling
     final messageId = doc.id;
@@ -490,9 +556,9 @@ class _ChatPageState extends State<ChatPage> {
       reactions = Map<String, String>.from(data['reactions'] as Map);
     }
 
-    bool showSeen = isLast && isCurrentUser && (data['isRead'] == true);
+    bool showSeen = !widget.isGroup && isLast && isCurrentUser && (data['isRead'] == true);
 
-    return ChatBubble(
+    Widget bubble = ChatBubble(
       key: key,
       message: decryptedMessage,
       isCurrentUser: isCurrentUser,
@@ -515,13 +581,31 @@ class _ChatPageState extends State<ChatPage> {
         _scrollToMessage(repliedId);
       },
       onReact: (emoji) {
-        myFocusNode.unfocus();
-        chatService.addReaction(widget.receiverID, messageId, emoji);
+        chatService.addReaction(widget.receiverID, messageId, emoji, isGroup: widget.isGroup);
         // Ensure keyboard stays closed after popup closes
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) myFocusNode.unfocus();
         });
       },
+    );
+
+    return Column(
+      crossAxisAlignment: isCurrentUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        if (showUsername && !isCurrentUser)
+          Padding(
+            padding: const EdgeInsets.only(left: 25, bottom: 2, top: 8),
+            child: Text(
+              '@${data['senderUsername'] ?? 'unknown'}',
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        bubble,
+      ],
     );
   }
 

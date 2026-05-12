@@ -1,3 +1,4 @@
+import 'package:asiimov/components/group_icon.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/models/post.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
@@ -23,12 +24,21 @@ class _ShareSheetState extends State<ShareSheet> {
 
   late Stream<List<Map<String, dynamic>>> _recentChatsStream;
   late Stream<List<Map<String, dynamic>>> _allUsersStream;
+  late Stream<List<Map<String, dynamic>>> _groupsStream;
+  final Set<String> _selectedGroupIds = {};
 
   @override
   void initState() {
     super.initState();
     _recentChatsStream = _chatService.getContactsStreamExcludingBlocked();
     _allUsersStream = _chatService.getUsersStream();
+    _groupsStream = _chatService.getConversationsStream().map((convs) => 
+      convs.where((c) => c.isGroup).map((c) => {
+        'uid': c.otherUserId,
+        'username': c.groupName,
+        'isGroup': true,
+      }).toList()
+    );
   }
 
   @override
@@ -37,26 +47,44 @@ class _ShareSheetState extends State<ShareSheet> {
     super.dispose();
   }
 
-  void _toggleUserSelection(String userId) {
+  void _toggleUserSelection(String id, {bool isGroup = false}) {
     setState(() {
-      if (_selectedUserIds.contains(userId)) {
-        _selectedUserIds.remove(userId);
+      if (isGroup) {
+        if (_selectedGroupIds.contains(id)) {
+          _selectedGroupIds.remove(id);
+        } else {
+          _selectedGroupIds.add(id);
+        }
       } else {
-        _selectedUserIds.add(userId);
+        if (_selectedUserIds.contains(id)) {
+          _selectedUserIds.remove(id);
+        } else {
+          _selectedUserIds.add(id);
+        }
       }
     });
   }
 
   Future<void> _sendPost() async {
-    if (_selectedUserIds.isEmpty) return;
+    if (_selectedUserIds.isEmpty && _selectedGroupIds.isEmpty) return;
 
     final List<String> userIds = _selectedUserIds.toList();
+    final List<String> groupIds = _selectedGroupIds.toList();
 
     // Close sheet first for better UX
     Navigator.pop(context);
 
-    // Share post
-    await _chatService.sharePost(widget.post.id, userIds);
+    // Share post to users
+    for (String id in userIds) {
+      await _chatService.sendMessage(id, "Shared a post", 
+        messageType: 'post_share', sharedPostId: widget.post.id);
+    }
+
+    // Share post to groups
+    for (String id in groupIds) {
+      await _chatService.sendMessage(id, "Shared a post", 
+        isGroup: true, messageType: 'post_share', sharedPostId: widget.post.id);
+    }
 
     // Increment share count and record who shared it
     await _postService.incrementShareCount(
@@ -64,7 +92,7 @@ class _ShareSheetState extends State<ShareSheet> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Post shared with ${userIds.length} person(s)')),
+        SnackBar(content: Text('Post shared with ${userIds.length + groupIds.length} chat(s)')),
       );
     }
   }
@@ -120,7 +148,7 @@ class _ShareSheetState extends State<ShareSheet> {
           ),
 
           // Send button
-          if (_selectedUserIds.isNotEmpty)
+          if (_selectedUserIds.isNotEmpty || _selectedGroupIds.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: SizedBox(
@@ -134,7 +162,7 @@ class _ShareSheetState extends State<ShareSheet> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: Text("Send (${_selectedUserIds.length})"),
+                  child: Text("Send (${_selectedUserIds.length + _selectedGroupIds.length})"),
                 ),
               ),
             ),
@@ -144,29 +172,55 @@ class _ShareSheetState extends State<ShareSheet> {
   }
 
   Widget _buildRecentChatsList() {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: _recentChatsStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final users = snapshot.data ?? [];
-        if (users.isEmpty) {
-          return const Center(child: Text("No recent chats"));
-        }
-
-        return ListView.builder(
-          itemCount: users.length,
-          itemBuilder: (context, index) {
-            final user = users[index];
-            final userId = user['uid'];
-            final isSelected = _selectedUserIds.contains(userId);
-
-            return _buildUserTile(user, isSelected);
+    return Column(
+      children: [
+        // Groups section
+        StreamBuilder<List<Map<String, dynamic>>>(
+          stream: _groupsStream,
+          builder: (context, snapshot) {
+            final groups = snapshot.data ?? [];
+            if (groups.isEmpty) return const SizedBox();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  child: Text("Groups", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
+                ...groups.map((g) => _buildUserTile(g, _selectedGroupIds.contains(g['uid']), isGroup: true)),
+                const Divider(),
+              ],
+            );
           },
-        );
-      },
+        ),
+        // Users section
+        Expanded(
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: _recentChatsStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final users = snapshot.data ?? [];
+              if (users.isEmpty && _selectedGroupIds.isEmpty) {
+                return const Center(child: Text("No recent chats"));
+              }
+
+              return ListView.builder(
+                itemCount: users.length,
+                itemBuilder: (context, index) {
+                  final user = users[index];
+                  final userId = user['uid'];
+                  final isSelected = _selectedUserIds.contains(userId);
+
+                  return _buildUserTile(user, isSelected);
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -201,19 +255,23 @@ class _ShareSheetState extends State<ShareSheet> {
     );
   }
 
-  Widget _buildUserTile(Map<String, dynamic> user, bool isSelected) {
-    final userId = user['uid'];
-    final username = user['username'] ?? "Anonymous";
+  Widget _buildUserTile(Map<String, dynamic> user, bool isSelected, {bool isGroup = false}) {
+    final id = user['uid'];
+    final name = user['username'] ?? (isGroup ? "Group" : "Anonymous");
 
     return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: Theme.of(context).colorScheme.secondary,
-        child: Text(username[0].toUpperCase()),
-      ),
-      title: UsernameDisplay(
-        userId: userId,
-        username: username,
-      ),
+      leading: isGroup 
+        ? const GroupIcon(size: 40)
+        : CircleAvatar(
+            backgroundColor: Theme.of(context).colorScheme.secondary,
+            child: Text(name[0].toUpperCase()),
+          ),
+      title: isGroup
+        ? Text(name)
+        : UsernameDisplay(
+            userId: id,
+            username: name,
+          ),
       trailing: Container(
         width: 24,
         height: 24,
@@ -232,7 +290,7 @@ class _ShareSheetState extends State<ShareSheet> {
             ? const Icon(Icons.check, size: 16, color: Colors.white)
             : null,
       ),
-      onTap: () => _toggleUserSelection(userId),
+      onTap: () => _toggleUserSelection(id, isGroup: isGroup),
     );
   }
 }

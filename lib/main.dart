@@ -44,17 +44,38 @@ Future<void> main() async {
       final context = navigatorKey.currentContext;
       if (context == null) return;
 
+      debugPrint('Notification Tap Data: $data');
+
       if (type == 'chat_message') {
-        final senderID = data['senderID'];
-        final senderUsername = data['senderUsername'] ?? '';
-        navigatorKey.currentState?.push(
-          MaterialPageRoute(
-            builder: (context) => ChatPage(
-              receiverUsername: senderUsername,
-              receiverID: senderID,
+        final bool isGroup = data['isGroup'] == 'true';
+        if (isGroup) {
+          final groupId = data['groupId'];
+          final groupName = data['groupName'] ?? 'Group';
+          final creatorId = data['creatorId'];
+          
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (context) => ChatPage(
+                receiverUsername: groupName,
+                receiverID: groupId,
+                isGroup: true,
+                creatorId: creatorId,
+              ),
             ),
-          ),
-        );
+          );
+        } else {
+          final senderID = data['senderID'];
+          final senderUsername = data['senderUsername'] ?? '';
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (context) => ChatPage(
+                receiverUsername: senderUsername,
+                receiverID: senderID,
+                isGroup: false,
+              ),
+            ),
+          );
+        }
       } else if (type == 'follow') {
         final senderID = data['senderID'];
         final senderUsername = data['senderUsername'] ?? '';
