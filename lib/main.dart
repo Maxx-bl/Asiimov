@@ -3,6 +3,7 @@ import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/models/post.dart';
 import 'package:asiimov/services/auth/auth_gate.dart';
+import 'package:asiimov/pages/follow_requests_page.dart';
 import 'package:asiimov/services/notifications/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:asiimov/firebase_options.dart';
@@ -76,7 +77,7 @@ Future<void> main() async {
             ),
           );
         }
-      } else if (type == 'follow') {
+      } else if (type == 'follow' || type == 'follow_accept') {
         final senderID = data['senderID'];
         final senderUsername = data['senderUsername'] ?? '';
         navigatorKey.currentState?.push(
@@ -85,6 +86,12 @@ Future<void> main() async {
               userId: senderID,
               username: senderUsername,
             ),
+          ),
+        );
+      } else if (type == 'follow_request') {
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) => const FollowRequestsPage(),
           ),
         );
       } else if (type == 'comment') {

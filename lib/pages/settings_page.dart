@@ -1,3 +1,4 @@
+import 'package:asiimov/pages/notification_settings_page.dart';
 import 'package:asiimov/themes/theme_provider.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -119,6 +120,42 @@ class SettingsPage extends StatelessWidget {
                               await UserService().togglePrivacy(value);
                             }
                           },
+                        )
+                      ],
+                    ),
+                  ),
+
+                  // Notifications
+                  Container(
+                    decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.secondary,
+                        borderRadius: BorderRadius.circular(12)),
+                    margin: const EdgeInsets.only(left: 25, top: 10, right: 25),
+                    padding: const EdgeInsets.only(
+                        left: 25, right: 25, top: 20, bottom: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.notifications_outlined, size: 20, color: Colors.orange),
+                            const SizedBox(width: 12),
+                            const Text('Notifications'),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const NotificationSettingsPage(),
+                              ),
+                            );
+                          },
+                          icon: Icon(
+                            Icons.arrow_forward_rounded,
+                            color: Theme.of(context).colorScheme.inversePrimary,
+                          ),
                         )
                       ],
                     ),

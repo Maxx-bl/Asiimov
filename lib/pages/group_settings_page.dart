@@ -127,9 +127,28 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           TextButton(
             onPressed: () async {
-              await _chatService.leaveGroup(widget.groupId);
-              if (mounted) {
-                Navigator.of(context).popUntil((route) => route.isFirst);
+              // Show loading
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.orange)),
+              );
+
+              try {
+                await _chatService.leaveGroup(widget.groupId);
+                if (mounted) {
+                  // Pop loading dialog
+                  Navigator.of(context).pop();
+                  // Go back to home
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.of(context).pop(); // Pop loading
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Error leaving group: $e")),
+                  );
+                }
               }
             },
             child: const Text("Leave", style: TextStyle(color: Colors.red)),

@@ -11,6 +11,7 @@ import 'package:asiimov/services/user/user_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -82,6 +83,24 @@ class _ProfilePageState extends State<ProfilePage> {
           isLoading = false;
         });
       }
+    }
+  }
+
+  // Update only one post in the list (saves reads)
+  Future<void> _updateSinglePost(String postId) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('posts').doc(postId).get();
+      if (doc.exists && mounted) {
+        final newPost = Post.fromFirestore(doc);
+        setState(() {
+          final index = posts.indexWhere((p) => p.id == postId);
+          if (index != -1) {
+            posts[index] = newPost;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error updating single post: $e");
     }
   }
 
@@ -440,14 +459,15 @@ class _ProfilePageState extends State<ProfilePage> {
                             itemBuilder: (context, index) {
                               return ProfilePostCard(
                                 post: posts[index],
-                                onTap: () {
-                                  Navigator.push(
+                                onTap: () async {
+                                  await Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
                                           PostDetailPage(post: posts[index]),
                                     ),
                                   );
+                                  _updateSinglePost(posts[index].id);
                                 },
                                 onDelete: isOwnProfile
                                     ? () async {

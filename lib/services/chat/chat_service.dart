@@ -184,7 +184,10 @@ class ChatService extends ChangeNotifier {
     });
   }
 
-  // NEW: High-performance stream for the main conversation list
+  // In-memory cache for user profiles (avoids re-fetching on every stream emission)
+  final Map<String, Map<String, dynamic>> _userProfileCache = {};
+
+  // OPTIMIZED: Conversation list stream — fetches only needed users, not ALL users
   Stream<List<Conversation>> getConversationsStream() {
     final currentUserId = auth.currentUser!.uid;
 
@@ -206,10 +209,7 @@ class ChatService extends ChangeNotifier {
     // Stream 2: Unread counts
     final unreadStream = getUnreadStatusForContacts();
 
-    // Stream 3: All users (to avoid fetching each one separately)
-    final usersStream = firestore.collection('users').snapshots();
-
-    // Stream 4: Blocked users
+    // Stream 3: Blocked users (lightweight — only my sub-collection)
     final blockedStream = firestore
         .collection('users')
         .doc(currentUserId)
@@ -217,70 +217,99 @@ class ChatService extends ChangeNotifier {
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => doc.id).toList());
 
-    return CombineLatestStream.combine4(
+    // Combine 3 streams instead of 4 — NO global users stream
+    return CombineLatestStream.combine3(
       chatsStream,
       unreadStream,
-      usersStream,
       blockedStream,
-      (chatDocs, unreadMap, usersSnapshot, blockedIds) {
-        final usersMap = {
-          for (final doc in usersSnapshot.docs) doc.id: doc.data()
-        };
+      (chatDocs, unreadMap, blockedIds) => _ConversationStreamData(chatDocs, unreadMap, blockedIds),
+    ).asyncMap((data) async {
+      final chatDocs = data.chatDocs;
+      final unreadMap = data.unreadMap;
+      final blockedIds = data.blockedIds;
 
-        final List<Conversation> conversations = [];
-
-        for (final chatDoc in chatDocs) {
-          final chatId = chatDoc.id;
-          final chatData = chatDoc.data();
-          
-          final isGroup = chatData['type'] == 'group';
-          String otherUserId;
-          
-          if (isGroup) {
-            otherUserId = chatId;
-          } else {
-            final ids = chatId.split('_');
-            if (ids.length < 2) continue; // Skip malformed private chats
-            otherUserId = ids.firstWhere((id) => id != currentUserId, orElse: () => ids.first);
+      // 1. Extract only the user IDs we need from private chats
+      final Set<String> neededUserIds = {};
+      for (final chatDoc in chatDocs) {
+        final chatData = chatDoc.data();
+        if (chatData['type'] != 'group') {
+          final ids = chatDoc.id.split('_');
+          if (ids.length >= 2) {
+            final otherUserId = ids.firstWhere((id) => id != currentUserId, orElse: () => ids.first);
+            if (otherUserId.isNotEmpty && !blockedIds.contains(otherUserId)) {
+              neededUserIds.add(otherUserId);
+            }
           }
+        }
+      }
 
-          if (otherUserId.isEmpty) continue;
-          
-          // Skip if blocked (only for private chats)
-          if (!isGroup && blockedIds.contains(otherUserId)) continue;
+      // 2. Fetch only MISSING user profiles (cache-first)
+      final uncachedIds = neededUserIds.where((id) => !_userProfileCache.containsKey(id)).toList();
+      if (uncachedIds.isNotEmpty) {
+        // Firestore 'whereIn' limit is 30
+        for (int i = 0; i < uncachedIds.length; i += 30) {
+          final batch = uncachedIds.sublist(i, (i + 30).clamp(0, uncachedIds.length));
+          final usersSnapshot = await firestore
+              .collection('users')
+              .where(FieldPath.documentId, whereIn: batch)
+              .get();
+          for (final doc in usersSnapshot.docs) {
+            _userProfileCache[doc.id] = doc.data();
+          }
+        }
+      }
 
-          final otherUserData = isGroup ? <String, dynamic>{} : usersMap[otherUserId];
-          if (!isGroup && otherUserData == null) continue;
+      // 3. Build conversation list
+      final List<Conversation> conversations = [];
 
-          final lastTimestamp = chatData['lastTimestamp'] as Timestamp? ?? 
-                              chatData['updatedAt'] as Timestamp? ?? 
-                              Timestamp.fromMillisecondsSinceEpoch(0);
-
-          conversations.add(Conversation(
-            id: otherUserId,
-            userData: otherUserData ?? {},
-            unreadCount: unreadMap[isGroup ? chatId : otherUserId] ?? 0,
-            lastActive: lastTimestamp.toDate(),
-            isGroup: isGroup,
-            groupName: chatData['groupName'],
-            members: isGroup ? List<String>.from(chatData['members'] ?? []) : null,
-            creatorId: chatData['creatorId'],
-            lastMessage: chatData['lastMessage'] != null ? {
-              'message': chatData['lastMessage'],
-              'senderID': chatData['lastSenderID'],
-              'senderUsername': chatData['lastSenderUsername'],
-              'timestamp': chatData['lastTimestamp'],
-              'isRead': chatData['lastMessageRead'] ?? false,
-              'isSystemMessage': chatData['lastIsSystem'] ?? false,
-            } : null,
-          ));
+      for (final chatDoc in chatDocs) {
+        final chatId = chatDoc.id;
+        final chatData = chatDoc.data();
+        
+        final isGroup = chatData['type'] == 'group';
+        String otherUserId;
+        
+        if (isGroup) {
+          otherUserId = chatId;
+        } else {
+          final ids = chatId.split('_');
+          if (ids.length < 2) continue;
+          otherUserId = ids.firstWhere((id) => id != currentUserId, orElse: () => ids.first);
         }
 
-        // Sort by last active (newest first)
-        conversations.sort((a, b) => b.lastActive.compareTo(a.lastActive));
-        return conversations;
-      },
-    );
+        if (otherUserId.isEmpty) continue;
+        if (!isGroup && blockedIds.contains(otherUserId)) continue;
+
+        final otherUserData = isGroup ? <String, dynamic>{} : _userProfileCache[otherUserId];
+        if (!isGroup && otherUserData == null) continue;
+
+        final lastTimestamp = chatData['lastTimestamp'] as Timestamp? ?? 
+                            chatData['updatedAt'] as Timestamp? ?? 
+                            Timestamp.fromMillisecondsSinceEpoch(0);
+
+        conversations.add(Conversation(
+          id: otherUserId,
+          userData: otherUserData ?? {},
+          unreadCount: unreadMap[isGroup ? chatId : otherUserId] ?? 0,
+          lastActive: lastTimestamp.toDate(),
+          isGroup: isGroup,
+          groupName: chatData['groupName'],
+          members: isGroup ? List<String>.from(chatData['members'] ?? []) : null,
+          creatorId: chatData['creatorId'],
+          lastMessage: chatData['lastMessage'] != null ? {
+            'message': chatData['lastMessage'],
+            'senderID': chatData['lastSenderID'],
+            'senderUsername': chatData['lastSenderUsername'],
+            'timestamp': chatData['lastTimestamp'],
+            'isRead': chatData['lastMessageRead'] ?? false,
+            'isSystemMessage': chatData['lastIsSystem'] ?? false,
+          } : null,
+        ));
+      }
+
+      conversations.sort((a, b) => b.lastActive.compareTo(a.lastActive));
+      return conversations;
+    });
   }
 
   // NEW: Create a new group discussion
@@ -428,62 +457,100 @@ class ChatService extends ChangeNotifier {
 
   // NEW: Leave a group with admin succession logic
   Future<void> leaveGroup(String groupId) async {
-    final currentUserId = auth.currentUser!.uid;
-    final currentUsername = auth.currentUser?.displayName ?? 'Someone';
-    
-    final groupDoc = await firestore.collection('chats').doc(groupId).get();
-    final data = groupDoc.data();
-    if (data == null) return;
+    try {
+      final currentUserId = auth.currentUser!.uid;
+      final currentUsername = auth.currentUser?.displayName ?? 'Someone';
+      
+      final groupDoc = await firestore.collection('chats').doc(groupId).get();
+      final data = groupDoc.data();
+      if (data == null) return;
 
-    final List<String> members = List<String>.from(data['members'] ?? []);
-    final String creatorId = data['creatorId'] ?? '';
-    final Map<String, dynamic> memberDetails = Map<String, dynamic>.from(data['memberDetails'] ?? {});
+      List<String> members = List<String>.from(data['members'] ?? []);
+      final String creatorId = data['creatorId'] ?? '';
+      Map<String, dynamic> memberDetails = Map<String, dynamic>.from(data['memberDetails'] ?? {});
 
-    // 1. Remove me from members and details
-    members.remove(currentUserId);
-    memberDetails.remove(currentUserId);
+      // 1. Remove me from members and details
+      members.remove(currentUserId);
+      memberDetails.remove(currentUserId);
 
-    if (members.isEmpty) {
-      // Last person left, delete the chat or just mark as inactive
-      await firestore.collection('chats').doc(groupId).delete();
-      return;
-    }
+      if (members.isEmpty) {
+        // Last person left, delete the chat
+        await firestore.collection('chats').doc(groupId).delete();
+        return;
+      }
 
-    final updates = {
-      'members': members,
-      'memberDetails': memberDetails,
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
+      // 1. Prepare updates with atomic operations
+      final Map<String, dynamic> updates = {
+        'members': FieldValue.arrayRemove([currentUserId]),
+        'memberDetails.$currentUserId': FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
 
-    // 2. If I was the creator, find the oldest member
-    if (currentUserId == creatorId) {
       String? nextAdmin;
-      Timestamp? oldestTimestamp;
+      String adminUsername = 'Someone';
 
-      memberDetails.forEach((uid, timestamp) {
-        if (timestamp is Timestamp) {
-          if (oldestTimestamp == null || timestamp.compareTo(oldestTimestamp!) < 0) {
-            oldestTimestamp = timestamp;
-            nextAdmin = uid;
+      // 2. If I was the creator, find a successor
+      if (currentUserId == creatorId) {
+        Timestamp? oldestTimestamp;
+
+        memberDetails.forEach((uid, timestamp) {
+          if (uid != currentUserId && timestamp != null) {
+            Timestamp? t;
+            if (timestamp is Timestamp) {
+              t = timestamp;
+            } else if (timestamp is Map && timestamp['_seconds'] != null) {
+              t = Timestamp(timestamp['_seconds'], timestamp['_nanoseconds'] ?? 0);
+            }
+
+            if (t != null) {
+              if (oldestTimestamp == null || t.compareTo(oldestTimestamp!) < 0) {
+                oldestTimestamp = t;
+                nextAdmin = uid;
+              }
+            }
+          }
+        });
+
+        // Fallback: if no valid timestamp found, pick any other member
+        if (nextAdmin == null) {
+          final otherMembers = members.where((m) => m != currentUserId).toList();
+          if (otherMembers.isNotEmpty) {
+            nextAdmin = otherMembers.first;
           }
         }
-      });
+        
+        if (nextAdmin != null) {
+          updates['creatorId'] = nextAdmin;
+          
+          // Fetch new admin username
+          try {
+            final adminDoc = await firestore.collection('users').doc(nextAdmin).get();
+            adminUsername = adminDoc.data()?['username'] ?? 'Someone';
+          } catch (e) {
+            debugPrint("Error fetching new admin name: $e");
+          }
+        }
+      }
 
-      // If no timestamp found, pick the first member
-      nextAdmin ??= members.first;
-      
-      updates['creatorId'] = nextAdmin ?? members.first;
-      
-      // Fetch new admin username
-      final adminDoc = await firestore.collection('users').doc(nextAdmin).get();
-      final adminUsername = adminDoc.data()?['username'] ?? 'Someone';
-      
-      await sendSystemMessage(groupId, "$currentUsername left the group. $adminUsername is the new admin.");
-    } else {
-      await sendSystemMessage(groupId, "$currentUsername left the group.");
+      // 3. APPLY UPDATES FIRST (CRITICAL)
+      await firestore.collection('chats').doc(groupId).update(updates);
+
+      // 4. Then send system message (if we still have access or via server-side if needed, 
+      // but here we try while still having the local token valid for a few ms)
+      try {
+        if (nextAdmin != null) {
+          await sendSystemMessage(groupId, "$currentUsername left the group. @$adminUsername is the new admin.");
+        } else {
+          await sendSystemMessage(groupId, "$currentUsername left the group.");
+        }
+      } catch (e) {
+        debugPrint("Silent error sending system message after leaving: $e");
+      }
+    } catch (e) {
+      debugPrint("❌ Error leaving group: $e");
+      // Rethrow to let the UI know if needed, but the important part is we tried to clean up
+      rethrow;
     }
-
-    await firestore.collection('chats').doc(groupId).update(updates);
   }
 
   //send message
@@ -497,6 +564,7 @@ class ChatService extends ChangeNotifier {
     //get current user info
     final String currentUserId = auth.currentUser!.uid;
     final String currentUserEmail = auth.currentUser!.email!;
+    final String senderName = auth.currentUser?.displayName ?? 'Someone';
     final Timestamp timestamp = Timestamp.now();
 
     //encrypt the message
@@ -517,11 +585,13 @@ class ChatService extends ChangeNotifier {
       replyToSenderID: replyToSenderID,
     );
 
-    // For group unread tracking
+    // For groups, fetch the doc ONCE and reuse for unread + notifications
+    Map<String, dynamic>? groupData;
     List<String> unreadBy = [];
     if (isGroup) {
       final groupDoc = await firestore.collection('chats').doc(receiverID).get();
-      final List<String> members = List<String>.from(groupDoc.data()?['members'] ?? []);
+      groupData = groupDoc.data();
+      final List<String> members = List<String>.from(groupData?['members'] ?? []);
       unreadBy = members.where((id) => id != currentUserId).toList();
     }
 
@@ -537,7 +607,7 @@ class ChatService extends ChangeNotifier {
 
     //add to db
     final messageMap = newMessage.toMap();
-    messageMap['senderUsername'] = auth.currentUser?.displayName ?? 'Someone';
+    messageMap['senderUsername'] = senderName;
     if (isGroup) {
       messageMap['unreadBy'] = unreadBy;
     }
@@ -552,7 +622,7 @@ class ChatService extends ChangeNotifier {
     final updateData = {
       'lastMessage': encryptedMessage,
       'lastSenderID': currentUserId,
-      'lastSenderUsername': auth.currentUser?.displayName ?? 'Someone',
+      'lastSenderUsername': senderName,
       'lastTimestamp': timestamp,
       'lastMessageRead': false,
       'lastIsSystem': false,
@@ -577,44 +647,33 @@ class ChatService extends ChangeNotifier {
       notificationBody = "📜 sent a post!";
     }
 
-    if (isGroup) {
-      final groupDoc = await firestore.collection('chats').doc(chatRoomID).get();
-      final groupData = groupDoc.data();
-      if (groupData != null) {
-        final List<String> members = List<String>.from(groupData['members'] ?? []);
-        final String groupName = groupData['groupName'] ?? 'Group';
-        final List<String> mutedBy = List<String>.from(groupData['mutedBy'] ?? []);
-        final String? creatorId = groupData['creatorId'];
-        
-        // Fetch real sender username from firestore for accuracy
-        final senderDoc = await firestore.collection('users').doc(currentUserId).get();
-        final senderName = senderDoc.data()?['username'] ?? auth.currentUser?.displayName ?? 'Someone';
+    if (isGroup && groupData != null) {
+      // Reuse the groupData we already fetched — NO second fetch
+      final List<String> members = List<String>.from(groupData['members'] ?? []);
+      final String groupName = groupData['groupName'] ?? 'Group';
+      final List<String> mutedBy = List<String>.from(groupData['mutedBy'] ?? []);
+      final String? creatorId = groupData['creatorId'];
 
-        for (String memberId in members) {
-          if (memberId != currentUserId && !mutedBy.contains(memberId)) {
-            final extra = {
-              'isGroup': 'true',
-              'groupId': chatRoomID,
-              'groupName': groupName,
-              'creatorId': creatorId ?? '',
-              'senderID': currentUserId,
-              'senderUsername': senderName,
-            };
-            debugPrint('Sending Group Notif to $memberId with data: $extra');
-            await sendPushNotification(
-              memberId, 
-              "$senderName: $notificationBody", 
-              title: groupName,
-              extraData: extra,
-            );
-          }
+      for (String memberId in members) {
+        if (memberId != currentUserId && !mutedBy.contains(memberId)) {
+          final extra = {
+            'isGroup': 'true',
+            'groupId': chatRoomID,
+            'groupName': groupName,
+            'creatorId': creatorId ?? '',
+            'senderID': currentUserId,
+            'senderUsername': senderName,
+          };
+          debugPrint('Sending Group Notif to $memberId with data: $extra');
+          await sendPushNotification(
+            memberId, 
+            "$senderName: $notificationBody", 
+            title: groupName,
+            extraData: extra,
+          );
         }
       }
-    } else {
-      // For private chats, still fetch username for content
-      final senderDoc = await firestore.collection('users').doc(currentUserId).get();
-      final senderName = senderDoc.data()?['username'] ?? auth.currentUser?.displayName ?? 'Someone';
-      
+    } else if (!isGroup) {
       await sendPushNotification(receiverID, notificationBody, extraData: {
         'senderID': currentUserId,
         'senderUsername': senderName,
@@ -732,6 +791,26 @@ class ChatService extends ChangeNotifier {
       final fcmToken = receiverData['fcmToken'];
       if (fcmToken == null || fcmToken.isEmpty) return;
 
+      // Check receiver's notification preferences (uses same doc, 0 extra reads)
+      final notificationType = extraData?['type'] ?? type ?? 'chat_message';
+      final prefs = receiverData['notificationPrefs'] as Map<String, dynamic>? ?? {};
+      
+      // Map notification types to preference categories
+      String? prefKey;
+      if (notificationType == 'chat_message' || notificationType == 'post_share') {
+        prefKey = 'messages';
+      } else if (notificationType == 'follow' || notificationType == 'follow_request' || notificationType == 'follow_accept') {
+        prefKey = 'followers';
+      } else if (notificationType == 'comment') {
+        prefKey = 'comments';
+      }
+
+      // If the receiver has disabled this category, don't send
+      if (prefKey != null && prefs[prefKey] == false) {
+        debugPrint('🔕 Notification suppressed: $notificationType (user disabled $prefKey)');
+        return;
+      }
+
       //get sender's username
       final senderUsername = auth.currentUser?.displayName ?? 'Someone';
 
@@ -744,7 +823,6 @@ class ChatService extends ChangeNotifier {
       final accessToken = await _getAccessToken();
       if (accessToken == null) return;
 
-      final notificationType = extraData?['type'] ?? type ?? 'chat_message';
       final String finalTitle = (title != null && title.isNotEmpty) ? title : senderUsername;
 
       // Prepare data payload (FCM V1 requires all values to be Strings)
@@ -980,22 +1058,36 @@ class ChatService extends ChangeNotifier {
       chatRoomID = ids.join('_');
     }
 
-    // Get all messages sorted by newest first
-    final messagesSnapshot = await firestore
+    // First, get the 30th message to use as cursor (skip the 30 most recent)
+    final recentSnapshot = await firestore
         .collection('chats')
         .doc(chatRoomID)
         .collection('messages')
         .orderBy('timestamp', descending: true)
+        .limit(30)
         .get();
 
-    final messages = messagesSnapshot.docs;
-    final now = DateTime.now();
+    // If there are fewer than 30 messages, nothing to clean
+    if (recentSnapshot.docs.length < 30) return;
 
-    // Loop through messages, skipping the first 30 (the most recent ones)
-    for (int i = 30; i < messages.length; i++) {
-      final doc = messages[i];
+    // Get only messages OLDER than the 30th most recent
+    final lastProtectedDoc = recentSnapshot.docs.last;
+    final oldMessagesSnapshot = await firestore
+        .collection('chats')
+        .doc(chatRoomID)
+        .collection('messages')
+        .orderBy('timestamp', descending: true)
+        .startAfterDocument(lastProtectedDoc)
+        .get();
+
+    if (oldMessagesSnapshot.docs.isEmpty) return;
+
+    final now = DateTime.now();
+    final batch = firestore.batch();
+    int deleteCount = 0;
+
+    for (final doc in oldMessagesSnapshot.docs) {
       final data = doc.data();
-      
       final bool isRead = data['isRead'] ?? false;
       final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
 
@@ -1005,8 +1097,16 @@ class ChatService extends ChangeNotifier {
 
       // Condition: Read AND Older than 24h AND (already guaranteed) not in top 30
       if (isRead && isOlderThan24h) {
-        await doc.reference.delete();
+        batch.delete(doc.reference);
+        deleteCount++;
+
+        // Firestore batches are limited to 500 operations
+        if (deleteCount >= 500) break;
       }
+    }
+
+    if (deleteCount > 0) {
+      await batch.commit();
     }
   }
 
@@ -1076,4 +1176,13 @@ class ChatService extends ChangeNotifier {
         .doc(messageId)
         .delete();
   }
+}
+
+// Helper class to bundle stream data for asyncMap
+class _ConversationStreamData {
+  final List<QueryDocumentSnapshot<Map<String, dynamic>>> chatDocs;
+  final Map<String, int> unreadMap;
+  final List<String> blockedIds;
+
+  _ConversationStreamData(this.chatDocs, this.unreadMap, this.blockedIds);
 }

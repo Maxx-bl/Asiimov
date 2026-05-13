@@ -20,7 +20,9 @@ class ChatBubble extends StatefulWidget {
   final String? sharedPostId;
   final Map<String, String>? reactions;
   final Timestamp? timestamp;
-  final bool showSeen;
+  final bool isSeen;
+  final bool showStatus;
+  final bool isGroup;
   final void Function(String emoji)? onReact;
   final VoidCallback? onSwipeReply;
   final void Function(String messageId)? onReplyTap;
@@ -40,7 +42,9 @@ class ChatBubble extends StatefulWidget {
     this.replyToSenderID,
     this.reactions,
     this.timestamp,
-    this.showSeen = false,
+    this.isSeen = false,
+    this.showStatus = false,
+    this.isGroup = false,
     this.onReact,
     this.onSwipeReply,
     this.onReplyTap,
@@ -413,7 +417,9 @@ class ChatBubbleState extends State<ChatBubble>
                 if (widget.timestamp != null)
                   Text(
                     _formatTimestamp(widget.timestamp!) +
-                        (widget.showSeen ? ' • seen' : ''),
+                        (widget.showStatus
+                            ? (widget.isSeen ? ' • seen' : ' • sent')
+                            : ''),
                     style: TextStyle(
                       fontSize: 10,
                       color: widget.isCurrentUser

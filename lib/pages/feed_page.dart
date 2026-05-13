@@ -113,6 +113,24 @@ class _FeedPageState extends State<FeedPage> {
     }
   }
 
+  // NEW: Update only one post in the list (saves reads)
+  Future<void> _updateSinglePost(String postId) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('posts').doc(postId).get();
+      if (doc.exists && mounted) {
+        final newPost = Post.fromFirestore(doc);
+        setState(() {
+          final index = _posts.indexWhere((p) => p.id == postId);
+          if (index != -1) {
+            _posts[index] = newPost;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error updating single post: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -167,6 +185,7 @@ class _FeedPageState extends State<FeedPage> {
           return PostCard(
             post: post,
             currentUserId: currentUserId,
+            onAction: () => _updateSinglePost(post.id),
             onTap: () async {
               await Navigator.push(
                 context,
@@ -174,11 +193,12 @@ class _FeedPageState extends State<FeedPage> {
                   builder: (context) => PostDetailPage(post: post),
                 ),
               );
-              // Optional: refresh on return if needed
+              // Refresh this post in case comments or votes changed inside detail page
+              _updateSinglePost(post.id);
             },
             onDelete: () async {
               await postService.deletePost(post.id);
-              // No need to call refresh, stream will update automatically
+              _onRefresh();
             },
           );
         },

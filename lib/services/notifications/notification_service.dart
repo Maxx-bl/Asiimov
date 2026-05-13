@@ -68,7 +68,7 @@ class NotificationService {
 
     // Initialize local notifications plugin
     const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@drawable/ic_notification');
 
     const initSettings = InitializationSettings(android: androidSettings);
 
@@ -195,6 +195,7 @@ class NotificationService {
             priority: Priority.high,
             styleInformation: messagingStyle,
             groupKey: historyKey,
+            color: const Color(0xFFFF9800),
             // We set the ticker to the full message for accessibility
             ticker: bodyText,
           ),
@@ -214,6 +215,7 @@ class NotificationService {
             channelDescription: _chatChannel.description,
             importance: Importance.high,
             priority: Priority.high,
+            color: const Color(0xFFFF9800),
           ),
         ),
         payload: jsonEncode(message.data),

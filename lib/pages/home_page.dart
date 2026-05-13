@@ -338,7 +338,7 @@ class _HomePageState extends State<HomePage> {
     
     // Determine status (sent/seen) if I am the sender
     String? status;
-    if (conv.lastMessage != null) {
+    if (conv.lastMessage != null && !conv.isGroup) {
       final isMyMessage = conv.lastMessage!['senderID'] == authService.getCurrentUser()!.uid;
       if (isMyMessage) {
         status = conv.lastMessage!['isRead'] == true ? 'seen' : 'sent';

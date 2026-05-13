@@ -9,12 +9,14 @@ class CommentTile extends StatelessWidget {
   final Comment comment;
   final String currentUserId;
   final String postId;
+  final VoidCallback? onAction;
 
   const CommentTile({
     super.key,
     required this.comment,
     required this.currentUserId,
     required this.postId,
+    this.onAction,
   });
 
   String _timeAgo(DateTime dateTime) {
@@ -53,9 +55,10 @@ class CommentTile extends StatelessWidget {
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
-                postService.deleteComment(postId, comment.id);
-                Navigator.pop(context);
+              onPressed: () async {
+                await postService.deleteComment(postId, comment.id);
+                if (onAction != null) onAction!();
+                if (context.mounted) Navigator.pop(context);
               },
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
             ),
@@ -158,11 +161,13 @@ class CommentTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   // Votes
-                  Row(
+                   Row(
                     children: [
                       GestureDetector(
-                        onTap: () =>
-                            postService.upvoteComment(postId, comment.id),
+                        onTap: () async {
+                          await postService.upvoteComment(postId, comment.id);
+                          if (onAction != null) onAction!();
+                        },
                         onLongPress: () {
                           showModalBottomSheet(
                             context: context,
@@ -191,8 +196,10 @@ class CommentTile extends StatelessWidget {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () =>
-                            postService.downvoteComment(postId, comment.id),
+                        onTap: () async {
+                          await postService.downvoteComment(postId, comment.id);
+                          if (onAction != null) onAction!();
+                        },
                         onLongPress: () {
                           showModalBottomSheet(
                             context: context,

@@ -60,7 +60,7 @@ class LoginPage extends StatelessWidget {
             children: [
               //logo
               Image.asset(
-                'assets/asiimov-logo.jpeg',
+                'assets/asiimov-logo.png',
                 width: 100,
                 height: 100,
               ),

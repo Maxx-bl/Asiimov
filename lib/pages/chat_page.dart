@@ -556,7 +556,7 @@ class _ChatPageState extends State<ChatPage> {
       reactions = Map<String, String>.from(data['reactions'] as Map);
     }
 
-    bool showSeen = !widget.isGroup && isLast && isCurrentUser && (data['isRead'] == true);
+
 
     Widget bubble = ChatBubble(
       key: key,
@@ -573,7 +573,9 @@ class _ChatPageState extends State<ChatPage> {
       replyToSenderID: data['replyToSenderID'],
       reactions: reactions,
       timestamp: data['timestamp'] as Timestamp?,
-      showSeen: showSeen,
+      isSeen: data['isRead'] == true,
+      showStatus: !widget.isGroup && isLast && isCurrentUser,
+      isGroup: widget.isGroup,
       onSwipeReply: () {
         setReplyTo(messageId, decryptedMessage, data['senderID']);
       },

@@ -115,7 +115,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
     await _postService.addComment(_post.id, commentText);
     
-    // Refresh to show the new comment
+    // Refresh to show the new comment and update post comment count
     _onRefresh();
   }
 
@@ -139,59 +139,63 @@ class _PostDetailPageState extends State<PostDetailPage> {
           Expanded(
             child: RefreshIndicator(
               onRefresh: _onRefresh,
-              child: ListView.builder(
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                itemCount: 2 + _comments.length + (_isLoadingMore ? 1 : 0),
-                itemBuilder: (context, index) {
-                  // 0: Post
-                  if (index == 0) {
-                    return PostCard(
-                      post: _post,
-                      currentUserId: currentUserId,
-                    );
-                  }
-                  // 1: Divider
-                  if (index == 1) {
-                    return Column(
-                      children: [
-                        Divider(
-                          color: Theme.of(context).colorScheme.secondary,
-                          height: 1,
-                        ),
-                        if (_comments.isEmpty && !_isCommentsLoading)
-                          Padding(
-                            padding: const EdgeInsets.all(32),
-                            child: Center(
-                              child: Text(
-                                'No comments yet.',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
+              child: _isCommentsLoading && _comments.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : ListView.builder(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: 2 + _comments.length + (_isLoadingMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        // 0: Post
+                        if (index == 0) {
+                          return PostCard(
+                            post: _post,
+                            currentUserId: currentUserId,
+                            onAction: _onRefresh,
+                          );
+                        }
+                        // 1: Divider
+                        if (index == 1) {
+                          return Column(
+                            children: [
+                              Divider(
+                                color: Theme.of(context).colorScheme.secondary,
+                                height: 1,
                               ),
-                            ),
-                          ),
-                      ],
-                    );
-                  }
-                  
-                  // Last: Loading Indicator
-                  if (index == 2 + _comments.length) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
+                              if (_comments.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.all(32),
+                                  child: Center(
+                                    child: Text(
+                                      'No comments yet.',
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        }
+                        
+                        // Last: Loading Indicator
+                        if (index == 2 + _comments.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
 
-                  // Comments
-                  final comment = _comments[index - 2];
-                  return CommentTile(
-                    comment: comment,
-                    postId: _post.id,
-                    currentUserId: currentUserId,
-                  );
-                },
-              ),
+                        // Comments
+                        final comment = _comments[index - 2];
+                        return CommentTile(
+                          comment: comment,
+                          postId: _post.id,
+                          currentUserId: currentUserId,
+                          onAction: _onRefresh,
+                        );
+                      },
+                    ),
             ),
           ),
 
