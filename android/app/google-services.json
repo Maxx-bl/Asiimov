@@ -12,7 +12,16 @@
           "package_name": "com.example.asiimov"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "264872610809-ndmgfdov7ej5d3pr7hg6fm70m4q2sc88.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.asiimov",
+            "certificate_hash": "3527b29fed0c8d09f8bc628d8bad86dfa759deac"
+          }
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCKVyz607LLtD-MZpt_V0n6lhemgW_9Lww"
