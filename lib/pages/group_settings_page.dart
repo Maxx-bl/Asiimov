@@ -55,8 +55,8 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
     final controller = TextEditingController(text: widget.groupName);
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
           title: const Text("Rename Group"),
           content: TextField(
             controller: controller,
@@ -71,12 +71,13 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
             onChanged: (value) => setDialogState(() {}),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text("Cancel")),
             TextButton(
               onPressed: _isNameValid(controller.text) 
                 ? () async {
+                    final nav = Navigator.of(dialogContext);
                     await _chatService.renameGroup(widget.groupId, controller.text.trim());
-                    if (mounted) Navigator.pop(context);
+                    if (mounted) nav.pop();
                     setState(() {}); // Refresh
                   }
                 : null,
@@ -91,19 +92,20 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
   void _removeMember(String uid, String username) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text("Remove Member?"),
         content: Text("Are you sure you want to remove @$username from the group?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text("Cancel")),
           TextButton(
             onPressed: () async {
+              final nav = Navigator.of(dialogContext);
               final doc = await FirebaseFirestore.instance.collection('chats').doc(widget.groupId).get();
               final members = List<String>.from(doc.data()?['members'] ?? []);
               final newMembers = members.where((m) => m != uid).toList();
               
               await _chatService.updateGroupMembers(widget.groupId, newMembers.where((m) => m != _currentUserId).toList());
-              if (mounted) Navigator.pop(context);
+              if (mounted) nav.pop();
             },
             child: const Text("Remove", style: TextStyle(color: Colors.red)),
           ),
@@ -120,16 +122,18 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
   void _leaveGroup() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text("Leave Group?"),
         content: const Text("Are you sure you want to leave this discussion?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text("Cancel")),
           TextButton(
             onPressed: () async {
+              final nav = Navigator.of(dialogContext);
+              final scaffold = ScaffoldMessenger.of(dialogContext);
               // Show loading
               showDialog(
-                context: context,
+                context: dialogContext,
                 barrierDismissible: false,
                 builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.orange)),
               );
@@ -138,14 +142,14 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                 await _chatService.leaveGroup(widget.groupId);
                 if (mounted) {
                   // Pop loading dialog
-                  Navigator.of(context).pop();
+                  nav.pop();
                   // Go back to home
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  nav.popUntil((route) => route.isFirst);
                 }
               } catch (e) {
                 if (mounted) {
-                  Navigator.of(context).pop(); // Pop loading
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  nav.pop(); // Pop loading
+                  scaffold.showSnackBar(
                     SnackBar(content: Text("Error leaving group: $e")),
                   );
                 }
