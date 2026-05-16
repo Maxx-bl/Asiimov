@@ -8,8 +8,9 @@ import 'package:flutter/material.dart';
 
 class ShareSheet extends StatefulWidget {
   final Post post;
+  final String? docPath;
 
-  const ShareSheet({super.key, required this.post});
+  const ShareSheet({super.key, required this.post, this.docPath});
 
   @override
   State<ShareSheet> createState() => _ShareSheetState();
@@ -74,21 +75,23 @@ class _ShareSheetState extends State<ShareSheet> {
     // Close sheet first for better UX
     Navigator.pop(context);
 
+    final String pathToSend = widget.docPath ?? 'posts/${widget.post.id}';
+
     // Share post to users
     for (String id in userIds) {
       await _chatService.sendMessage(id, "Shared a post", 
-        messageType: 'post_share', sharedPostId: widget.post.id);
+        messageType: 'post_share', sharedPostId: pathToSend);
     }
 
     // Share post to groups
     for (String id in groupIds) {
       await _chatService.sendMessage(id, "Shared a post", 
-        isGroup: true, messageType: 'post_share', sharedPostId: widget.post.id);
+        isGroup: true, messageType: 'post_share', sharedPostId: pathToSend);
     }
 
     // Increment share count and record who shared it
     await _postService.incrementShareCount(
-        widget.post.id, AuthService().getCurrentUser()!.uid);
+        pathToSend, AuthService().getCurrentUser()!.uid);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

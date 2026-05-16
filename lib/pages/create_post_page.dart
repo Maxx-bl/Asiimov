@@ -28,7 +28,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     
     try {
       await PostService().createPost(cleanContent);
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context, true);
     } catch (e) {
       setState(() => _isPosting = false);
       if (mounted) {

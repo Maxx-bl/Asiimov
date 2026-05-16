@@ -95,15 +95,19 @@ Future<void> main() async {
           ),
         );
       } else if (type == 'comment') {
-        final postId = data['postId'];
-        if (postId != null) {
-          // Fetch the post first to pass it to PostDetailPage
-          final postDoc = await FirebaseFirestore.instance.collection('posts').doc(postId).get();
-          if (postDoc.exists) {
-            final post = Post.fromFirestore(postDoc);
+        final parentPath = data['parentPath'];
+        final legacyPostId = data['postId'];
+        
+        final String? docPath = parentPath ?? (legacyPostId != null ? 'posts/$legacyPostId' : null);
+
+        if (docPath != null) {
+          // Fetch the post/comment first to pass it to PostDetailPage
+          final doc = await FirebaseFirestore.instance.doc(docPath).get();
+          if (doc.exists) {
+            final post = Post.fromFirestore(doc);
             navigatorKey.currentState?.push(
               MaterialPageRoute(
-                builder: (context) => PostDetailPage(post: post),
+                builder: (context) => PostDetailPage(post: post, docPath: docPath),
               ),
             );
           }

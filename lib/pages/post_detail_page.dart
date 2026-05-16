@@ -10,8 +10,9 @@ import 'package:flutter/material.dart';
 
 class PostDetailPage extends StatefulWidget {
   final Post post;
+  final String docPath;
 
-  const PostDetailPage({super.key, required this.post});
+  const PostDetailPage({super.key, required this.post, required this.docPath});
 
   @override
   State<PostDetailPage> createState() => _PostDetailPageState();
@@ -28,6 +29,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
   List<Comment> _comments = [];
   bool _isCommentsLoading = true;
   late Post _post;
+  Post? _parentPost;
+  String? _parentDocPath;
 
   @override
   void initState() {
@@ -38,11 +41,30 @@ class _PostDetailPageState extends State<PostDetailPage> {
   }
 
   Future<void> _fetchComments({bool refresh = false}) async {
+    // Always attempt to fetch parent post if this is a comment
+    if (widget.docPath.contains('/comments/')) {
+      final docRef = FirebaseFirestore.instance.doc(widget.docPath);
+      final parentRef = docRef.parent.parent;
+      if (parentRef != null) {
+        _parentDocPath = parentRef.path;
+        try {
+          final parentDoc = await parentRef.get();
+          if (parentDoc.exists && mounted) {
+            setState(() {
+              _parentPost = Post.fromFirestore(parentDoc);
+            });
+          }
+        } catch (e) {
+          debugPrint("Error fetching parent post: $e");
+        }
+      }
+    }
+
     if (refresh) {
       _commentLimit = 15;
       // Also refresh the post itself if requested
       try {
-        final postDoc = await FirebaseFirestore.instance.collection('posts').doc(widget.post.id).get();
+        final postDoc = await FirebaseFirestore.instance.doc(widget.docPath).get();
         if (postDoc.exists) {
           setState(() {
             _post = Post.fromFirestore(postDoc);
@@ -54,13 +76,19 @@ class _PostDetailPageState extends State<PostDetailPage> {
     }
 
     try {
-      final snapshot = await _postService.getCommentsFuture(widget.post.id, _commentLimit);
+      final snapshot = await _postService.getCommentsFuture(widget.docPath, _commentLimit);
       final fetchedComments = snapshot.docs
           .map((doc) => Comment.fromFirestore(doc))
           .toList();
       
-      // Sort comments by net score (upvotes - downvotes) descending
+      // Owner's comments always appear first.
       fetchedComments.sort((a, b) {
+        final isAOwner = a.authorID == widget.post.authorID;
+        final isBOwner = b.authorID == widget.post.authorID;
+
+        if (isAOwner && !isBOwner) return -1;
+        if (!isAOwner && isBOwner) return 1;
+
         final scoreA = a.upvotes.length - a.downvotes.length;
         final scoreB = b.upvotes.length - b.downvotes.length;
         return scoreB.compareTo(scoreA);
@@ -113,7 +141,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     _commentController.clear();
     _commentFocus.unfocus();
 
-    await _postService.addComment(_post.id, commentText);
+    await _postService.addComment(widget.docPath, commentText);
     
     // Refresh to show the new comment and update post comment count
     _onRefresh();
@@ -144,18 +172,57 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   : ListView.builder(
                       controller: _scrollController,
                       physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: 2 + _comments.length + (_isLoadingMore ? 1 : 0),
+                      itemCount: 3 + _comments.length + (_isLoadingMore ? 1 : 0),
                       itemBuilder: (context, index) {
-                        // 0: Post
+                        // 0: Parent Post
                         if (index == 0) {
+                          if (_parentPost == null) return const SizedBox.shrink();
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => PostDetailPage(post: _parentPost!, docPath: _parentDocPath!)),
+                                  );
+                                },
+                                child: Opacity(
+                                  opacity: 0.6,
+                                  child: AbsorbPointer(
+                                    absorbing: true,
+                                    child: PostCard(
+                                      post: _parentPost!,
+                                      currentUserId: currentUserId,
+                                      docPath: _parentDocPath,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 32.0, top: 12, bottom: 4),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.subdirectory_arrow_right_rounded, color: Theme.of(context).colorScheme.primary, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text("Replying to", style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 13, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                        // 1: Main Post
+                        if (index == 1) {
                           return PostCard(
                             post: _post,
                             currentUserId: currentUserId,
+                            docPath: widget.docPath,
                             onAction: _onRefresh,
                           );
                         }
-                        // 1: Divider
-                        if (index == 1) {
+                        // 2: Divider
+                        if (index == 2) {
                           return Column(
                             children: [
                               Divider(
@@ -179,7 +246,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                         }
                         
                         // Last: Loading Indicator
-                        if (index == 2 + _comments.length) {
+                        if (index == 3 + _comments.length) {
                           return const Padding(
                             padding: EdgeInsets.symmetric(vertical: 24),
                             child: Center(child: CircularProgressIndicator()),
@@ -187,10 +254,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
                         }
 
                         // Comments
-                        final comment = _comments[index - 2];
+                        final comment = _comments[index - 3];
                         return CommentTile(
                           comment: comment,
-                          postId: _post.id,
+                          parentPath: widget.docPath,
                           currentUserId: currentUserId,
                           onAction: _onRefresh,
                         );
@@ -217,6 +284,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                     child: TextField(
                       controller: _commentController,
                       focusNode: _commentFocus,
+                      maxLength: 250,
                       textCapitalization: TextCapitalization.sentences,
                       decoration: InputDecoration(
                         hintText: 'Add a comment...',

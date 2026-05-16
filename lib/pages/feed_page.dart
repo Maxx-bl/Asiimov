@@ -183,6 +183,7 @@ class _FeedPageState extends State<FeedPage> {
 
           final post = _posts[index];
           return PostCard(
+            key: ValueKey(post.id),
             post: post,
             currentUserId: currentUserId,
             onAction: () => _updateSinglePost(post.id),
@@ -190,7 +191,10 @@ class _FeedPageState extends State<FeedPage> {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => PostDetailPage(post: post),
+                  builder: (context) => PostDetailPage(
+                    post: post,
+                    docPath: 'posts/${post.id}',
+                  ),
                 ),
               );
               // Refresh this post in case comments or votes changed inside detail page

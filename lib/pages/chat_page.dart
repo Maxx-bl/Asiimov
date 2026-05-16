@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:asiimov/components/chat_bubble.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/pages/group_settings_page.dart';
+import 'package:asiimov/pages/pinned_messages_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
@@ -113,6 +114,10 @@ class _ChatPageState extends State<ChatPage> {
   String? _replyToMessage;
   String? _replyToSenderID;
 
+  // Edit state
+  String? _editingMessageId;
+  String? _editingMessageText;
+
   // GlobalKeys for each message to allow scrolling to them
   final Map<String, GlobalKey<ChatBubbleState>> _messageKeys = {};
   List<String> _loadedMessageIds = [];
@@ -189,28 +194,64 @@ class _ChatPageState extends State<ChatPage> {
     });
   }
 
+  //set edit
+  void setEditMessage(String messageId, String message) {
+    cancelReply(); // Can't edit and reply at the same time
+    setState(() {
+      _editingMessageId = messageId;
+      _editingMessageText = message;
+      messageController.text = message;
+    });
+    // Delay focus to ensure the UI has settled
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) myFocusNode.requestFocus();
+    });
+  }
+
+  //cancel edit
+  void cancelEdit() {
+    setState(() {
+      _editingMessageId = null;
+      _editingMessageText = null;
+      messageController.clear();
+    });
+  }
+
   //send message
   void sendMessage() async {
     final String message = messageController.text.trim();
     if (message.isNotEmpty) {
-      // Capture reply data before clearing
-      final String? replyId = _replyToMessageId;
-      final String? replyText = _replyToMessage;
-      final String? replySender = _replyToSenderID;
+      if (_editingMessageId != null) {
+        // Edit mode
+        final String msgId = _editingMessageId!;
+        cancelEdit();
+        await chatService.editMessage(
+          widget.receiverID,
+          msgId,
+          message,
+          isGroup: widget.isGroup,
+        );
+      } else {
+        // Send mode
+        // Capture reply data before clearing
+        final String? replyId = _replyToMessageId;
+        final String? replyText = _replyToMessage;
+        final String? replySender = _replyToSenderID;
 
-      // Clear immediately for better UX
-      messageController.clear();
-      cancelReply();
+        // Clear immediately for better UX
+        messageController.clear();
+        cancelReply();
 
-      // Send in background
-      await chatService.sendMessage(
-        widget.receiverID,
-        message,
-        isGroup: widget.isGroup,
-        replyToMessageId: replyId,
-        replyToMessage: replyText,
-        replyToSenderID: replySender,
-      );
+        // Send in background
+        await chatService.sendMessage(
+          widget.receiverID,
+          message,
+          isGroup: widget.isGroup,
+          replyToMessageId: replyId,
+          replyToMessage: replyText,
+          replyToSenderID: replySender,
+        );
+      }
     }
   }
 
@@ -245,6 +286,21 @@ class _ChatPageState extends State<ChatPage> {
               ),
         centerTitle: true,
         actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PinnedMessagesPage(
+                    receiverID: widget.receiverID,
+                    receiverUsername: widget.receiverUsername,
+                    isGroup: widget.isGroup,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.push_pin),
+          ),
           if (widget.isGroup)
             IconButton(
               onPressed: () {
@@ -269,9 +325,81 @@ class _ChatPageState extends State<ChatPage> {
           Expanded(
             child: buildMessageList(),
           ),
-          // Reply banner
-          if (_replyToMessage != null) buildReplyBanner(),
+          // Reply or Edit banner
+          if (_editingMessageId != null)
+            buildEditBanner()
+          else if (_replyToMessage != null)
+            buildReplyBanner(),
           buildUserInput(),
+        ],
+      ),
+    );
+  }
+
+  Widget buildEditBanner() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.9),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.edit, size: 14, color: Colors.blue),
+                    const SizedBox(width: 4),
+                    const Text(
+                      'Editing message',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _editingMessageText!,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: cancelEdit,
+            icon: Icon(
+              Icons.close_rounded,
+              size: 20,
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+            ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
         ],
       ),
     );
@@ -576,6 +704,11 @@ class _ChatPageState extends State<ChatPage> {
       isSeen: data['isRead'] == true,
       showStatus: !widget.isGroup && isLast && isCurrentUser,
       isGroup: widget.isGroup,
+      isEdited: data['isEdited'] == true,
+      isPinned: data['isPinned'] == true,
+      onEdit: (messageId, content) {
+        setEditMessage(messageId, content);
+      },
       onSwipeReply: () {
         setReplyTo(messageId, decryptedMessage, data['senderID']);
       },
@@ -644,6 +777,17 @@ class _ChatPageState extends State<ChatPage> {
                     focusNode: myFocusNode,
                     maxLines: 4,
                     minLines: 1,
+                    maxLength: 1000,
+                    buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
+                      if (currentLength < 900) return null;
+                      return Text(
+                        '$currentLength / $maxLength',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                        ),
+                      );
+                    },
                     textInputAction: TextInputAction.newline,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
@@ -655,7 +799,9 @@ class _ChatPageState extends State<ChatPage> {
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
                     ),
                   ),
                 ),

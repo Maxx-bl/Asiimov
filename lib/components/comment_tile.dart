@@ -1,6 +1,9 @@
+import 'package:asiimov/components/share_sheet.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/components/voters_list_sheet.dart';
 import 'package:asiimov/models/comment.dart';
+import 'package:asiimov/models/post.dart';
+import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:flutter/material.dart';
@@ -8,14 +11,14 @@ import 'package:flutter/material.dart';
 class CommentTile extends StatelessWidget {
   final Comment comment;
   final String currentUserId;
-  final String postId;
+  final String parentPath;
   final VoidCallback? onAction;
 
   const CommentTile({
     super.key,
     required this.comment,
     required this.currentUserId,
-    required this.postId,
+    required this.parentPath,
     this.onAction,
   });
 
@@ -56,7 +59,8 @@ class CommentTile extends StatelessWidget {
             ),
             TextButton(
               onPressed: () async {
-                await postService.deleteComment(postId, comment.id);
+                final commentPath = '$parentPath/comments/${comment.id}';
+                await postService.deleteComment(commentPath);
                 if (onAction != null) onAction!();
                 if (context.mounted) Navigator.pop(context);
               },
@@ -165,7 +169,8 @@ class CommentTile extends StatelessWidget {
                     children: [
                       GestureDetector(
                         onTap: () async {
-                          await postService.upvoteComment(postId, comment.id);
+                          final commentPath = '$parentPath/comments/${comment.id}';
+                          await postService.upvoteComment(commentPath);
                           if (onAction != null) onAction!();
                         },
                         onLongPress: () {
@@ -197,7 +202,8 @@ class CommentTile extends StatelessWidget {
                       ),
                       GestureDetector(
                         onTap: () async {
-                          await postService.downvoteComment(postId, comment.id);
+                          final commentPath = '$parentPath/comments/${comment.id}';
+                          await postService.downvoteComment(commentPath);
                           if (onAction != null) onAction!();
                         },
                         onLongPress: () {
@@ -215,6 +221,99 @@ class CommentTile extends StatelessWidget {
                           size: 16,
                           color:
                               hasDownvoted ? Colors.blue.shade400 : Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      // Comments
+                      GestureDetector(
+                        onTap: () async {
+                          final commentAsPost = Post(
+                            id: comment.id,
+                            authorID: comment.authorID,
+                            authorUsername: comment.authorUsername,
+                            content: comment.content,
+                            timestamp: comment.timestamp,
+                            upvotes: comment.upvotes,
+                            downvotes: comment.downvotes,
+                            commentCount: comment.commentCount,
+                            shareCount: comment.shareCount,
+                            sharedBy: comment.sharedBy,
+                          );
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PostDetailPage(
+                                post: commentAsPost,
+                                docPath: '$parentPath/comments/${comment.id}',
+                              ),
+                            ),
+                          );
+                          if (onAction != null) onAction!();
+                        },
+                        child: Row(
+                          children: [
+                            const Icon(Icons.chat_bubble_outline,
+                                size: 16, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${comment.commentCount}',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      // Share
+                      GestureDetector(
+                        onTap: () {
+                          final commentAsPost = Post(
+                            id: comment.id,
+                            authorID: comment.authorID,
+                            authorUsername: comment.authorUsername,
+                            content: comment.content,
+                            timestamp: comment.timestamp,
+                            upvotes: comment.upvotes,
+                            downvotes: comment.downvotes,
+                            commentCount: comment.commentCount,
+                            shareCount: comment.shareCount,
+                            sharedBy: comment.sharedBy,
+                          );
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => ShareSheet(
+                              post: commentAsPost,
+                              docPath: '$parentPath/comments/${comment.id}',
+                            ),
+                          );
+                        },
+                        onLongPress: () {
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => VotersListSheet(
+                              userIds: comment.sharedBy,
+                              title: 'Shares',
+                            ),
+                          );
+                        },
+                        child: Row(
+                          children: [
+                            const Icon(Icons.send_rounded,
+                                size: 16, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${comment.shareCount}',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

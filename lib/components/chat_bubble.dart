@@ -1,10 +1,17 @@
 import 'package:asiimov/models/post.dart';
 import 'package:asiimov/pages/post_detail_page.dart';
+import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/themes/theme_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:asiimov/components/username_display.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
+import 'package:flutter_linkify/flutter_linkify.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ChatBubble extends StatefulWidget {
   final String message;
@@ -23,7 +30,10 @@ class ChatBubble extends StatefulWidget {
   final bool isSeen;
   final bool showStatus;
   final bool isGroup;
+  final bool isEdited;
+  final bool isPinned;
   final void Function(String emoji)? onReact;
+  final void Function(String messageId, String content)? onEdit;
   final VoidCallback? onSwipeReply;
   final void Function(String messageId)? onReplyTap;
 
@@ -45,7 +55,10 @@ class ChatBubble extends StatefulWidget {
     this.isSeen = false,
     this.showStatus = false,
     this.isGroup = false,
+    this.isEdited = false,
+    this.isPinned = false,
     this.onReact,
+    this.onEdit,
     this.onSwipeReply,
     this.onReplyTap,
   });
@@ -188,7 +201,7 @@ class ChatBubbleState extends State<ChatBubble>
                     child: const Text('Cancel')),
                 TextButton(
                     onPressed: () {
-                      ChatService().deleteMessage(widget.otherUserId, messageId);
+                      ChatService().deleteMessage(widget.otherUserId, messageId, isGroup: widget.isGroup);
                       Navigator.pop(context);
                     },
                     child: const Text('Delete',
@@ -197,36 +210,208 @@ class ChatBubbleState extends State<ChatBubble>
             ));
   }
 
-  //show options
-  void showOptions(BuildContext context, String messageId, String userId) {
+  // Unified Reaction & Options Menu (Instagram Style)
+  void _showReactionMenu(BuildContext context) {
     showModalBottomSheet(
-        context: context,
-        builder: (context) {
-          return SafeArea(
-              child: Wrap(children: [
-            ListTile(
-              leading: const Icon(Icons.flag),
-              title: const Text('Report'),
-              onTap: () {
-                Navigator.pop(context);
-                reportMessage(context, messageId, userId);
-              },
+      context: context,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // EMOJI MENU (Top Row)
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Predefined Emojis
+                      ...ChatBubble.quickEmojis.map((emoji) {
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.pop(context);
+                            widget.onReact?.call(emoji);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                          ),
+                        );
+                      }),
+
+                      const SizedBox(width: 4),
+                      Container(width: 1, height: 24, color: Colors.grey.withValues(alpha: 0.3)),
+                      const SizedBox(width: 4),
+
+                      // Full Picker (+) Button
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showFullEmojiPicker(context);
+                        },
+                        icon: Icon(Icons.add_circle_outline, 
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                          size: 26,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // ACTION MENU (Bottom Column)
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildActionTile(
+                      context,
+                      Icons.copy_rounded,
+                      "Copy",
+                      () {
+                        Navigator.pop(context);
+                        Clipboard.setData(ClipboardData(text: widget.message));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Copied to clipboard"),
+                            duration: Duration(seconds: 1),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                    ),
+                    Divider(height: 1, color: Colors.grey.withValues(alpha: 0.2)),
+                    _buildActionTile(
+                      context,
+                      widget.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                      widget.isPinned ? "Unpin" : "Pin",
+                      () {
+                        Navigator.pop(context);
+                        ChatService().togglePinMessage(widget.otherUserId, widget.messageId, widget.isPinned, isGroup: widget.isGroup);
+                      },
+                      color: widget.isPinned ? Colors.orange : null,
+                    ),
+                    Divider(height: 1, color: Colors.grey.withValues(alpha: 0.2)),
+                    if (!widget.isCurrentUser)
+                      _buildActionTile(
+                        context,
+                        Icons.flag_rounded,
+                        "Report",
+                        () {
+                          Navigator.pop(context);
+                          reportMessage(context, widget.messageId, widget.userId);
+                        },
+                        color: Colors.redAccent,
+                      )
+                    else ...[
+                      _buildActionTile(
+                        context,
+                        Icons.edit_rounded,
+                        "Edit",
+                        () {
+                          Navigator.pop(context);
+                          widget.onEdit?.call(widget.messageId, widget.message);
+                        },
+                      ),
+                      Divider(height: 1, color: Colors.grey.withValues(alpha: 0.2)),
+                      _buildActionTile(
+                        context,
+                        Icons.delete_rounded,
+                        "Delete",
+                        () {
+                          Navigator.pop(context);
+                          confirmDeleteMessage(context, widget.messageId, widget.userId);
+                        },
+                        color: Colors.redAccent,
+                      ),
+                    ]
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActionTile(BuildContext context, IconData icon, String label, VoidCallback onTap, {Color? color}) {
+    return ListTile(
+      onTap: onTap,
+      leading: Icon(icon, size: 22, color: color ?? Theme.of(context).colorScheme.primary.withValues(alpha: 0.8)),
+      title: Text(label, style: TextStyle(
+        fontSize: 16, 
+        fontWeight: FontWeight.w500,
+        color: color ?? Theme.of(context).colorScheme.primary.withValues(alpha: 0.8)
+      )),
+      dense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
+    );
+  }
+
+
+  void _showFullEmojiPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) {
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.45,
+          child: EmojiPicker(
+            onEmojiSelected: (category, emoji) {
+              Navigator.pop(context);
+              widget.onReact?.call(emoji.emoji);
+            },
+            config: Config(
+              height: 256,
+              checkPlatformCompatibility: true,
+              viewOrderConfig: const ViewOrderConfig(),
+              emojiViewConfig: EmojiViewConfig(
+                columns: 7,
+                emojiSizeMax: 28 * (defaultTargetPlatform == TargetPlatform.iOS ? 1.30 : 1.0),
+              ),
+              skinToneConfig: const SkinToneConfig(),
+              categoryViewConfig: const CategoryViewConfig(),
+              bottomActionBarConfig: const BottomActionBarConfig(enabled: false),
+              searchViewConfig: const SearchViewConfig(),
             ),
-            ListTile(
-              leading: const Icon(Icons.block),
-              title: const Text('Block'),
-              onTap: () {
-                Navigator.pop(context);
-                blockUser(context, userId);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.cancel),
-              title: const Text('Cancel'),
-              onTap: () => Navigator.pop(context),
-            ),
-          ]));
-        });
+          ),
+        );
+      },
+    );
   }
 
   void reportMessage(BuildContext context, String messageId, String userId) {
@@ -252,67 +437,7 @@ class ChatBubbleState extends State<ChatBubble>
             ));
   }
 
-  void blockUser(BuildContext context, String userId) {
-    showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-              title: const Text('Block user'),
-              content: const Text('Are you sure you want to block this user?'),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel')),
-                TextButton(
-                    onPressed: () {
-                      ChatService().blockUser(userId);
-                      Navigator.pop(context);
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('User blocked!')));
-                    },
-                    child: const Text('Confirm')),
-              ],
-            ));
-  }
 
-  void showEmojiPicker(BuildContext context) {
-    final RenderBox renderBox = context.findRenderObject() as RenderBox;
-    final position = renderBox.localToGlobal(Offset.zero);
-    final size = renderBox.size;
-
-    showMenu(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        widget.isCurrentUser ? position.dx - 100 : position.dx,
-        position.dy - 50,
-        widget.isCurrentUser ? position.dx + size.width : position.dx + 250,
-        position.dy,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      items: [
-        PopupMenuItem(
-          enabled: false,
-          padding: EdgeInsets.zero,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: ChatBubble.quickEmojis.map((emoji) {
-              return GestureDetector(
-                onTap: () {
-                  Navigator.pop(context);
-                  widget.onReact?.call(emoji);
-                },
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  child: Text(emoji, style: const TextStyle(fontSize: 24)),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
 
   String _formatTimestamp(Timestamp timestamp) {
     final DateTime date = timestamp.toDate();
@@ -378,16 +503,10 @@ class ChatBubbleState extends State<ChatBubble>
         // Message bubble
         GestureDetector(
           onLongPress: () {
-            if (!widget.isCurrentUser) {
-              showOptions(context, widget.messageId, widget.userId);
-            } else {
-              showDeleteOptions(context, widget.messageId, widget.userId);
-            }
+            _showReactionMenu(context);
           },
           onDoubleTap: () {
-            if (widget.onReact != null) {
-              showEmojiPicker(context);
-            }
+            widget.onReact?.call('❤️');
           },
           child: Container(
             decoration: BoxDecoration(
@@ -406,28 +525,87 @@ class ChatBubbleState extends State<ChatBubble>
                   padding: const EdgeInsets.only(right: 8, bottom: 2, top: 2),
                   child: widget.messageType == 'post_share'
                       ? _buildPostShare(isDarkMode)
-                      : Text(
-                          widget.message,
+                      : Linkify(
+                          onOpen: (link) async {
+                            final Uri url = Uri.parse(link.url);
+                            
+                            final bool? shouldLeave = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Leaving App'),
+                                content: Text('This link will take you to an external website:\n\n${link.url}\n\nDo you want to continue?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, true),
+                                    child: const Text('Continue', style: TextStyle(color: Colors.orange)),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (shouldLeave == true) {
+                              try {
+                                await launchUrl(url, mode: LaunchMode.externalApplication);
+                              } catch (e) {
+                                debugPrint('Could not launch ${link.url}: $e');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Could not open the link.')),
+                                  );
+                                }
+                              }
+                            }
+                          },
+                          text: widget.message,
                           style: TextStyle(
                               color: widget.isCurrentUser
                                   ? Colors.white
                                   : (isDarkMode ? Colors.white : Colors.black)),
+                          linkStyle: TextStyle(
+                              color: widget.isCurrentUser
+                                  ? Colors.white
+                                  : Colors.blue,
+                              decoration: TextDecoration.underline,
+                          ),
+                          options: const LinkifyOptions(humanize: false),
                         ),
                 ),
                 if (widget.timestamp != null)
-                  Text(
-                    _formatTimestamp(widget.timestamp!) +
-                        (widget.showStatus
-                            ? (widget.isSeen ? ' • seen' : ' • sent')
-                            : ''),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: widget.isCurrentUser
-                          ? Colors.white70
-                          : (isDarkMode
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600),
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.isPinned) ...[
+                        const Icon(Icons.push_pin, size: 10, color: Colors.orange),
+                        const SizedBox(width: 2),
+                        Text(
+                          'pinned • ',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: widget.isCurrentUser ? Colors.white70 : Colors.orange,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                      Text(
+                        (widget.isEdited ? 'edited • ' : '') +
+                        _formatTimestamp(widget.timestamp!) +
+                            (widget.showStatus
+                                ? (widget.isSeen ? ' • seen' : ' • sent')
+                                : ''),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: widget.isCurrentUser
+                              ? Colors.white70
+                              : (isDarkMode
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600),
+                        ),
+                      ),
+                    ],
                   ),
               ],
             ),
@@ -498,6 +676,76 @@ class ChatBubbleState extends State<ChatBubble>
     );
   }
 
+  void _showReactionDetails(BuildContext context) {
+    if (widget.reactions == null || widget.reactions!.isEmpty) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 15),
+              const Text(
+                "Reactions",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              const SizedBox(height: 10),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: widget.reactions!.entries.map((entry) {
+                    final userId = entry.key;
+                    final emoji = entry.value;
+
+                    return ListTile(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfilePage(
+                              userId: userId,
+                              username: "", // ProfilePage will fetch if empty or we can pass if we had it
+                            ),
+                          ),
+                        );
+                      },
+                      title: UsernameDisplay(
+                        userId: userId,
+                        username: "", 
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 25, vertical: 4),
+                      trailing: Text(
+                        emoji,
+                        style: const TextStyle(fontSize: 22),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   List<Widget> _buildReactions(bool isDarkMode) {
     if (widget.reactions == null || widget.reactions!.isEmpty) return [];
 
@@ -514,9 +762,15 @@ class ChatBubbleState extends State<ChatBubble>
     return emojiCounts.entries.map((entry) {
       final isUserReaction = userReacted[entry.key] == true;
       return GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () => widget.onReact?.call(entry.key),
+        onLongPress: () {
+          // Provide haptic feedback for better mobile experience
+          HapticFeedback.lightImpact();
+          _showReactionDetails(context);
+        },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: isUserReaction
                 ? Colors.orange.withValues(alpha: 0.3)
@@ -550,8 +804,12 @@ class ChatBubbleState extends State<ChatBubble>
   Widget _buildPostShare(bool isDarkMode) {
     if (widget.sharedPostId == null) return const SizedBox.shrink();
 
+    final String docPath = widget.sharedPostId!.contains('/') 
+        ? widget.sharedPostId! 
+        : 'posts/${widget.sharedPostId}';
+
     return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection('posts').doc(widget.sharedPostId).get(),
+      future: FirebaseFirestore.instance.doc(docPath).get(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || !snapshot.data!.exists) {
           return const Text("Post unavailable", style: TextStyle(fontStyle: FontStyle.italic));
@@ -563,7 +821,10 @@ class ChatBubbleState extends State<ChatBubble>
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => PostDetailPage(post: post)),
+              MaterialPageRoute(builder: (context) => PostDetailPage(
+                post: post,
+                docPath: docPath,
+              )),
             );
           },
           child: Container(

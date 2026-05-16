@@ -1095,8 +1095,10 @@ class ChatService extends ChangeNotifier {
 
       final bool isOlderThan24h = now.difference(timestamp).inHours >= 24;
 
-      // Condition: Read AND Older than 24h AND (already guaranteed) not in top 30
-      if (isRead && isOlderThan24h) {
+      final bool isPinned = data['isPinned'] == true;
+
+      // Condition: Read AND Older than 24h AND not pinned AND (already guaranteed) not in top 30
+      if (isRead && isOlderThan24h && !isPinned) {
         batch.delete(doc.reference);
         deleteCount++;
 
@@ -1162,12 +1164,17 @@ class ChatService extends ChangeNotifier {
   }
 
   //delete message
-  Future<void> deleteMessage(String otherUserId, String messageId) async {
+  Future<void> deleteMessage(String otherUserId, String messageId, {bool isGroup = false}) async {
     final currentUserId = auth.currentUser!.uid;
 
-    List<String> ids = [currentUserId, otherUserId];
-    ids.sort();
-    String chatRoomID = ids.join('_');
+    String chatRoomID;
+    if (isGroup) {
+      chatRoomID = otherUserId;
+    } else {
+      List<String> ids = [currentUserId, otherUserId];
+      ids.sort();
+      chatRoomID = ids.join('_');
+    }
 
     await firestore
         .collection('chats')
@@ -1175,6 +1182,56 @@ class ChatService extends ChangeNotifier {
         .collection('messages')
         .doc(messageId)
         .delete();
+  }
+
+  //edit message
+  Future<void> editMessage(String otherUserId, String messageId, String newMessage, {bool isGroup = false}) async {
+    final currentUserId = auth.currentUser!.uid;
+    
+    // Encrypt the new message
+    final String encryptedMessage = encryption.encrypt(newMessage);
+
+    String chatRoomID;
+    if (isGroup) {
+      chatRoomID = otherUserId;
+    } else {
+      List<String> ids = [currentUserId, otherUserId];
+      ids.sort();
+      chatRoomID = ids.join('_');
+    }
+
+    await firestore
+        .collection('chats')
+        .doc(chatRoomID)
+        .collection('messages')
+        .doc(messageId)
+        .update({
+          'message': encryptedMessage,
+          'isEdited': true,
+        });
+  }
+
+  //toggle pin message
+  Future<void> togglePinMessage(String otherUserId, String messageId, bool currentPinState, {bool isGroup = false}) async {
+    final currentUserId = auth.currentUser!.uid;
+    
+    String chatRoomID;
+    if (isGroup) {
+      chatRoomID = otherUserId;
+    } else {
+      List<String> ids = [currentUserId, otherUserId];
+      ids.sort();
+      chatRoomID = ids.join('_');
+    }
+
+    await firestore
+        .collection('chats')
+        .doc(chatRoomID)
+        .collection('messages')
+        .doc(messageId)
+        .update({
+          'isPinned': !currentPinState,
+        });
   }
 }
 

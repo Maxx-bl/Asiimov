@@ -463,8 +463,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                   await Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) =>
-                                          PostDetailPage(post: posts[index]),
+                                      builder: (context) => PostDetailPage(
+                                        post: posts[index],
+                                        docPath: 'posts/${posts[index].id}',
+                                      ),
                                     ),
                                   );
                                   _updateSinglePost(posts[index].id);

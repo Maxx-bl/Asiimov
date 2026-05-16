@@ -4,12 +4,12 @@ import 'package:asiimov/components/voters_list_sheet.dart';
 import 'package:asiimov/models/post.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/post/post_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class PostCard extends StatelessWidget {
   final Post post;
   final String currentUserId;
+  final String? docPath;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final VoidCallback? onAction;
@@ -18,6 +18,7 @@ class PostCard extends StatelessWidget {
     super.key,
     required this.post,
     required this.currentUserId,
+    this.docPath,
     this.onTap,
     this.onDelete,
     this.onAction,
@@ -163,7 +164,8 @@ class PostCard extends StatelessWidget {
                   // Upvote
                   GestureDetector(
                     onTap: () async {
-                      await postService.upvotePost(post.id);
+                      final path = docPath ?? 'posts/${post.id}';
+                      await postService.upvoteComment(path);
                       if (onAction != null) onAction!();
                     },
                     onLongPress: () {
@@ -199,7 +201,8 @@ class PostCard extends StatelessWidget {
                   // Downvote
                   GestureDetector(
                     onTap: () async {
-                      await postService.downvotePost(post.id);
+                      final path = docPath ?? 'posts/${post.id}';
+                      await postService.downvoteComment(path);
                       if (onAction != null) onAction!();
                     },
                     onLongPress: () {
@@ -251,7 +254,7 @@ class PostCard extends StatelessWidget {
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
                         builder: (context) =>
-                            ShareSheet(post: post),
+                            ShareSheet(post: post, docPath: docPath),
                       );
                     },
                     onLongPress: () {

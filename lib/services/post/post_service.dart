@@ -44,8 +44,8 @@ class PostService extends ChangeNotifier {
   }
 
   // Increment share count and record who shared it
-  Future<void> incrementShareCount(String postId, String userId) async {
-    await _firestore.collection('posts').doc(postId).update({
+  Future<void> incrementShareCount(String docPath, String userId) async {
+    await _firestore.doc(docPath).update({
       'shareCount': FieldValue.increment(1),
       'sharedBy': FieldValue.arrayUnion([userId]),
     });
@@ -65,11 +65,10 @@ class PostService extends ChangeNotifier {
     return _firestore.collection('posts').doc(postId).snapshots();
   }
 
-  //get comments future for a post
-  Future<QuerySnapshot> getCommentsFuture(String postId, int limit) {
+  //get comments future for a parent document
+  Future<QuerySnapshot> getCommentsFuture(String parentPath, int limit) {
     return _firestore
-        .collection('posts')
-        .doc(postId)
+        .doc(parentPath)
         .collection('comments')
         .orderBy('timestamp', descending: true)
         .limit(limit)
@@ -166,50 +165,49 @@ class PostService extends ChangeNotifier {
     }
   }
 
-  //add a comment to a post
-  Future<void> addComment(String postId, String content) async {
+  //add a comment to a parent document (post or comment)
+  Future<void> addComment(String parentPath, String content) async {
     final user = _auth.currentUser!;
-    final postRef = _firestore.collection('posts').doc(postId);
+    final parentRef = _firestore.doc(parentPath);
 
-    await postRef.collection('comments').add({
+    await parentRef.collection('comments').add({
       'authorID': user.uid,
       'authorUsername': user.displayName ?? 'Anonymous',
       'content': content,
       'timestamp': FieldValue.serverTimestamp(),
       'upvotes': [],
       'downvotes': [],
+      'commentCount': 0,
+      'shareCount': 0,
+      'sharedBy': [],
     });
 
     // Increment comment count
-    await postRef.update({
+    await parentRef.update({
       'commentCount': FieldValue.increment(1),
     });
 
-    // Fetch post to send notification
-    final postDoc = await postRef.get();
-    if (postDoc.exists) {
-      final postOwnerID = postDoc.data()?['authorID'] as String?;
-      if (postOwnerID != null && postOwnerID != user.uid) {
+    // Fetch parent to send notification
+    final parentDoc = await parentRef.get();
+    if (parentDoc.exists) {
+      final ownerID = parentDoc.data()?['authorID'] as String?;
+      if (ownerID != null && ownerID != user.uid) {
         final senderUsername = user.displayName ?? 'Someone';
         await ChatService().sendPushNotification(
-          postOwnerID,
+          ownerID,
           content,
-          title: '$senderUsername commented on your post',
+          title: '$senderUsername replied to you',
           type: 'comment',
-          extraData: {'postId': postId},
+          extraData: {'parentPath': parentPath},
         );
       }
     }
   }
 
   //toggle upvote on a comment
-  Future<void> upvoteComment(String postId, String commentId) async {
+  Future<void> upvoteComment(String commentPath) async {
     final userId = _auth.currentUser!.uid;
-    final docRef = _firestore
-        .collection('posts')
-        .doc(postId)
-        .collection('comments')
-        .doc(commentId);
+    final docRef = _firestore.doc(commentPath);
 
     await _firestore.runTransaction((transaction) async {
       final doc = await transaction.get(docRef);
@@ -233,13 +231,9 @@ class PostService extends ChangeNotifier {
   }
 
   //toggle downvote on a comment
-  Future<void> downvoteComment(String postId, String commentId) async {
+  Future<void> downvoteComment(String commentPath) async {
     final userId = _auth.currentUser!.uid;
-    final docRef = _firestore
-        .collection('posts')
-        .doc(postId)
-        .collection('comments')
-        .doc(commentId);
+    final docRef = _firestore.doc(commentPath);
 
     await _firestore.runTransaction((transaction) async {
       final doc = await transaction.get(docRef);
@@ -263,22 +257,31 @@ class PostService extends ChangeNotifier {
   }
 
   //delete a comment (only if author)
-  Future<void> deleteComment(String postId, String commentId) async {
+  Future<void> deleteComment(String commentPath) async {
     final userId = _auth.currentUser!.uid;
-    final commentRef = _firestore
-        .collection('posts')
-        .doc(postId)
-        .collection('comments')
-        .doc(commentId);
+    final commentRef = _firestore.doc(commentPath);
 
     final doc = await commentRef.get();
     if (doc.exists && doc['authorID'] == userId) {
       await commentRef.delete();
 
-      // Decrement comment count on post
-      await _firestore.collection('posts').doc(postId).update({
-        'commentCount': FieldValue.increment(-1),
-      });
+      // Decrement comment count on parent
+      final parentRef = commentRef.parent.parent;
+      if (parentRef != null) {
+        await parentRef.update({
+          'commentCount': FieldValue.increment(-1),
+        });
+      }
     }
+  }
+  
+  //share a comment
+  Future<void> shareComment(String commentPath) async {
+    final userId = _auth.currentUser!.uid;
+    final docRef = _firestore.doc(commentPath);
+    await docRef.update({
+      'shareCount': FieldValue.increment(1),
+      'sharedBy': FieldValue.arrayUnion([userId]),
+    });
   }
 }

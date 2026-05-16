@@ -8,6 +8,9 @@ class Comment {
   final Timestamp timestamp;
   final List<String> upvotes;
   final List<String> downvotes;
+  final int commentCount;
+  final int shareCount;
+  final List<String> sharedBy;
 
   Comment({
     required this.id,
@@ -17,6 +20,9 @@ class Comment {
     required this.timestamp,
     required this.upvotes,
     required this.downvotes,
+    required this.commentCount,
+    required this.shareCount,
+    required this.sharedBy,
   });
 
   int get score => upvotes.length - downvotes.length;
@@ -31,6 +37,9 @@ class Comment {
       timestamp: data['timestamp'] ?? Timestamp.now(),
       upvotes: List<String>.from(data['upvotes'] ?? []),
       downvotes: List<String>.from(data['downvotes'] ?? []),
+      commentCount: data['commentCount'] ?? 0,
+      shareCount: data['shareCount'] ?? 0,
+      sharedBy: List<String>.from(data['sharedBy'] ?? []),
     );
   }
 
@@ -42,6 +51,9 @@ class Comment {
       'timestamp': timestamp,
       'upvotes': upvotes,
       'downvotes': downvotes,
+      'commentCount': commentCount,
+      'shareCount': shareCount,
+      'sharedBy': sharedBy,
     };
   }
 }
