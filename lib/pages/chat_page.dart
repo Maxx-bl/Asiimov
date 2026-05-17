@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:asiimov/components/chat_bubble.dart';
 import 'package:asiimov/components/username_display.dart';
@@ -8,6 +9,7 @@ import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
+import 'package:asiimov/services/file/file_service.dart';
 import 'package:asiimov/services/notifications/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -63,6 +65,14 @@ class _ChatPageState extends State<ChatPage> {
     chatService.cleanUpOldMessages(widget.receiverID, isGroup: widget.isGroup);
     scrollController.addListener(_onScroll);
 
+    // Track text input to toggle between + and send button
+    messageController.addListener(() {
+      final hasText = messageController.text.trim().isNotEmpty;
+      if (hasText != _hasText) {
+        setState(() => _hasText = hasText);
+      }
+    });
+
     // Listen for new messages while the page is open to mark them as read automatically
     _messageSubscription = chatService
         .getMessages(authService.getCurrentUser()!.uid, widget.receiverID, isGroup: widget.isGroup)
@@ -117,6 +127,12 @@ class _ChatPageState extends State<ChatPage> {
   // Edit state
   String? _editingMessageId;
   String? _editingMessageText;
+
+  // Attachment state
+  final FileService _fileService = FileService();
+  List<File> _stagedFiles = [];
+  bool _isUploading = false;
+  bool _hasText = false;
 
   // GlobalKeys for each message to allow scrolling to them
   final Map<String, GlobalKey<ChatBubbleState>> _messageKeys = {};
@@ -220,39 +236,149 @@ class _ChatPageState extends State<ChatPage> {
   //send message
   void sendMessage() async {
     final String message = messageController.text.trim();
-    if (message.isNotEmpty) {
-      if (_editingMessageId != null) {
-        // Edit mode
-        final String msgId = _editingMessageId!;
-        cancelEdit();
-        await chatService.editMessage(
-          widget.receiverID,
-          msgId,
-          message,
-          isGroup: widget.isGroup,
-        );
-      } else {
-        // Send mode
-        // Capture reply data before clearing
-        final String? replyId = _replyToMessageId;
-        final String? replyText = _replyToMessage;
-        final String? replySender = _replyToSenderID;
+    if (message.isEmpty && _stagedFiles.isEmpty) return;
 
-        // Clear immediately for better UX
-        messageController.clear();
-        cancelReply();
-
-        // Send in background
-        await chatService.sendMessage(
-          widget.receiverID,
-          message,
-          isGroup: widget.isGroup,
-          replyToMessageId: replyId,
-          replyToMessage: replyText,
-          replyToSenderID: replySender,
-        );
-      }
+    if (_editingMessageId != null) {
+      // Edit mode (no attachments in edit)
+      final String msgId = _editingMessageId!;
+      cancelEdit();
+      await chatService.editMessage(
+        widget.receiverID,
+        msgId,
+        message,
+        isGroup: widget.isGroup,
+      );
+      return;
     }
+
+    // Capture reply data and staged files before clearing
+    final String? replyId = _replyToMessageId;
+    final String? replyText = _replyToMessage;
+    final String? replySender = _replyToSenderID;
+    final List<File> filesToUpload = List.from(_stagedFiles);
+
+    // Clear immediately for better UX
+    messageController.clear();
+    cancelReply();
+    setState(() {
+      _stagedFiles = [];
+      _isUploading = filesToUpload.isNotEmpty;
+    });
+
+    // Upload attachments if any
+    List<dynamic>? attachments;
+    if (filesToUpload.isNotEmpty) {
+      attachments = [];
+      // Construct a chat room ID for storage path
+      final currentUid = authService.getCurrentUser()!.uid;
+      List<String> ids = [currentUid, widget.receiverID];
+      ids.sort();
+      final chatRoomId = widget.isGroup ? widget.receiverID : ids.join('_');
+
+      for (final file in filesToUpload) {
+        final result = await _fileService.uploadChatAttachment(file, chatRoomId);
+        if (result != null) {
+          attachments.add(result);
+        }
+      }
+      if (mounted) setState(() => _isUploading = false);
+
+      // If all uploads failed and no text, abort
+      if (attachments.isEmpty && message.isEmpty) return;
+    }
+
+    // Send in background
+    await chatService.sendMessage(
+      widget.receiverID,
+      message,
+      isGroup: widget.isGroup,
+      replyToMessageId: replyId,
+      replyToMessage: replyText,
+      replyToSenderID: replySender,
+      attachments: attachments,
+    );
+  }
+
+  // Show attachment picker bottom sheet
+  void _showAttachmentPicker() {
+    final parentContext = context;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                'Send Attachment',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Colors.orange,
+                  child: Icon(Icons.photo_library, color: Colors.white),
+                ),
+                title: const Text('Photos & Videos'),
+                subtitle: const Text('From your gallery'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  try {
+                    final files = await _fileService.pickGalleryMedia();
+                    if (files.isNotEmpty && mounted) {
+                      setState(() => _stagedFiles.addAll(files));
+                    }
+                  } catch (e) {
+                    if (parentContext.mounted) {
+                      ScaffoldMessenger.of(parentContext).showSnackBar(
+                        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
+                      );
+                    }
+                  }
+                },
+              ),
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.orange.shade200,
+                  child: const Icon(Icons.insert_drive_file, color: Colors.white),
+                ),
+                title: const Text('Documents'),
+                subtitle: const Text('PDF, ZIP, and more'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  try {
+                    final files = await _fileService.pickDocuments();
+                    if (files.isNotEmpty && mounted) {
+                      setState(() => _stagedFiles.addAll(files));
+                    }
+                  } catch (e) {
+                    if (parentContext.mounted) {
+                      ScaffoldMessenger.of(parentContext).showSnackBar(
+                        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -325,11 +451,27 @@ class _ChatPageState extends State<ChatPage> {
           Expanded(
             child: buildMessageList(),
           ),
+          // Upload indicator
+          if (_isUploading)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange)),
+                  SizedBox(width: 8),
+                  Text('Uploading...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ),
           // Reply or Edit banner
           if (_editingMessageId != null)
             buildEditBanner()
           else if (_replyToMessage != null)
             buildReplyBanner(),
+          // Staged files preview
+          if (_stagedFiles.isNotEmpty)
+            _buildStagedFilesPreview(),
           buildUserInput(),
         ],
       ),
@@ -706,6 +848,7 @@ class _ChatPageState extends State<ChatPage> {
       isGroup: widget.isGroup,
       isEdited: data['isEdited'] == true,
       isPinned: data['isPinned'] == true,
+      attachments: data['attachments'] as List<dynamic>?,
       onEdit: (messageId, content) {
         setEditMessage(messageId, content);
       },
@@ -744,7 +887,87 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  Widget _buildStagedFilesPreview() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      color: Theme.of(context).colorScheme.surface,
+      child: SizedBox(
+        height: 72,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: _stagedFiles.length,
+          itemBuilder: (context, index) {
+            final file = _stagedFiles[index];
+            final ext = file.path.split('.').last.toLowerCase();
+            final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext);
+            final isVideo = ['mp4', 'mov', 'avi', 'mkv'].contains(ext);
+
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Stack(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: Theme.of(context).colorScheme.secondary,
+                      border: Border.all(color: Colors.grey.shade400, width: 0.5),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: isImage
+                          ? Image.file(file, fit: BoxFit.cover)
+                          : Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    isVideo ? Icons.videocam : Icons.insert_drive_file,
+                                    color: Colors.orange,
+                                    size: 24,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    ext.toUpperCase(),
+                                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                    ),
+                  ),
+                  // Remove button
+                  Positioned(
+                    top: -2,
+                    right: -2,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() => _stagedFiles.removeAt(index));
+                      },
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        padding: const EdgeInsets.all(2),
+                        child: const Icon(Icons.close, size: 14, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Widget buildUserInput() {
+    final bool showSendButton = _hasText || _stagedFiles.isNotEmpty;
+
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -791,7 +1014,7 @@ class _ChatPageState extends State<ChatPage> {
                     textInputAction: TextInputAction.newline,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
-                      hintText: 'Message...',
+                      hintText: _stagedFiles.isNotEmpty ? 'Add a caption...' : 'Message...',
                       hintStyle: TextStyle(
                         color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
                       ),
@@ -808,22 +1031,28 @@ class _ChatPageState extends State<ChatPage> {
               ),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: sendMessage,
-                child: Container(
+                onTap: showSendButton ? sendMessage : _showAttachmentPicker,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
                   height: 48,
                   width: 48,
                   decoration: BoxDecoration(
-                    color: Colors.orange,
+                    color: showSendButton ? Colors.orange : Colors.grey.shade600,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.orange.withValues(alpha: 0.3),
+                        color: (showSendButton ? Colors.orange : Colors.grey).withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 26),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: showSendButton
+                        ? const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 26, key: ValueKey('send'))
+                        : const Icon(Icons.add_rounded, color: Colors.white, size: 28, key: ValueKey('add')),
+                  ),
                 ),
               ),
             ],

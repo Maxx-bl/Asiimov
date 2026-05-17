@@ -1,7 +1,9 @@
+import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/share_sheet.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/components/voters_list_sheet.dart';
 import 'package:asiimov/models/post.dart';
+import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +12,8 @@ class PostCard extends StatelessWidget {
   final Post post;
   final String currentUserId;
   final String? docPath;
+  final Post? parentPost;
+  final String? parentDocPath;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final VoidCallback? onAction;
@@ -19,6 +23,8 @@ class PostCard extends StatelessWidget {
     required this.post,
     required this.currentUserId,
     this.docPath,
+    this.parentPost,
+    this.parentDocPath,
     this.onTap,
     this.onDelete,
     this.onAction,
@@ -108,20 +114,10 @@ class PostCard extends StatelessWidget {
                   },
                   child: Row(
                     children: [
-                      CircleAvatar(
+                      ProfileAvatar(
+                        userId: post.authorID,
+                        username: post.authorUsername,
                         radius: 18,
-                        backgroundColor:
-                            Colors.orange.withValues(alpha: 0.2),
-                        child: Text(
-                          post.authorUsername.isNotEmpty
-                              ? post.authorUsername[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            color: Colors.orange,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
                       ),
                       const SizedBox(width: 10),
                       UsernameDisplay(
@@ -144,6 +140,83 @@ class PostCard extends StatelessWidget {
             ),
 
             const SizedBox(height: 10),
+
+            // Parent embed (Twitter-style quote)
+            if (parentPost != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 46, bottom: 10),
+                child: GestureDetector(
+                  onTap: () {
+                    if (parentDocPath != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PostDetailPage(
+                            post: parentPost!,
+                            docPath: parentDocPath!,
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.secondary,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            ProfileAvatar(
+                              userId: parentPost!.authorID,
+                              username: parentPost!.authorUsername,
+                              radius: 10,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                parentPost!.authorUsername,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '· ${_timeAgo(parentPost!.timestamp.toDate())}',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          parentPost!.content,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.3,
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
             // Content
             Padding(

@@ -323,12 +323,14 @@ class _HomePageState extends State<HomePage> {
           final decrypted = chatService.encryption.decrypt(rawMsg);
           final senderName = lastMsg['senderID'] == authService.getCurrentUser()!.uid ? 'You' : lastMsg['senderUsername'];
           
+          String displayMsg = decrypted.isEmpty ? 'Sent an attachment 📎' : decrypted;
+
           if (conv.isGroup) {
-            messagePreview = '$senderName: $decrypted';
+            messagePreview = '$senderName: $displayMsg';
           } else {
             messagePreview = lastMsg['senderID'] == authService.getCurrentUser()!.uid
-                ? 'You: $decrypted'
-                : decrypted;
+                ? 'You: $displayMsg'
+                : displayMsg;
           }
         }
       } catch (e) {

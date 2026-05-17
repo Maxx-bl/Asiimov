@@ -1,3 +1,4 @@
+import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
@@ -148,9 +149,10 @@ class _AddMembersSheetState extends State<AddMembersSheet> {
 
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
-                            leading: CircleAvatar(
-                              backgroundColor: Theme.of(context).colorScheme.secondary,
-                              child: Text(username[0].toUpperCase()),
+                            leading: ProfileAvatar(
+                              userId: userId,
+                              username: username,
+                              radius: 20,
                             ),
                             title: UsernameDisplay(userId: userId, username: username),
                             trailing: Container(

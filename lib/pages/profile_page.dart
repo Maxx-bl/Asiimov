@@ -1,16 +1,19 @@
+import 'dart:io';
+import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/profile_post_card.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/models/post.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:asiimov/pages/chat_page.dart';
 import 'package:asiimov/pages/follow_list_page.dart';
 import 'package:asiimov/pages/follow_requests_page.dart';
 import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
+import 'package:asiimov/services/image/image_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -101,6 +104,80 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } catch (e) {
       debugPrint("Error updating single post: $e");
+    }
+  }
+
+  Future<void> _changeProfilePicture() async {
+    final hasCurrentPicture = userData != null && 
+        userData!['profilePictureUrl'] != null && 
+        userData!['profilePictureUrl'].toString().isNotEmpty;
+
+    final action = await ImageService.showImageSourceSheet(context, showDeleteOption: hasCurrentPicture);
+    if (action == null) return;
+
+    final imageService = ImageService();
+
+    // Show loading indicator
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+          child: CircularProgressIndicator(color: Colors.orange),
+        ),
+      );
+    }
+
+    if (action == 'delete') {
+      final success = await imageService.deleteProfilePicture();
+      // Pop loading dialog
+      if (mounted) Navigator.pop(context);
+
+      if (success) {
+        imageService.invalidateCache(currentUserId);
+        await _refreshData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile picture deleted.')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to delete profile picture.')),
+          );
+        }
+      }
+      return;
+    }
+
+    final source = action == 'camera' ? ImageSource.camera : ImageSource.gallery;
+    final pickedFile = await imageService.pickImage(source);
+    if (pickedFile == null) {
+      if (mounted) Navigator.pop(context); // Pop loading if image picker cancelled
+      return;
+    }
+
+    final url = await imageService.uploadProfilePicture(File(pickedFile.path));
+
+    // Pop loading dialog
+    if (mounted) Navigator.pop(context);
+
+    if (url != null) {
+      // Invalidate cache and refresh
+      imageService.invalidateCache(currentUserId);
+      await _refreshData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile picture updated!')),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update profile picture.')),
+        );
+      }
     }
   }
 
@@ -195,25 +272,12 @@ class _ProfilePageState extends State<ProfilePage> {
                         const SizedBox(height: 24),
 
                         // Profile picture
-                        CircleAvatar(
+                        ProfileAvatar(
+                          userId: widget.userId,
+                          username: widget.username,
                           radius: 45,
-                          backgroundColor: Colors.orange.withValues(alpha: 0.2),
-                          backgroundImage:
-                              FirebaseAuth.instance.currentUser?.photoURL != null && isOwnProfile
-                                  ? NetworkImage(FirebaseAuth.instance.currentUser!.photoURL!)
-                                  : null,
-                          child: (FirebaseAuth.instance.currentUser?.photoURL == null || !isOwnProfile)
-                              ? Text(
-                                  widget.username.isNotEmpty
-                                      ? widget.username[0].toUpperCase()
-                                      : '?',
-                                  style: const TextStyle(
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.orange,
-                                  ),
-                                )
-                              : null,
+                          showEditIcon: isOwnProfile,
+                          onTap: isOwnProfile ? () => _changeProfilePicture() : null,
                         ),
 
                         const SizedBox(height: 12),

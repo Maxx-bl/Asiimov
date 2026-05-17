@@ -172,57 +172,21 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   : ListView.builder(
                       controller: _scrollController,
                       physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: 3 + _comments.length + (_isLoadingMore ? 1 : 0),
+                      itemCount: 2 + _comments.length + (_isLoadingMore ? 1 : 0),
                       itemBuilder: (context, index) {
-                        // 0: Parent Post
+                        // 0: Main Post (with embedded parent if applicable)
                         if (index == 0) {
-                          if (_parentPost == null) return const SizedBox.shrink();
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => PostDetailPage(post: _parentPost!, docPath: _parentDocPath!)),
-                                  );
-                                },
-                                child: Opacity(
-                                  opacity: 0.6,
-                                  child: AbsorbPointer(
-                                    absorbing: true,
-                                    child: PostCard(
-                                      post: _parentPost!,
-                                      currentUserId: currentUserId,
-                                      docPath: _parentDocPath,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(left: 32.0, top: 12, bottom: 4),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.subdirectory_arrow_right_rounded, color: Theme.of(context).colorScheme.primary, size: 18),
-                                    const SizedBox(width: 8),
-                                    Text("Replying to", style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 13, fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                        // 1: Main Post
-                        if (index == 1) {
                           return PostCard(
                             post: _post,
                             currentUserId: currentUserId,
                             docPath: widget.docPath,
+                            parentPost: _parentPost,
+                            parentDocPath: _parentDocPath,
                             onAction: _onRefresh,
                           );
                         }
-                        // 2: Divider
-                        if (index == 2) {
+                        // 1: Divider
+                        if (index == 1) {
                           return Column(
                             children: [
                               Divider(
@@ -246,7 +210,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                         }
                         
                         // Last: Loading Indicator
-                        if (index == 3 + _comments.length) {
+                        if (index == 2 + _comments.length) {
                           return const Padding(
                             padding: EdgeInsets.symmetric(vertical: 24),
                             child: Center(child: CircularProgressIndicator()),
@@ -254,7 +218,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                         }
 
                         // Comments
-                        final comment = _comments[index - 3];
+                        final comment = _comments[index - 2];
                         return CommentTile(
                           comment: comment,
                           parentPath: widget.docPath,

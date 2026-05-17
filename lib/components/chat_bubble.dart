@@ -12,6 +12,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:asiimov/components/chat_attachment_viewer.dart';
 
 class ChatBubble extends StatefulWidget {
   final String message;
@@ -32,6 +33,7 @@ class ChatBubble extends StatefulWidget {
   final bool isGroup;
   final bool isEdited;
   final bool isPinned;
+  final List<dynamic>? attachments;
   final void Function(String emoji)? onReact;
   final void Function(String messageId, String content)? onEdit;
   final VoidCallback? onSwipeReply;
@@ -57,6 +59,7 @@ class ChatBubble extends StatefulWidget {
     this.isGroup = false,
     this.isEdited = false,
     this.isPinned = false,
+    this.attachments,
     this.onReact,
     this.onEdit,
     this.onSwipeReply,
@@ -311,6 +314,8 @@ class ChatBubbleState extends State<ChatBubble>
                       },
                     ),
                     Divider(height: 1, color: Colors.grey.withValues(alpha: 0.2)),
+                    // Don't allow pinning messages with attachments
+                    if (widget.attachments == null || widget.attachments!.isEmpty) ...[
                     _buildActionTile(
                       context,
                       widget.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
@@ -321,6 +326,7 @@ class ChatBubbleState extends State<ChatBubble>
                       },
                       color: widget.isPinned ? Colors.orange : null,
                     ),
+                    ],
                     Divider(height: 1, color: Colors.grey.withValues(alpha: 0.2)),
                     if (!widget.isCurrentUser)
                       _buildActionTile(
@@ -500,7 +506,41 @@ class ChatBubbleState extends State<ChatBubble>
             ),
           ),
 
-        // Message bubble
+        // Attachments (images/videos/documents)
+        if (widget.attachments != null && widget.attachments!.isNotEmpty)
+          Builder(builder: (context) {
+            List<dynamic> mediaAttachments = [];
+            List<dynamic> docAttachments = [];
+            for (var att in widget.attachments!) {
+              if (att['type'] == 'image' || att['type'] == 'video') {
+                mediaAttachments.add(att);
+              } else {
+                docAttachments.add(att);
+              }
+            }
+            return Column(
+              crossAxisAlignment: widget.isCurrentUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                if (mediaAttachments.isNotEmpty)
+                  ChatMediaGrid(
+                    attachments: mediaAttachments,
+                    isDarkMode: isDarkMode,
+                    onLongPress: () => _showReactionMenu(context),
+                    onDoubleTap: () => widget.onReact?.call('❤️'),
+                  ),
+                if (docAttachments.isNotEmpty)
+                  ...docAttachments.map((att) => ChatAttachmentViewer(
+                        attachment: Map<String, dynamic>.from(att),
+                        isDarkMode: isDarkMode,
+                        onLongPress: () => _showReactionMenu(context),
+                        onDoubleTap: () => widget.onReact?.call('❤️'),
+                      )),
+              ],
+            );
+          }),
+
+        // Message bubble (only show if message text is not empty)
+        if (widget.message.isNotEmpty)
         GestureDetector(
           onLongPress: () {
             _showReactionMenu(context);

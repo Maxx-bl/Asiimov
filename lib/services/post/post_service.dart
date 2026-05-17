@@ -150,18 +150,12 @@ class PostService extends ChangeNotifier {
   //delete a post (only if author)
   Future<void> deletePost(String postId) async {
     final userId = _auth.currentUser!.uid;
-    final doc = await _firestore.collection('posts').doc(postId).get();
+    final docRef = _firestore.collection('posts').doc(postId);
+    final doc = await docRef.get();
     if (doc.exists && doc['authorID'] == userId) {
-      // Delete all comments first
-      final comments = await _firestore
-          .collection('posts')
-          .doc(postId)
-          .collection('comments')
-          .get();
-      for (final comment in comments.docs) {
-        await comment.reference.delete();
-      }
-      await _firestore.collection('posts').doc(postId).delete();
+      // Recursively delete all nested comments
+      await _deleteSubcollection(docRef);
+      await docRef.delete();
     }
   }
 
@@ -263,6 +257,8 @@ class PostService extends ChangeNotifier {
 
     final doc = await commentRef.get();
     if (doc.exists && doc['authorID'] == userId) {
+      // Recursively delete all nested comments
+      await _deleteSubcollection(commentRef);
       await commentRef.delete();
 
       // Decrement comment count on parent
@@ -273,6 +269,23 @@ class PostService extends ChangeNotifier {
         });
       }
     }
+  }
+
+  /// Recursively deletes all documents in the 'comments' subcollection
+  /// of [parentRef], including their own nested subcollections.
+  Future<void> _deleteSubcollection(DocumentReference parentRef) async {
+    final commentsRef = parentRef.collection('comments');
+    
+    // Process in batches of 100 to avoid memory issues
+    QuerySnapshot snapshot;
+    do {
+      snapshot = await commentsRef.limit(100).get();
+      for (final doc in snapshot.docs) {
+        // Recurse into this comment's own subcollection first
+        await _deleteSubcollection(doc.reference);
+        await doc.reference.delete();
+      }
+    } while (snapshot.docs.isNotEmpty);
   }
   
   //share a comment

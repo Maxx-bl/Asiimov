@@ -46,3 +46,10 @@ app.*.map.json
 assets/env
 firebase.json
 assets/service-account.json
+
+# Firebase Functions
+functions/node_modules/
+functions/lib/
+functions/.firebase/
+functions/package-lock.json
+.firebase/

@@ -18,6 +18,9 @@ class Message {
   // Reactions: {userID: emoji}
   final Map<String, String>? reactions;
 
+  // Attachments: [{url, type, name, size, objectKey}]
+  final List<dynamic>? attachments;
+
   Message({
     required this.senderID,
     required this.senderEmail,
@@ -31,6 +34,7 @@ class Message {
     this.replyToMessage,
     this.replyToSenderID,
     this.reactions,
+    this.attachments,
   });
 
   //convert to map
@@ -57,6 +61,10 @@ class Message {
 
     if (reactions != null) {
       map['reactions'] = reactions;
+    }
+
+    if (attachments != null && attachments!.isNotEmpty) {
+      map['attachments'] = attachments;
     }
 
     return map;

@@ -1,3 +1,4 @@
+import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:asiimov/components/username_display.dart';
@@ -65,15 +66,10 @@ class _FollowRequestsPageState extends State<FollowRequestsPage> {
                   final username = userData['username'] ?? 'Unknown';
 
                   return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.orange.withValues(alpha: 0.2),
-                      child: Text(
-                        username.isNotEmpty ? username[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          color: Colors.orange,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    leading: ProfileAvatar(
+                      userId: uid,
+                      username: username,
+                      radius: 20,
                     ),
                     title: UsernameDisplay(
                       userId: uid,

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:asiimov/models/conversation.dart';
 import 'package:asiimov/models/message.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
+import 'package:asiimov/services/file/file_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -560,7 +561,8 @@ class ChatService extends ChangeNotifier {
       String? replyToMessage,
       String? replyToSenderID,
       String messageType = 'text',
-      String? sharedPostId}) async {
+      String? sharedPostId,
+      List<dynamic>? attachments}) async {
     //get current user info
     final String currentUserId = auth.currentUser!.uid;
     final String currentUserEmail = auth.currentUser!.email!;
@@ -583,6 +585,7 @@ class ChatService extends ChangeNotifier {
       replyToMessageId: replyToMessageId,
       replyToMessage: replyToMessage,
       replyToSenderID: replyToSenderID,
+      attachments: attachments,
     );
 
     // For groups, fetch the doc ONCE and reuse for unread + notifications
@@ -1176,12 +1179,29 @@ class ChatService extends ChangeNotifier {
       chatRoomID = ids.join('_');
     }
 
-    await firestore
+    final messageRef = firestore
         .collection('chats')
         .doc(chatRoomID)
         .collection('messages')
-        .doc(messageId)
-        .delete();
+        .doc(messageId);
+
+    // Fetch message to check for attachments
+    final doc = await messageRef.get();
+    if (doc.exists) {
+      final data = doc.data() as Map<String, dynamic>;
+      final attachments = data['attachments'] as List<dynamic>?;
+      if (attachments != null && attachments.isNotEmpty) {
+        final fileService = FileService();
+        for (var attachment in attachments) {
+          final objectKey = attachment['objectKey'] as String?;
+          if (objectKey != null) {
+            await fileService.deleteAttachment(objectKey);
+          }
+        }
+      }
+    }
+
+    await messageRef.delete();
   }
 
   //edit message

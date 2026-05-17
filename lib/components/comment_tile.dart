@@ -1,3 +1,4 @@
+import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/share_sheet.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/components/voters_list_sheet.dart';
@@ -72,6 +73,30 @@ class CommentTile extends StatelessWidget {
     }
 
     return GestureDetector(
+      onTap: () async {
+        final commentAsPost = Post(
+          id: comment.id,
+          authorID: comment.authorID,
+          authorUsername: comment.authorUsername,
+          content: comment.content,
+          timestamp: comment.timestamp,
+          upvotes: comment.upvotes,
+          downvotes: comment.downvotes,
+          commentCount: comment.commentCount,
+          shareCount: comment.shareCount,
+          sharedBy: comment.sharedBy,
+        );
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PostDetailPage(
+              post: commentAsPost,
+              docPath: '$parentPath/comments/${comment.id}',
+            ),
+          ),
+        );
+        if (onAction != null) onAction!();
+      },
       onLongPress: comment.authorID == currentUserId
           ? () => showDeleteDialog(context)
           : null,
@@ -101,19 +126,10 @@ class CommentTile extends StatelessWidget {
                   ),
                 );
               },
-              child: CircleAvatar(
+              child: ProfileAvatar(
+                userId: comment.authorID,
+                username: comment.authorUsername,
                 radius: 16,
-                backgroundColor: Colors.orange.withValues(alpha: 0.2),
-                child: Text(
-                  comment.authorUsername.isNotEmpty
-                      ? comment.authorUsername[0].toUpperCase()
-                      : '?',
-                  style: const TextStyle(
-                    color: Colors.orange,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
               ),
             ),
             

@@ -1,3 +1,4 @@
+import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/user/user_service.dart';
@@ -93,17 +94,10 @@ class VotersListSheet extends StatelessWidget {
                           ),
                         );
                       },
-                      leading: CircleAvatar(
+                      leading: ProfileAvatar(
+                        userId: userId,
+                        username: username,
                         radius: 16,
-                        backgroundColor: Colors.orange.withValues(alpha: 0.2),
-                        child: Text(
-                          username[0].toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.orange,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
                       ),
                       title: UsernameDisplay(
                         userId: userId,

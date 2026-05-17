@@ -1,5 +1,6 @@
 import 'package:asiimov/components/add_members_sheet.dart';
 import 'package:asiimov/components/group_icon.dart';
+import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
@@ -288,9 +289,10 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                             ),
                           );
                         },
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.secondary,
-                          child: Text(username[0].toUpperCase()),
+                        leading: ProfileAvatar(
+                          userId: uid,
+                          username: username,
+                          radius: 20,
                         ),
                         title: UsernameDisplay(userId: uid, username: username),
                         subtitle: isMemberAdmin ? const Text("Admin", style: TextStyle(color: Colors.orange, fontSize: 12)) : null,

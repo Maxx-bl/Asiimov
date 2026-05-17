@@ -8,6 +8,7 @@ class EncryptionService {
       : _encrypter = Encrypter(AES(Key.fromUtf8(keyString), mode: AESMode.cbc));
 
   String encrypt(String plainText) {
+    if (plainText.isEmpty) return "";
     final iv = IV.fromSecureRandom(16);
     final encrypted = _encrypter.encrypt(plainText, iv: iv);
 
@@ -20,6 +21,7 @@ class EncryptionService {
   }
 
   String decrypt(String encryptedPayload) {
+    if (encryptedPayload.isEmpty) return "";
     final Map<String, dynamic> payload = jsonDecode(encryptedPayload);
     final iv = IV.fromBase64(payload['iv']);
     final encrypted = Encrypted.fromBase64(payload['ciphertext']);

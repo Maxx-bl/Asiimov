@@ -1,4 +1,5 @@
 import 'package:asiimov/components/group_icon.dart';
+import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/models/post.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
@@ -265,9 +266,10 @@ class _ShareSheetState extends State<ShareSheet> {
     return ListTile(
       leading: isGroup 
         ? const GroupIcon(size: 40)
-        : CircleAvatar(
-            backgroundColor: Theme.of(context).colorScheme.secondary,
-            child: Text(name[0].toUpperCase()),
+        : ProfileAvatar(
+            userId: id,
+            username: name,
+            radius: 20,
           ),
       title: isGroup
         ? Text(name)
