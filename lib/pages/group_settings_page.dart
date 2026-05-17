@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:asiimov/components/add_members_sheet.dart';
 import 'package:asiimov/components/group_icon.dart';
 import 'package:asiimov/components/profile_avatar.dart';
@@ -5,6 +6,8 @@ import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
+import 'package:asiimov/services/image/image_service.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -163,6 +166,89 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
     );
   }
 
+  Future<void> _changeGroupPicture(String? currentUrl) async {
+    final hasCurrentPicture = currentUrl != null && currentUrl.isNotEmpty;
+
+    final action = await ImageService.showImageSourceSheet(context, showDeleteOption: hasCurrentPicture);
+    if (action == null) return;
+
+    final imageService = ImageService();
+
+    // Show loading indicator
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+          child: CircularProgressIndicator(color: Colors.orange),
+        ),
+      );
+    }
+
+    if (action == 'delete') {
+      final success = await imageService.deleteGroupProfilePicture(widget.groupId);
+      if (mounted) Navigator.pop(context); // Pop loading
+
+      if (success) {
+        await _chatService.logGroupPictureUpdate(widget.groupId, true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Group picture deleted.')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to delete group picture.')),
+          );
+        }
+      }
+      return;
+    }
+
+    final source = action == 'camera' ? ImageSource.camera : ImageSource.gallery;
+    final pickedFile = await imageService.pickImage(source);
+    if (pickedFile == null) {
+      if (mounted) Navigator.pop(context); // Pop loading if cancelled
+      return;
+    }
+
+    // Check file size (max 20MB)
+    final file = File(pickedFile.path);
+    final length = await file.length();
+    if (length > 20 * 1024 * 1024) {
+      if (mounted) {
+        Navigator.pop(context); // Pop loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('File is too large (max 20MB).', style: TextStyle(color: Colors.white)), 
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    final url = await imageService.uploadGroupProfilePicture(widget.groupId, file);
+
+    if (mounted) Navigator.pop(context); // Pop loading
+
+    if (url != null) {
+      await _chatService.logGroupPictureUpdate(widget.groupId, false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Group picture updated!')),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update group picture.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -188,6 +274,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
           final name = data['groupName'] ?? widget.groupName;
           final creatorId = data['creatorId'] ?? widget.creatorId;
           final members = List<String>.from(data['members'] ?? []);
+          final groupIconUrl = data['groupIconUrl'] as String?;
           final isAdmin = _currentUserId == creatorId;
 
           return ListView(
@@ -197,7 +284,24 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
               Center(
                 child: Column(
                   children: [
-                    const GroupIcon(size: 80),
+                    GestureDetector(
+                      onTap: isAdmin ? () => _changeGroupPicture(groupIconUrl) : null,
+                      child: Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          GroupIcon(size: 80, imageUrl: groupIconUrl),
+                          if (isAdmin)
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.orange,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
+                            ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,

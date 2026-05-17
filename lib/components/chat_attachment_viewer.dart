@@ -117,7 +117,7 @@ class ChatAttachmentViewer extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => _MediaCarouselScreen(
+              builder: (context) => MediaCarouselScreen(
                 attachments: [attachment],
                 initialIndex: 0,
               ),
@@ -423,7 +423,7 @@ class ChatMediaGrid extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => _MediaCarouselScreen(
+        builder: (context) => MediaCarouselScreen(
           attachments: attachments,
           initialIndex: initialIndex,
         ),
@@ -513,17 +513,17 @@ class ChatMediaGrid extends StatelessWidget {
   }
 }
 
-class _MediaCarouselScreen extends StatefulWidget {
+class MediaCarouselScreen extends StatefulWidget {
   final List<dynamic> attachments;
   final int initialIndex;
 
-  const _MediaCarouselScreen({required this.attachments, required this.initialIndex});
+  const MediaCarouselScreen({super.key, required this.attachments, required this.initialIndex});
 
   @override
-  State<_MediaCarouselScreen> createState() => _MediaCarouselScreenState();
+  State<MediaCarouselScreen> createState() => _MediaCarouselScreenState();
 }
 
-class _MediaCarouselScreenState extends State<_MediaCarouselScreen> {
+class _MediaCarouselScreenState extends State<MediaCarouselScreen> {
   late PageController _pageController;
 
   @override

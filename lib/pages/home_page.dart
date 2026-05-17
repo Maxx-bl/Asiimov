@@ -350,7 +350,7 @@ class _HomePageState extends State<HomePage> {
     return UserTile(
       text: conv.otherUsername,
       userId: conv.isGroup ? '' : conv.otherUserId,
-      leading: conv.isGroup ? GroupIcon(size: 40) : null,
+      leading: conv.isGroup ? GroupIcon(size: 40, imageUrl: conv.groupIconUrl) : null,
       subtitle: Text(
         messagePreview,
         maxLines: 1,

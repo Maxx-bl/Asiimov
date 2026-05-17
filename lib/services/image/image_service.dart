@@ -158,6 +158,83 @@ class ImageService {
     }
   }
 
+  /// Upload a group profile picture securely via Cloudflare Worker proxy.
+  Future<String?> uploadGroupProfilePicture(String groupId, File imageFile) async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    if (_workerUrl.contains("TODO")) {
+      debugPrint("ERROR: Cloudflare Worker URL is missing!");
+      return null;
+    }
+
+    try {
+      // 1. Compress image locally to preserve bandwidth
+      final compressed = await compressImage(
+        imageFile,
+        quality: 70,
+        minWidth: 400,
+        minHeight: 400,
+      );
+      final fileToUpload = compressed ?? imageFile;
+      final fileBytes = await fileToUpload.readAsBytes();
+
+      // 2. Fetch Firebase ID Token for secure Auth verification in Worker
+      final idToken = await user.getIdToken();
+
+      // 3. Upload to Cloudflare Worker securely
+      final objectKey = 'chat_files/${user.uid}/group_$groupId.jpg';
+      final cleanWorkerUrl = _workerUrl.endsWith('/') 
+          ? _workerUrl.substring(0, _workerUrl.length - 1) 
+          : _workerUrl;
+          
+      final response = await http.put(
+        Uri.parse('$cleanWorkerUrl/$objectKey'),
+        headers: {
+          'Authorization': 'Bearer $idToken',
+          'Content-Type': 'image/jpeg',
+        },
+        body: fileBytes,
+      );
+
+      if (response.statusCode != 200) {
+        debugPrint("Failed to upload group pfp to Worker: ${response.statusCode} - ${response.body}");
+        return null;
+      }
+
+      // 4. Construct the public URL for downloading (via R2 CDN directly)
+      final downloadUrl = "$_r2PublicDomain/$objectKey?v=${DateTime.now().millisecondsSinceEpoch}";
+
+      // 5. Update Firestore group document
+      await _firestore.collection('chats').doc(groupId).update({
+        'groupIconUrl': downloadUrl,
+      });
+
+      // 6. Clean up temp file
+      if (compressed != null && await compressed.exists()) {
+        await compressed.delete();
+      }
+
+      return downloadUrl;
+    } catch (e) {
+      debugPrint("Error uploading group profile picture to R2: $e");
+      return null;
+    }
+  }
+
+  /// Delete a group profile picture.
+  Future<bool> deleteGroupProfilePicture(String groupId) async {
+    try {
+      await _firestore.collection('chats').doc(groupId).update({
+        'groupIconUrl': '',
+      });
+      return true;
+    } catch (e) {
+      debugPrint("Error deleting group profile picture: $e");
+      return false;
+    }
+  }
+
   /// Get a user's profile picture URL (with in-memory cache).
   /// Returns null if no profile picture is set.
   Future<String?> getProfilePictureUrl(String userId) async {

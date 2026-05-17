@@ -13,6 +13,7 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:asiimov/components/chat_attachment_viewer.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ChatBubble extends StatefulWidget {
   final String message;
@@ -34,6 +35,7 @@ class ChatBubble extends StatefulWidget {
   final bool isEdited;
   final bool isPinned;
   final List<dynamic>? attachments;
+  final Map<String, dynamic>? instantAttachment;
   final void Function(String emoji)? onReact;
   final void Function(String messageId, String content)? onEdit;
   final VoidCallback? onSwipeReply;
@@ -60,6 +62,7 @@ class ChatBubble extends StatefulWidget {
     this.isEdited = false,
     this.isPinned = false,
     this.attachments,
+    this.instantAttachment,
     this.onReact,
     this.onEdit,
     this.onSwipeReply,
@@ -563,9 +566,11 @@ class ChatBubbleState extends State<ChatBubble>
               children: [
                 Padding(
                   padding: const EdgeInsets.only(right: 8, bottom: 2, top: 2),
-                  child: widget.messageType == 'post_share'
-                      ? _buildPostShare(isDarkMode)
-                      : Linkify(
+                  child: widget.messageType == 'instant_attachment'
+                      ? _buildInstantAttachment(isDarkMode)
+                      : widget.messageType == 'post_share'
+                          ? _buildPostShare(isDarkMode)
+                          : Linkify(
                           onOpen: (link) async {
                             final Uri url = Uri.parse(link.url);
                             
@@ -909,6 +914,79 @@ class ChatBubbleState extends State<ChatBubble>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildInstantAttachment(bool isDarkMode) {
+    if (widget.instantAttachment == null) return const SizedBox.shrink();
+    final att = widget.instantAttachment!;
+    final bool isVideo = att['type'] == 'video';
+    final String url = att['url'] ?? '';
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MediaCarouselScreen(
+              attachments: [att],
+              initialIndex: 0,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 200,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isDarkMode ? Colors.grey.shade900 : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.orange, width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                height: 140,
+                width: double.infinity,
+                child: isVideo
+                    ? Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CachedNetworkImage(
+                            imageUrl: url,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange)),
+                            errorWidget: (context, url, error) => const Icon(Icons.video_file, size: 40, color: Colors.grey),
+                          ),
+                          const Center(
+                            child: CircleAvatar(
+                              backgroundColor: Colors.black54,
+                              radius: 20,
+                              child: Icon(Icons.play_arrow, color: Colors.white, size: 24),
+                            ),
+                          ),
+                        ],
+                      )
+                    : CachedNetworkImage(
+                        imageUrl: url,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange)),
+                        errorWidget: (context, url, error) => const Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isVideo ? "Sent a video" : "Sent a photo",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

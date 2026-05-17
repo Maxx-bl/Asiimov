@@ -12,6 +12,7 @@ class Conversation {
   final String? groupName;
   final List<String>? members;
   final String? creatorId;
+  final String? groupIconUrl;
 
   Conversation({
     required this.id,
@@ -23,6 +24,7 @@ class Conversation {
     this.groupName,
     this.members,
     this.creatorId,
+    this.groupIconUrl,
   });
 
   String get otherUserId => id;

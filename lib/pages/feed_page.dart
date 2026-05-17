@@ -25,9 +25,10 @@ class _FeedPageState extends State<FeedPage> {
 
   final ScrollController _scrollController = ScrollController();
   List<Post> _posts = [];
-  int _limit = 15;
+  int _limit = 20;
   bool _isLoading = true;
   bool _isLoadingMore = false;
+  bool _hasMorePosts = true;
   List<String> _blockedUserIds = [];
   List<String> _allowedUserIds = [];
 
@@ -62,7 +63,8 @@ class _FeedPageState extends State<FeedPage> {
 
   Future<void> _fetchPosts({bool refresh = false}) async {
     if (refresh) {
-      _limit = 15;
+      _limit = 20;
+      _hasMorePosts = true;
     }
 
     try {
@@ -80,12 +82,16 @@ class _FeedPageState extends State<FeedPage> {
           _posts = fetchedPosts;
           _isLoading = false;
           _isLoadingMore = false;
+          _hasMorePosts = snapshot.docs.length >= _limit;
         });
       }
     } catch (e) {
       debugPrint("Error fetching posts: $e");
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _isLoadingMore = false;
+        });
       }
     }
   }
@@ -103,10 +109,10 @@ class _FeedPageState extends State<FeedPage> {
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      if (!_isLoadingMore && _posts.length >= _limit) {
+      if (!_isLoadingMore && _hasMorePosts) {
         setState(() {
           _isLoadingMore = true;
-          _limit += 15;
+          _limit += 20;
         });
         _fetchPosts();
       }

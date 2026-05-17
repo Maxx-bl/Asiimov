@@ -297,6 +297,7 @@ class ChatService extends ChangeNotifier {
           groupName: chatData['groupName'],
           members: isGroup ? List<String>.from(chatData['members'] ?? []) : null,
           creatorId: chatData['creatorId'],
+          groupIconUrl: chatData['groupIconUrl'],
           lastMessage: chatData['lastMessage'] != null ? {
             'message': chatData['lastMessage'],
             'senderID': chatData['lastSenderID'],
@@ -398,6 +399,13 @@ class ChatService extends ChangeNotifier {
       'updatedAt': FieldValue.serverTimestamp(),
     });
     await sendSystemMessage(groupId, "$currentUsername renamed the group to \"$newName\"");
+  }
+
+  // NEW: Log group picture update/delete
+  Future<void> logGroupPictureUpdate(String groupId, bool isDeleted) async {
+    final currentUsername = auth.currentUser?.displayName ?? 'Someone';
+    final action = isDeleted ? "removed the group photo" : "updated the group photo";
+    await sendSystemMessage(groupId, "$currentUsername $action");
   }
 
   // NEW: Toggle mute for a group
@@ -562,7 +570,8 @@ class ChatService extends ChangeNotifier {
       String? replyToSenderID,
       String messageType = 'text',
       String? sharedPostId,
-      List<dynamic>? attachments}) async {
+      List<dynamic>? attachments,
+      Map<String, dynamic>? instantAttachment}) async {
     //get current user info
     final String currentUserId = auth.currentUser!.uid;
     final String currentUserEmail = auth.currentUser!.email!;
@@ -586,6 +595,7 @@ class ChatService extends ChangeNotifier {
       replyToMessage: replyToMessage,
       replyToSenderID: replyToSenderID,
       attachments: attachments,
+      instantAttachment: instantAttachment,
     );
 
     // For groups, fetch the doc ONCE and reuse for unread + notifications

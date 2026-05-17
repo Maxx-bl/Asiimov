@@ -38,6 +38,7 @@ class _ShareSheetState extends State<ShareSheet> {
       convs.where((c) => c.isGroup).map((c) => {
         'uid': c.otherUserId,
         'username': c.groupName,
+        'groupIconUrl': c.groupIconUrl,
         'isGroup': true,
       }).toList()
     );
@@ -265,7 +266,7 @@ class _ShareSheetState extends State<ShareSheet> {
 
     return ListTile(
       leading: isGroup 
-        ? const GroupIcon(size: 40)
+        ? GroupIcon(size: 40, imageUrl: user['groupIconUrl'])
         : ProfileAvatar(
             userId: id,
             username: name,

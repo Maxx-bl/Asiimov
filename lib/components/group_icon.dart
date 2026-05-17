@@ -1,11 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class GroupIcon extends StatelessWidget {
   final double size;
-  const GroupIcon({super.key, this.size = 40});
+  final String? imageUrl;
+  const GroupIcon({super.key, this.size = 40, this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      return SizedBox(
+        width: size,
+        height: size,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(size / 2),
+          child: CachedNetworkImage(
+            imageUrl: imageUrl!,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => _buildDefaultIcon(context),
+            errorWidget: (context, url, error) => _buildDefaultIcon(context),
+          ),
+        ),
+      );
+    }
+    return _buildDefaultIcon(context);
+  }
+
+  Widget _buildDefaultIcon(BuildContext context) {
     return SizedBox(
       width: size,
       height: size,

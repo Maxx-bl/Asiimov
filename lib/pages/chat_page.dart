@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:asiimov/components/chat_bubble.dart';
+import 'package:asiimov/components/instant_camera_screen.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/pages/group_settings_page.dart';
 import 'package:asiimov/pages/pinned_messages_page.dart';
@@ -10,6 +11,7 @@ import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
 import 'package:asiimov/services/file/file_service.dart';
+import 'package:asiimov/services/image/image_service.dart';
 import 'package:asiimov/services/notifications/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -849,6 +851,7 @@ class _ChatPageState extends State<ChatPage> {
       isEdited: data['isEdited'] == true,
       isPinned: data['isPinned'] == true,
       attachments: data['attachments'] as List<dynamic>?,
+      instantAttachment: data['instantAttachment'] as Map<String, dynamic>?,
       onEdit: (messageId, content) {
         setEditMessage(messageId, content);
       },
@@ -965,6 +968,60 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  Future<void> _openInstantCamera() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const InstantCameraScreen()),
+    );
+    if (result == null) return;
+
+    final File file = result['file'];
+    final bool isVideo = result['isVideo'];
+
+    setState(() => _isUploading = true);
+
+    File? compressedFile;
+    if (isVideo) {
+      compressedFile = file;
+    } else {
+      compressedFile = await ImageService().compressImage(file, quality: 75, minWidth: 800, minHeight: 800);
+    }
+
+    final fileToUpload = compressedFile ?? file;
+    
+    final currentUid = authService.getCurrentUser()!.uid;
+    List<String> ids = [currentUid, widget.receiverID];
+    ids.sort();
+    final chatRoomId = widget.isGroup ? widget.receiverID : ids.join('_');
+
+    final uploadResult = await _fileService.uploadChatAttachment(fileToUpload, chatRoomId);
+    if (mounted) setState(() => _isUploading = false);
+
+    if (uploadResult == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to upload attachment.')),
+        );
+      }
+      return;
+    }
+
+    final instantAttachment = {
+      'name': fileToUpload.path.split('/').last,
+      'url': uploadResult['url'],
+      'type': isVideo ? 'video' : 'image',
+      'size': await fileToUpload.length(),
+    };
+
+    await chatService.sendMessage(
+      widget.receiverID,
+      isVideo ? '📸 Instant Video' : '📸 Instant Photo',
+      isGroup: widget.isGroup,
+      messageType: 'instant_attachment',
+      instantAttachment: instantAttachment,
+    );
+  }
+
   Widget buildUserInput() {
     final bool showSendButton = _hasText || _stagedFiles.isNotEmpty;
 
@@ -995,37 +1052,50 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: TextField(
-                    controller: messageController,
-                    focusNode: myFocusNode,
-                    maxLines: 4,
-                    minLines: 1,
-                    maxLength: 1000,
-                    buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
-                      if (currentLength < 900) return null;
-                      return Text(
-                        '$currentLength / $maxLength',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                  child: Row(
+                    children: [
+                      if (!_hasText) ...[
+                        GestureDetector(
+                          onTap: _openInstantCamera,
+                          child: const Icon(Icons.camera_alt_rounded, color: Colors.orange, size: 24),
                         ),
-                      );
-                    },
-                    textInputAction: TextInputAction.newline,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: InputDecoration(
-                      hintText: _stagedFiles.isNotEmpty ? 'Add a caption...' : 'Message...',
-                      hintStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+                        const SizedBox(width: 12),
+                      ],
+                      Expanded(
+                        child: TextField(
+                          controller: messageController,
+                          focusNode: myFocusNode,
+                          maxLines: 4,
+                          minLines: 1,
+                          maxLength: 1000,
+                          buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
+                            if (currentLength < 900) return null;
+                            return Text(
+                              '$currentLength / $maxLength',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                              ),
+                            );
+                          },
+                          textInputAction: TextInputAction.newline,
+                          textCapitalization: TextCapitalization.sentences,
+                          decoration: InputDecoration(
+                            hintText: _stagedFiles.isNotEmpty ? 'Add a caption...' : 'Message...',
+                            hintStyle: TextStyle(
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
+                          ),
+                        ),
                       ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black,
-                    ),
+                    ],
                   ),
                 ),
               ),

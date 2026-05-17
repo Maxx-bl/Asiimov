@@ -21,6 +21,9 @@ class Message {
   // Attachments: [{url, type, name, size, objectKey}]
   final List<dynamic>? attachments;
 
+  // Instant Attachment: {url, type, name, size}
+  final Map<String, dynamic>? instantAttachment;
+
   Message({
     required this.senderID,
     required this.senderEmail,
@@ -35,6 +38,7 @@ class Message {
     this.replyToSenderID,
     this.reactions,
     this.attachments,
+    this.instantAttachment,
   });
 
   //convert to map
@@ -65,6 +69,10 @@ class Message {
 
     if (attachments != null && attachments!.isNotEmpty) {
       map['attachments'] = attachments;
+    }
+
+    if (instantAttachment != null) {
+      map['instantAttachment'] = instantAttachment;
     }
 
     return map;
