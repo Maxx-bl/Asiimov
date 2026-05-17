@@ -318,8 +318,8 @@ class ChatBubbleState extends State<ChatBubble>
                       },
                     ),
                     Divider(height: 1, color: Colors.grey.withValues(alpha: 0.2)),
-                    // Don't allow pinning messages with attachments
-                    if (widget.attachments == null || widget.attachments!.isEmpty) ...[
+                    // Don't allow pinning messages with attachments or instant media (voice/camera)
+                    if ((widget.attachments == null || widget.attachments!.isEmpty) && widget.instantAttachment == null) ...[
                     _buildActionTile(
                       context,
                       widget.isPinned ? Icons.push_pin : Icons.push_pin_outlined,

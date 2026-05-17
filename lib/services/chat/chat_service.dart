@@ -657,7 +657,48 @@ class ChatService extends ChangeNotifier {
     //send push notification to receiver(s)
     String notificationBody = message;
     if (messageType == 'post_share') {
-      notificationBody = "📜 sent a post!";
+      notificationBody = "📜 sent a post";
+    } else if (messageType == 'instant_attachment' && instantAttachment != null) {
+      final type = instantAttachment['type'];
+      if (type == 'audio') {
+        notificationBody = "🎤 sent a voice message";
+      } else if (type == 'video') {
+        notificationBody = "📸 sent a video";
+      } else {
+        notificationBody = "📸 sent a photo";
+      }
+    } else if (attachments != null && attachments.isNotEmpty) {
+      if (message.isEmpty) {
+        if (attachments.length == 1) {
+          final type = attachments[0]['type'];
+          if (type == 'image') {
+            notificationBody = "📷 sent a photo";
+          } else if (type == 'video') {
+            notificationBody = "🎥 sent a video";
+          } else if (type == 'audio') {
+            notificationBody = "🎵 sent an audio file";
+          } else {
+            notificationBody = "📁 sent an attachment";
+          }
+        } else {
+          notificationBody = "📁 sent ${attachments.length} attachments";
+        }
+      } else {
+        if (attachments.length == 1) {
+          final type = attachments[0]['type'];
+          if (type == 'image') {
+            notificationBody = "📷 Photo: $message";
+          } else if (type == 'video') {
+            notificationBody = "🎥 Video: $message";
+          } else if (type == 'audio') {
+            notificationBody = "🎵 Audio: $message";
+          } else {
+            notificationBody = "📁 Attachment: $message";
+          }
+        } else {
+          notificationBody = "📁 ${attachments.length} attachments: $message";
+        }
+      }
     }
 
     if (isGroup && groupData != null) {
@@ -1097,21 +1138,49 @@ class ChatService extends ChangeNotifier {
 
     final now = DateTime.now();
     final batch = firestore.batch();
+    final fileService = FileService();
     int deleteCount = 0;
 
     for (final doc in oldMessagesSnapshot.docs) {
       final data = doc.data();
-      final bool isRead = data['isRead'] ?? false;
-      final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
+      
+      // Check read status based on chat type
+      bool isEffectivelyRead = false;
+      if (isGroup) {
+        // In groups, messages older than 24h are deleted even if not read by everyone
+        isEffectivelyRead = true;
+      } else {
+        isEffectivelyRead = data['isRead'] == true;
+      }
 
+      final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
       if (timestamp == null) continue;
 
       final bool isOlderThan24h = now.difference(timestamp).inHours >= 24;
-
       final bool isPinned = data['isPinned'] == true;
 
       // Condition: Read AND Older than 24h AND not pinned AND (already guaranteed) not in top 30
-      if (isRead && isOlderThan24h && !isPinned) {
+      if (isEffectivelyRead && isOlderThan24h && !isPinned) {
+        // 1. Delete associated R2 attachments if any
+        final attachments = data['attachments'] as List<dynamic>?;
+        if (attachments != null && attachments.isNotEmpty) {
+          for (var attachment in attachments) {
+            final objectKey = attachment['objectKey'] as String?;
+            if (objectKey != null) {
+              await fileService.deleteAttachment(objectKey);
+            }
+          }
+        }
+
+        final instantAttachment = data['instantAttachment'] as Map<String, dynamic>?;
+        if (instantAttachment != null) {
+          final objectKey = instantAttachment['objectKey'] as String?;
+          if (objectKey != null) {
+            await fileService.deleteAttachment(objectKey);
+          }
+        }
+
+        // 2. Delete message document
         batch.delete(doc.reference);
         deleteCount++;
 
