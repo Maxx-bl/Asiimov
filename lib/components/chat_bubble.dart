@@ -14,6 +14,7 @@ import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:asiimov/components/chat_attachment_viewer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class ChatBubble extends StatefulWidget {
   final String message;
@@ -921,7 +922,18 @@ class ChatBubbleState extends State<ChatBubble>
     if (widget.instantAttachment == null) return const SizedBox.shrink();
     final att = widget.instantAttachment!;
     final bool isVideo = att['type'] == 'video';
+    final bool isAudio = att['type'] == 'audio';
     final String url = att['url'] ?? '';
+
+    if (isAudio) {
+      final int duration = att['duration'] ?? 0;
+      return VoiceMessagePlayer(
+        url: url,
+        duration: duration,
+        isCurrentUser: widget.isCurrentUser,
+        isDarkMode: isDarkMode,
+      );
+    }
 
     return GestureDetector(
       onTap: () {
@@ -986,6 +998,152 @@ class ChatBubbleState extends State<ChatBubble>
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class VoiceMessagePlayer extends StatefulWidget {
+  final String url;
+  final int duration;
+  final bool isCurrentUser;
+  final bool isDarkMode;
+
+  const VoiceMessagePlayer({
+    super.key,
+    required this.url,
+    required this.duration,
+    required this.isCurrentUser,
+    required this.isDarkMode,
+  });
+
+  @override
+  State<VoiceMessagePlayer> createState() => _VoiceMessagePlayerState();
+}
+
+class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isPlaying = false;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _duration = Duration(seconds: widget.duration);
+
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = state == PlayerState.playing;
+        });
+      }
+    });
+
+    _audioPlayer.onDurationChanged.listen((newDuration) {
+      if (mounted && newDuration > Duration.zero) {
+        setState(() {
+          _duration = newDuration;
+        });
+      }
+    });
+
+    _audioPlayer.onPositionChanged.listen((newPosition) {
+      if (mounted) {
+        setState(() {
+          _position = newPosition;
+        });
+      }
+    });
+
+    _audioPlayer.onPlayerComplete.listen((_) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = false;
+          _position = Duration.zero;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  void _togglePlay() async {
+    if (_isPlaying) {
+      await _audioPlayer.pause();
+    } else {
+      await _audioPlayer.play(UrlSource(widget.url));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color fgColor = widget.isCurrentUser
+        ? Colors.white
+        : (widget.isDarkMode ? Colors.white : Colors.black);
+
+    final Color bgColor = widget.isCurrentUser
+        ? Colors.orange.shade400
+        : (widget.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300);
+
+    return Container(
+      width: 220,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: _togglePlay,
+            child: CircleAvatar(
+              backgroundColor: fgColor.withValues(alpha: 0.2),
+              radius: 18,
+              child: Icon(
+                _isPlaying ? Icons.pause : Icons.play_arrow,
+                color: fgColor,
+                size: 20,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LinearProgressIndicator(
+                  value: _duration.inMilliseconds > 0
+                      ? (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0)
+                      : 0.0,
+                  backgroundColor: fgColor.withValues(alpha: 0.3),
+                  valueColor: AlwaysStoppedAnimation<Color>(fgColor),
+                  minHeight: 4,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${_position.inMinutes}:${(_position.inSeconds % 60).toString().padLeft(2, '0')}',
+                      style: TextStyle(fontSize: 10, color: fgColor.withValues(alpha: 0.8)),
+                    ),
+                    Text(
+                      '${_duration.inMinutes}:${(_duration.inSeconds % 60).toString().padLeft(2, '0')}',
+                      style: TextStyle(fontSize: 10, color: fgColor.withValues(alpha: 0.8)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

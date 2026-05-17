@@ -1,12 +1,18 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:asiimov/components/comment_tile.dart';
 import 'package:asiimov/components/post_card.dart';
 import 'package:asiimov/models/comment.dart';
 import 'package:asiimov/models/post.dart';
+import 'package:asiimov/pages/create_post_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
+import 'package:asiimov/services/file/file_service.dart';
+import 'package:asiimov/services/image/image_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 
 class PostDetailPage extends StatefulWidget {
   final Post post;
@@ -31,6 +37,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
   late Post _post;
   Post? _parentPost;
   String? _parentDocPath;
+
+  final List<PickedAttachment> _commentAttachments = [];
+  bool _isPostingComment = false;
 
   @override
   void initState() {
@@ -114,6 +123,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
     _commentController.dispose();
     _commentFocus.dispose();
     _scrollController.dispose();
+    for (final att in _commentAttachments) {
+      att.videoController?.dispose();
+    }
     super.dispose();
   }
 
@@ -133,18 +145,203 @@ class _PostDetailPageState extends State<PostDetailPage> {
     }
   }
 
+  void _pickCommentMedia() async {
+    if (_isPostingComment) return;
+
+    final source = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                'Add Photos or Videos',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Colors.orange,
+                  child: Icon(Icons.camera_alt, color: Colors.white),
+                ),
+                title: const Text('Take a Photo'),
+                onTap: () => Navigator.pop(context, 'camera_photo'),
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Colors.deepOrange,
+                  child: Icon(Icons.videocam, color: Colors.white),
+                ),
+                title: const Text('Record a Video'),
+                onTap: () => Navigator.pop(context, 'camera_video'),
+              ),
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.orange.shade200,
+                  child: const Icon(Icons.photo_library, color: Colors.white),
+                ),
+                title: const Text('Choose from Gallery'),
+                onTap: () => Navigator.pop(context, 'gallery'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final ImagePicker picker = ImagePicker();
+    List<XFile> pickedXFiles = [];
+    bool isCamVideo = false;
+
+    try {
+      if (source == 'camera_photo') {
+        final xf = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+        if (xf != null) pickedXFiles.add(xf);
+      } else if (source == 'camera_video') {
+        final xf = await picker.pickVideo(source: ImageSource.camera, maxDuration: const Duration(seconds: 10));
+        if (xf != null) {
+          pickedXFiles.add(xf);
+          isCamVideo = true;
+        }
+      } else if (source == 'gallery') {
+        final list = await picker.pickMultipleMedia();
+        if (list.isNotEmpty) pickedXFiles.addAll(list);
+      }
+
+      if (pickedXFiles.isEmpty) return;
+
+      int currentTotalSize = 0;
+      for (final a in _commentAttachments) {
+        currentTotalSize += await a.file.length();
+      }
+
+      for (final pickedXFile in pickedXFiles) {
+        final ext = pickedXFile.path.toLowerCase();
+        final bool isVideo = isCamVideo || ext.endsWith('.mp4') || ext.endsWith('.mov') || ext.endsWith('.avi') || ext.endsWith('.mkv');
+        final bool validImage = ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png') || ext.endsWith('.gif') || ext.endsWith('.webp');
+
+        if (!isVideo && !validImage) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Skipped unsupported file format.'), backgroundColor: Colors.redAccent),
+            );
+          }
+          continue;
+        }
+
+        final file = File(pickedXFile.path);
+        final length = await file.length();
+
+        if (currentTotalSize + length > FileService.maxFileSizeInBytes) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Total size exceeds the 20MB limit.'), backgroundColor: Colors.redAccent),
+            );
+          }
+          break;
+        }
+
+        File finalFile = file;
+        if (!isVideo) {
+          final compressed = await ImageService().compressImage(file);
+          if (compressed != null) finalFile = compressed;
+        }
+
+        currentTotalSize += await finalFile.length();
+
+        if (isVideo) {
+          final vc = VideoPlayerController.file(finalFile);
+          await vc.initialize();
+          if (vc.value.duration.inSeconds > 10) {
+            vc.dispose();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Video duration cannot exceed 10 seconds.'), backgroundColor: Colors.redAccent),
+              );
+            }
+            continue;
+          }
+          vc.setLooping(true);
+          vc.play();
+          setState(() {
+            _commentAttachments.add(PickedAttachment(file: finalFile, isVideo: true, videoController: vc));
+          });
+        } else {
+          setState(() {
+            _commentAttachments.add(PickedAttachment(file: finalFile, isVideo: false));
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error picking comment media: $e");
+    }
+  }
+
+  void _removeCommentAttachment(int index) {
+    final att = _commentAttachments[index];
+    att.videoController?.dispose();
+    setState(() {
+      _commentAttachments.removeAt(index);
+    });
+  }
+
   void _addComment() async {
     final String commentText = _commentController.text.trim();
-    if (commentText.isEmpty) return;
+    if ((commentText.isEmpty && _commentAttachments.isEmpty) || _isPostingComment) return;
 
-    // Clear immediately for better UX
-    _commentController.clear();
-    _commentFocus.unfocus();
+    setState(() => _isPostingComment = true);
 
-    await _postService.addComment(widget.docPath, commentText);
-    
-    // Refresh to show the new comment and update post comment count
-    _onRefresh();
+    try {
+      List<dynamic> uploadedAttachments = [];
+      for (final att in _commentAttachments) {
+        final attachmentMap = await FileService().uploadChatAttachment(att.file, 'comment');
+        if (attachmentMap != null) {
+          uploadedAttachments.add(attachmentMap);
+        } else {
+          throw Exception('Failed to upload attachment.');
+        }
+      }
+
+      _commentController.clear();
+      _commentFocus.unfocus();
+      for (final att in _commentAttachments) {
+        att.videoController?.dispose();
+      }
+      setState(() {
+        _commentAttachments.clear();
+      });
+
+      await _postService.addComment(widget.docPath, commentText, uploadedAttachments.isNotEmpty ? uploadedAttachments : null);
+      
+      if (mounted) {
+        setState(() => _isPostingComment = false);
+        _onRefresh();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isPostingComment = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
   }
 
   @override
@@ -242,39 +439,116 @@ class _PostDetailPageState extends State<PostDetailPage> {
               ),
             ),
             child: SafeArea(
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _commentController,
-                      focusNode: _commentFocus,
-                      maxLength: 250,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: InputDecoration(
-                        hintText: 'Add a comment...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide.none,
+                  if (_commentAttachments.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      height: 100,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _commentAttachments.length,
+                        itemBuilder: (context, index) {
+                          final att = _commentAttachments[index];
+                          return Container(
+                            width: 100,
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange, width: 1.5),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  att.isVideo && att.videoController != null
+                                      ? FittedBox(
+                                          fit: BoxFit.cover,
+                                          child: SizedBox(
+                                            width: att.videoController!.value.size.width,
+                                            height: att.videoController!.value.size.height,
+                                            child: VideoPlayer(att.videoController!),
+                                          ),
+                                        )
+                                      : Image.file(att.file, fit: BoxFit.cover),
+                                  if (att.isVideo)
+                                    const Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 24)),
+                                  Align(
+                                    alignment: Alignment.topRight,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(4),
+                                      child: CircleAvatar(
+                                        backgroundColor: Colors.black87,
+                                        radius: 12,
+                                        child: IconButton(
+                                          padding: EdgeInsets.zero,
+                                          icon: const Icon(Icons.close, color: Colors.white, size: 14),
+                                          onPressed: () => _removeCommentAttachment(index),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.image, color: Colors.orange),
+                        onPressed: !_isPostingComment ? _pickCommentMedia : null,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: TextField(
+                          controller: _commentController,
+                          focusNode: _commentFocus,
+                          maxLength: 250,
+                          textCapitalization: TextCapitalization.sentences,
+                          decoration: InputDecoration(
+                            hintText: 'Add a comment...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Theme.of(context).colorScheme.secondary,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            counterText: '',
+                          ),
                         ),
-                        filled: true,
-                        fillColor: Theme.of(context).colorScheme.secondary,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: _addComment,
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: const BoxDecoration(
-                        color: Colors.orange,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.arrow_upward,
-                          color: Colors.white, size: 20),
-                    ),
+                      const SizedBox(width: 8),
+                      _isPostingComment
+                          ? const SizedBox(
+                              width: 36,
+                              height: 36,
+                              child: Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange),
+                              ),
+                            )
+                          : GestureDetector(
+                              onTap: _addComment,
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: const BoxDecoration(
+                                  color: Colors.orange,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.arrow_upward,
+                                    color: Colors.white, size: 20),
+                              ),
+                            ),
+                    ],
                   ),
                 ],
               ),
@@ -285,3 +559,4 @@ class _PostDetailPageState extends State<PostDetailPage> {
     );
   }
 }
+

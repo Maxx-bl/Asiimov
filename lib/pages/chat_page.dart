@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:asiimov/components/chat_bubble.dart';
 import 'package:asiimov/components/instant_camera_screen.dart';
@@ -112,6 +114,8 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    _recordingTimer?.cancel();
+    _audioRecorder.dispose();
     _messageSubscription?.cancel();
     NotificationService().setActiveChatUser(null);
     scrollController.removeListener(_onScroll);
@@ -129,6 +133,12 @@ class _ChatPageState extends State<ChatPage> {
   // Edit state
   String? _editingMessageId;
   String? _editingMessageText;
+
+  // Audio recording state
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  bool _isRecording = false;
+  Timer? _recordingTimer;
+  int _recordingDuration = 0;
 
   // Attachment state
   final FileService _fileService = FileService();
@@ -1011,11 +1021,101 @@ class _ChatPageState extends State<ChatPage> {
       'url': uploadResult['url'],
       'type': isVideo ? 'video' : 'image',
       'size': await fileToUpload.length(),
+      'objectKey': uploadResult['objectKey'],
     };
 
     await chatService.sendMessage(
       widget.receiverID,
       isVideo ? '📸 Instant Video' : '📸 Instant Photo',
+      isGroup: widget.isGroup,
+      messageType: 'instant_attachment',
+      instantAttachment: instantAttachment,
+    );
+  }
+
+  Future<void> _startRecording() async {
+    try {
+      if (await _audioRecorder.hasPermission()) {
+        final dir = await getTemporaryDirectory();
+        final path = '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        await _audioRecorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+        setState(() {
+          _isRecording = true;
+          _recordingDuration = 0;
+        });
+        _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          if (_recordingDuration >= 60) {
+            _stopRecordingAndSend();
+          } else {
+            setState(() {
+              _recordingDuration++;
+            });
+          }
+        });
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Microphone permission required')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error starting record: $e');
+    }
+  }
+
+  Future<void> _cancelRecording() async {
+    _recordingTimer?.cancel();
+    if (_isRecording) {
+      await _audioRecorder.stop();
+      setState(() {
+        _isRecording = false;
+        _recordingDuration = 0;
+      });
+    }
+  }
+
+  Future<void> _stopRecordingAndSend() async {
+    if (!_isRecording) return;
+    _recordingTimer?.cancel();
+    final int recordedDuration = _recordingDuration;
+    final path = await _audioRecorder.stop();
+    setState(() {
+      _isRecording = false;
+      _recordingDuration = 0;
+    });
+
+    if (path == null) return;
+    final file = File(path);
+    final length = await file.length();
+    if (length < 1000) return; // ignore accidental very short clicks
+
+    setState(() => _isUploading = true);
+
+    final uploadResult = await _fileService.uploadChatAttachment(file, 'voice');
+    if (mounted) setState(() => _isUploading = false);
+
+    if (uploadResult == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to upload voice message.')),
+        );
+      }
+      return;
+    }
+
+    final instantAttachment = {
+      'name': file.path.split('/').last,
+      'url': uploadResult['url'],
+      'type': 'audio',
+      'size': length,
+      'duration': recordedDuration,
+      'objectKey': uploadResult['objectKey'],
+    };
+
+    await chatService.sendMessage(
+      widget.receiverID,
+      '🎤 Voice Message',
       isGroup: widget.isGroup,
       messageType: 'instant_attachment',
       instantAttachment: instantAttachment,
@@ -1051,80 +1151,120 @@ class _ChatPageState extends State<ChatPage> {
                       color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3),
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      if (!_hasText) ...[
-                        GestureDetector(
-                          onTap: _openInstantCamera,
-                          child: const Icon(Icons.camera_alt_rounded, color: Colors.orange, size: 24),
-                        ),
-                        const SizedBox(width: 12),
-                      ],
-                      Expanded(
-                        child: TextField(
-                          controller: messageController,
-                          focusNode: myFocusNode,
-                          maxLines: 4,
-                          minLines: 1,
-                          maxLength: 1000,
-                          buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
-                            if (currentLength < 900) return null;
-                            return Text(
-                              '$currentLength / $maxLength',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
-                              ),
-                            );
-                          },
-                          textInputAction: TextInputAction.newline,
-                          textCapitalization: TextCapitalization.sentences,
-                          decoration: InputDecoration(
-                            hintText: _stagedFiles.isNotEmpty ? 'Add a caption...' : 'Message...',
-                            hintStyle: TextStyle(
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: _isRecording
+                      ? Row(
+                          children: [
+                            const Icon(Icons.mic, color: Colors.redAccent, size: 24),
+                            const SizedBox(width: 12),
+                            Text(
+                              '${(_recordingDuration ~/ 60).toString().padLeft(2, '0')}:${(_recordingDuration % 60).toString().padLeft(2, '0')}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                             ),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          style: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black,
-                          ),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: _cancelRecording,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: const Text('Cancel', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 13)),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            if (!_hasText) ...[
+                              GestureDetector(
+                                onTap: _openInstantCamera,
+                                child: const Icon(Icons.camera_alt_rounded, color: Colors.orange, size: 24),
+                              ),
+                              const SizedBox(width: 12),
+                            ],
+                            Expanded(
+                              child: TextField(
+                                controller: messageController,
+                                focusNode: myFocusNode,
+                                maxLines: 4,
+                                minLines: 1,
+                                maxLength: 1000,
+                                buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
+                                  if (currentLength < 900) return null;
+                                  return Text(
+                                    '$currentLength / $maxLength',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                                    ),
+                                  );
+                                },
+                                textInputAction: TextInputAction.newline,
+                                textCapitalization: TextCapitalization.sentences,
+                                decoration: InputDecoration(
+                                  hintText: _stagedFiles.isNotEmpty ? 'Add a caption...' : 'Message...',
+                                  hintStyle: TextStyle(
+                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
+                                  isDense: true,
+                                ),
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
               const SizedBox(width: 8),
-              GestureDetector(
-                onTap: showSendButton ? sendMessage : _showAttachmentPicker,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  height: 48,
-                  width: 48,
-                  decoration: BoxDecoration(
-                    color: showSendButton ? Colors.orange : Colors.grey.shade600,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: (showSendButton ? Colors.orange : Colors.grey).withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+              if (_isRecording)
+                GestureDetector(
+                  onTap: _stopRecordingAndSend,
+                  child: Container(
+                    height: 48,
+                    width: 48,
+                    decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
+                    child: const Icon(Icons.send_rounded, color: Colors.white, size: 24),
                   ),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: showSendButton
-                        ? const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 26, key: ValueKey('send'))
-                        : const Icon(Icons.add_rounded, color: Colors.white, size: 28, key: ValueKey('add')),
+                )
+              else if (showSendButton)
+                GestureDetector(
+                  onTap: sendMessage,
+                  child: Container(
+                    height: 48,
+                    width: 48,
+                    decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
+                    child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 26),
+                  ),
+                )
+              else ...[
+                GestureDetector(
+                  onTap: _showAttachmentPicker,
+                  child: Container(
+                    height: 48,
+                    width: 48,
+                    decoration: BoxDecoration(color: Colors.grey.shade600, shape: BoxShape.circle),
+                    child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
                   ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => _startRecording(),
+                  child: Container(
+                    height: 48,
+                    width: 48,
+                    decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
+                    child: const Icon(Icons.mic, color: Colors.white, size: 26),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

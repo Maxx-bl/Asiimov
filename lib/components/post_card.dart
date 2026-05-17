@@ -1,3 +1,4 @@
+import 'package:asiimov/components/post_attachment_viewer.dart';
 import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/share_sheet.dart';
 import 'package:asiimov/components/username_display.dart';
@@ -221,9 +222,17 @@ class PostCard extends StatelessWidget {
             // Content
             Padding(
               padding: const EdgeInsets.only(left: 46),
-              child: Text(
-                post.content,
-                style: const TextStyle(fontSize: 15, height: 1.4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (post.content.isNotEmpty)
+                    Text(
+                      post.content,
+                      style: const TextStyle(fontSize: 15, height: 1.4),
+                    ),
+                  if (post.attachments != null && post.attachments!.isNotEmpty)
+                    PostAttachmentViewer(attachments: post.attachments!),
+                ],
               ),
             ),
 

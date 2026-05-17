@@ -1,4 +1,5 @@
 import 'package:asiimov/services/chat/chat_service.dart';
+import 'package:asiimov/services/file/file_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,7 @@ class PostService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   //create a new post
-  Future<void> createPost(String content) async {
+  Future<void> createPost(String content, [List<dynamic>? attachments]) async {
     final user = _auth.currentUser!;
 
     // Check for cooldown (120 seconds)
@@ -40,6 +41,7 @@ class PostService extends ChangeNotifier {
       'commentCount': 0,
       'shareCount': 0,
       'sharedBy': [],
+      'attachments': attachments,
     });
   }
 
@@ -153,6 +155,16 @@ class PostService extends ChangeNotifier {
     final docRef = _firestore.collection('posts').doc(postId);
     final doc = await docRef.get();
     if (doc.exists && doc['authorID'] == userId) {
+      final data = doc.data();
+      if (data != null) {
+        final attachments = data['attachments'] as List<dynamic>? ?? (data['attachment'] != null ? [data['attachment']] : []);
+        for (final att in attachments) {
+          final objectKey = att['objectKey'] as String?;
+          if (objectKey != null && objectKey.isNotEmpty) {
+            await FileService().deleteAttachment(objectKey);
+          }
+        }
+      }
       // Recursively delete all nested comments
       await _deleteSubcollection(docRef);
       await docRef.delete();
@@ -160,7 +172,7 @@ class PostService extends ChangeNotifier {
   }
 
   //add a comment to a parent document (post or comment)
-  Future<void> addComment(String parentPath, String content) async {
+  Future<void> addComment(String parentPath, String content, [List<dynamic>? attachments]) async {
     final user = _auth.currentUser!;
     final parentRef = _firestore.doc(parentPath);
 
@@ -174,6 +186,7 @@ class PostService extends ChangeNotifier {
       'commentCount': 0,
       'shareCount': 0,
       'sharedBy': [],
+      'attachments': attachments,
     });
 
     // Increment comment count
@@ -257,6 +270,16 @@ class PostService extends ChangeNotifier {
 
     final doc = await commentRef.get();
     if (doc.exists && doc['authorID'] == userId) {
+      final data = doc.data();
+      if (data != null) {
+        final attachments = data['attachments'] as List<dynamic>? ?? (data['attachment'] != null ? [data['attachment']] : []);
+        for (final att in attachments) {
+          final objectKey = att['objectKey'] as String?;
+          if (objectKey != null && objectKey.isNotEmpty) {
+            await FileService().deleteAttachment(objectKey);
+          }
+        }
+      }
       // Recursively delete all nested comments
       await _deleteSubcollection(commentRef);
       await commentRef.delete();
@@ -281,6 +304,16 @@ class PostService extends ChangeNotifier {
     do {
       snapshot = await commentsRef.limit(100).get();
       for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>?;
+        if (data != null) {
+          final attachments = data['attachments'] as List<dynamic>? ?? (data['attachment'] != null ? [data['attachment']] : []);
+          for (final att in attachments) {
+            final objectKey = att['objectKey'] as String?;
+            if (objectKey != null && objectKey.isNotEmpty) {
+              await FileService().deleteAttachment(objectKey);
+            }
+          }
+        }
         // Recurse into this comment's own subcollection first
         await _deleteSubcollection(doc.reference);
         await doc.reference.delete();

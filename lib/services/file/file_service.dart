@@ -88,9 +88,11 @@ class FileService {
       final extension = dotIndex != -1 ? fileName.substring(dotIndex).toLowerCase() : '';
       final uniqueId = const Uuid().v4();
       
-      // We store chat files under chat_files/UID/UNIQUE_ID_FILENAME
+      final String folder = (chatRoomId == 'voice') ? 'voice_files' : (chatRoomId == 'post' || chatRoomId == 'comment') ? 'post_files' : 'chat_files';
+
+      // We store files under folder/UID/UNIQUE_ID_FILENAME
       // This allows the Worker to verify that the user uploading/deleting owns the directory
-      final objectKey = 'chat_files/${user.uid}/${uniqueId}_$fileName';
+      final objectKey = '$folder/${user.uid}/${uniqueId}_$fileName';
 
       final cleanWorkerUrl = _workerUrl.endsWith('/') 
           ? _workerUrl.substring(0, _workerUrl.length - 1) 
@@ -118,6 +120,8 @@ class FileService {
         type = 'image';
       } else if (['.mp4', '.mov', '.avi', '.mkv'].contains(extension)) {
         type = 'video';
+      } else if (['.m4a', '.aac', '.mp3', '.wav', '.ogg', '.flac'].contains(extension)) {
+        type = 'audio';
       }
 
       return {

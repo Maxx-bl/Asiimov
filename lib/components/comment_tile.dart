@@ -1,3 +1,4 @@
+import 'package:asiimov/components/post_attachment_viewer.dart';
 import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/share_sheet.dart';
 import 'package:asiimov/components/username_display.dart';
@@ -175,10 +176,13 @@ class CommentTile extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    comment.content,
-                    style: const TextStyle(fontSize: 14, height: 1.3),
-                  ),
+                  if (comment.content.isNotEmpty)
+                    Text(
+                      comment.content,
+                      style: const TextStyle(fontSize: 14, height: 1.3),
+                    ),
+                  if (comment.attachments != null && comment.attachments!.isNotEmpty)
+                    PostAttachmentViewer(attachments: comment.attachments!),
                   const SizedBox(height: 6),
                   // Votes
                    Row(

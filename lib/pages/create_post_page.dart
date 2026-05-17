@@ -1,5 +1,22 @@
+import 'dart:io';
+import 'package:asiimov/services/file/file_service.dart';
+import 'package:asiimov/services/image/image_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
+
+class PickedAttachment {
+  final File file;
+  final bool isVideo;
+  final VideoPlayerController? videoController;
+
+  PickedAttachment({
+    required this.file,
+    required this.isVideo,
+    this.videoController,
+  });
+}
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({super.key});
@@ -13,21 +30,192 @@ class _CreatePostPageState extends State<CreatePostPage> {
   final int _maxLength = 250;
   bool _isPosting = false;
 
+  final List<PickedAttachment> _attachments = [];
+
   @override
   void dispose() {
     _controller.dispose();
+    for (final att in _attachments) {
+      att.videoController?.dispose();
+    }
     super.dispose();
   }
 
+  void _pickMedia() async {
+    if (_isPosting) return;
+
+    final source = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                'Add Photos or Videos',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Colors.orange,
+                  child: Icon(Icons.camera_alt, color: Colors.white),
+                ),
+                title: const Text('Take a Photo'),
+                onTap: () => Navigator.pop(context, 'camera_photo'),
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Colors.deepOrange,
+                  child: Icon(Icons.videocam, color: Colors.white),
+                ),
+                title: const Text('Record a Video'),
+                onTap: () => Navigator.pop(context, 'camera_video'),
+              ),
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.orange.shade200,
+                  child: const Icon(Icons.photo_library, color: Colors.white),
+                ),
+                title: const Text('Choose from Gallery'),
+                onTap: () => Navigator.pop(context, 'gallery'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final ImagePicker picker = ImagePicker();
+    List<XFile> pickedXFiles = [];
+    bool isCamVideo = false;
+
+    try {
+      if (source == 'camera_photo') {
+        final xf = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+        if (xf != null) pickedXFiles.add(xf);
+      } else if (source == 'camera_video') {
+        final xf = await picker.pickVideo(source: ImageSource.camera, maxDuration: const Duration(seconds: 10));
+        if (xf != null) {
+          pickedXFiles.add(xf);
+          isCamVideo = true;
+        }
+      } else if (source == 'gallery') {
+        final list = await picker.pickMultipleMedia();
+        if (list.isNotEmpty) pickedXFiles.addAll(list);
+      }
+
+      if (pickedXFiles.isEmpty) return;
+
+      int currentTotalSize = 0;
+      for (final a in _attachments) {
+        currentTotalSize += await a.file.length();
+      }
+
+      for (final pickedXFile in pickedXFiles) {
+        final ext = pickedXFile.path.toLowerCase();
+        final bool isVideo = isCamVideo || ext.endsWith('.mp4') || ext.endsWith('.mov') || ext.endsWith('.avi') || ext.endsWith('.mkv');
+        final bool validImage = ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png') || ext.endsWith('.gif') || ext.endsWith('.webp');
+
+        if (!isVideo && !validImage) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Skipped unsupported file format.'), backgroundColor: Colors.redAccent),
+            );
+          }
+          continue;
+        }
+
+        final file = File(pickedXFile.path);
+        final length = await file.length();
+
+        if (currentTotalSize + length > FileService.maxFileSizeInBytes) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Total size exceeds the 20MB limit.'), backgroundColor: Colors.redAccent),
+            );
+          }
+          break;
+        }
+
+        File finalFile = file;
+        if (!isVideo) {
+          final compressed = await ImageService().compressImage(file);
+          if (compressed != null) finalFile = compressed;
+        }
+
+        currentTotalSize += await finalFile.length();
+
+        if (isVideo) {
+          final vc = VideoPlayerController.file(finalFile);
+          await vc.initialize();
+          if (vc.value.duration.inSeconds > 10) {
+            vc.dispose();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Video duration cannot exceed 10 seconds.'), backgroundColor: Colors.redAccent),
+              );
+            }
+            continue;
+          }
+          vc.setLooping(true);
+          vc.play();
+          setState(() {
+            _attachments.add(PickedAttachment(file: finalFile, isVideo: true, videoController: vc));
+          });
+        } else {
+          setState(() {
+            _attachments.add(PickedAttachment(file: finalFile, isVideo: false));
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error picking media: $e");
+    }
+  }
+
+  void _removeAttachment(int index) {
+    final att = _attachments[index];
+    att.videoController?.dispose();
+    setState(() {
+      _attachments.removeAt(index);
+    });
+  }
+
   void _post() async {
-    if (_controller.text.trim().isEmpty || _isPosting) return;
+    if ((_controller.text.trim().isEmpty && _attachments.isEmpty) || _isPosting) return;
 
     setState(() => _isPosting = true);
-    // Collapse multiple newlines into a single one to prevent abuse while allowing line breaks
     final cleanContent = _controller.text.trim().replaceAll(RegExp(r'(\r?\n){2,}'), '\n');
     
     try {
-      await PostService().createPost(cleanContent);
+      List<dynamic> uploadedAttachments = [];
+      for (final att in _attachments) {
+        final attachmentMap = await FileService().uploadChatAttachment(att.file, 'post');
+        if (attachmentMap != null) {
+          uploadedAttachments.add(attachmentMap);
+        } else {
+          throw Exception('Failed to upload attachment.');
+        }
+      }
+
+      await PostService().createPost(cleanContent, uploadedAttachments.isNotEmpty ? uploadedAttachments : null);
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       setState(() => _isPosting = false);
@@ -54,7 +242,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
               valueListenable: _controller,
               builder: (context, value, child) {
                 final isValid =
-                    value.text.trim().isNotEmpty && value.text.length <= _maxLength;
+                    (value.text.trim().isNotEmpty || _attachments.isNotEmpty) && value.text.length <= _maxLength;
                 return TextButton(
                   onPressed: isValid && !_isPosting ? _post : null,
                   style: TextButton.styleFrom(
@@ -108,52 +296,115 @@ class _CreatePostPageState extends State<CreatePostPage> {
               ),
             ),
 
-            // Character counter
-            ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _controller,
-              builder: (context, value, child) {
-                final remaining = _maxLength - value.text.length;
-                Color counterColor;
-                if (remaining < 0) {
-                  counterColor = Colors.red;
-                } else if (remaining < 30) {
-                  counterColor = Colors.orange;
-                } else {
-                  counterColor = Colors.grey;
-                }
+            if (_attachments.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                height: 120,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _attachments.length,
+                  itemBuilder: (context, index) {
+                    final att = _attachments[index];
+                    return Container(
+                      width: 120,
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange, width: 2),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            att.isVideo && att.videoController != null
+                                ? FittedBox(
+                                    fit: BoxFit.cover,
+                                    child: SizedBox(
+                                      width: att.videoController!.value.size.width,
+                                      height: att.videoController!.value.size.height,
+                                      child: VideoPlayer(att.videoController!),
+                                    ),
+                                  )
+                                : Image.file(att.file, fit: BoxFit.cover),
+                            if (att.isVideo)
+                              const Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 28)),
+                            Align(
+                              alignment: Alignment.topRight,
+                              child: Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: CircleAvatar(
+                                  backgroundColor: Colors.black87,
+                                  radius: 14,
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    icon: const Icon(Icons.close, color: Colors.white, size: 14),
+                                    onPressed: () => _removeAttachment(index),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      // Progress indicator
-                      SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          value: (value.text.length / _maxLength).clamp(0, 1),
-                          strokeWidth: 2.5,
-                          backgroundColor: Colors.grey.shade300,
-                          color: remaining < 0
-                              ? Colors.red
-                              : remaining < 30
-                                  ? Colors.orange
-                                  : Colors.orange.shade200,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '$remaining',
-                        style: TextStyle(
-                          color: counterColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+            // Bottom toolbar
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.image, color: Colors.orange, size: 28),
+                    onPressed: !_isPosting ? _pickMedia : null,
                   ),
-                );
-              },
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _controller,
+                    builder: (context, value, child) {
+                      final remaining = _maxLength - value.text.length;
+                      Color counterColor;
+                      if (remaining < 0) {
+                        counterColor = Colors.red;
+                      } else if (remaining < 30) {
+                        counterColor = Colors.orange;
+                      } else {
+                        counterColor = Colors.grey;
+                      }
+
+                      return Row(
+                        children: [
+                          SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              value: (value.text.length / _maxLength).clamp(0, 1),
+                              strokeWidth: 2.5,
+                              backgroundColor: Colors.grey.shade300,
+                              color: remaining < 0
+                                  ? Colors.red
+                                  : remaining < 30
+                                      ? Colors.orange
+                                      : Colors.orange.shade200,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '$remaining',
+                            style: TextStyle(
+                              color: counterColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -161,3 +412,4 @@ class _CreatePostPageState extends State<CreatePostPage> {
     );
   }
 }
+

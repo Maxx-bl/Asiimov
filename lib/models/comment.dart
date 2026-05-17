@@ -11,6 +11,7 @@ class Comment {
   final int commentCount;
   final int shareCount;
   final List<String> sharedBy;
+  final List<dynamic>? attachments;
 
   Comment({
     required this.id,
@@ -23,6 +24,7 @@ class Comment {
     required this.commentCount,
     required this.shareCount,
     required this.sharedBy,
+    this.attachments,
   });
 
   int get score => upvotes.length - downvotes.length;
@@ -40,6 +42,8 @@ class Comment {
       commentCount: data['commentCount'] ?? 0,
       shareCount: data['shareCount'] ?? 0,
       sharedBy: List<String>.from(data['sharedBy'] ?? []),
+      attachments: data['attachments'] as List<dynamic>? ??
+          (data['attachment'] != null ? [data['attachment']] : null),
     );
   }
 
@@ -54,6 +58,7 @@ class Comment {
       'commentCount': commentCount,
       'shareCount': shareCount,
       'sharedBy': sharedBy,
+      'attachments': attachments,
     };
   }
 }

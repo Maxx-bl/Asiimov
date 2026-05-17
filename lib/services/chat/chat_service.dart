@@ -1199,14 +1199,23 @@ class ChatService extends ChangeNotifier {
     final doc = await messageRef.get();
     if (doc.exists) {
       final data = doc.data() as Map<String, dynamic>;
+      final fileService = FileService();
+
       final attachments = data['attachments'] as List<dynamic>?;
       if (attachments != null && attachments.isNotEmpty) {
-        final fileService = FileService();
         for (var attachment in attachments) {
           final objectKey = attachment['objectKey'] as String?;
           if (objectKey != null) {
             await fileService.deleteAttachment(objectKey);
           }
+        }
+      }
+
+      final instantAttachment = data['instantAttachment'] as Map<String, dynamic>?;
+      if (instantAttachment != null) {
+        final objectKey = instantAttachment['objectKey'] as String?;
+        if (objectKey != null) {
+          await fileService.deleteAttachment(objectKey);
         }
       }
     }
