@@ -1,11 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 
 class AuthService {
   //instance
   final FirebaseAuth auth = FirebaseAuth.instance;
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  static final ValueNotifier<bool> isTwoFactorVerifiedNotifier = ValueNotifier<bool>(false);
+
+  static bool get isTwoFactorVerified => isTwoFactorVerifiedNotifier.value;
+  static set isTwoFactorVerified(bool value) {
+    isTwoFactorVerifiedNotifier.value = value;
+  }
 
   //get current user
   User? getCurrentUser() {
@@ -86,6 +94,7 @@ class AuthService {
         'fcmToken': null,
       });
     }
+    isTwoFactorVerified = false;
     return await auth.signOut();
   }
 
@@ -115,6 +124,15 @@ class AuthService {
           });
         }
       });
+    }
+  }
+
+  //send password reset email
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      throw Exception(e.code);
     }
   }
 }

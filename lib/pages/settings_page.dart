@@ -31,6 +31,7 @@ class SettingsPage extends StatelessWidget {
               
               final userData = snapshot.data?.data() as Map<String, dynamic>?;
               final isPublic = userData?['public_account'] ?? false; // Private by default
+              final is2faEnabled = userData?['two_factor_enabled'] ?? false;
 
               return Column(
                 children: [
@@ -119,6 +120,74 @@ class SettingsPage extends StatelessWidget {
 
                             if (shouldChange == true) {
                               await UserService().togglePrivacy(value);
+                            }
+                          },
+                        )
+                      ],
+                    ),
+                  ),
+
+                  // 2FA setting
+                  Container(
+                    decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.secondary,
+                        borderRadius: BorderRadius.circular(12)),
+                    margin: const EdgeInsets.only(left: 25, top: 10, right: 25),
+                    padding: const EdgeInsets.only(
+                        left: 25, right: 25, top: 20, bottom: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Text('Two-Factor Auth (2FA)'),
+                                const SizedBox(width: 8),
+                                Text(
+                                  is2faEnabled ? '(Enabled)' : '(Disabled)',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: is2faEnabled ? Colors.green : Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Secure your account with an email code',
+                              style: TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                        CupertinoSwitch(
+                          value: is2faEnabled,
+                          activeTrackColor: Colors.orange,
+                          onChanged: (value) async {
+                            final shouldChange = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Two-Factor Auth'),
+                                content: Text(value
+                                    ? 'Are you sure you want to enable Two-Factor Authentication? You will receive a verification code on your email every time you log in.'
+                                    : 'Are you sure you want to disable Two-Factor Authentication? Your account will be less secure.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, true),
+                                    child: Text('Confirm', style: TextStyle(color: Colors.orange)),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (shouldChange == true) {
+                              await UserService().toggleTwoFactor(value);
                             }
                           },
                         )

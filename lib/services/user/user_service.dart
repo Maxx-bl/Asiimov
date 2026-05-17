@@ -168,6 +168,14 @@ class UserService {
     // We intentionally do NOT auto-accept pending requests when switching to public (Option B)
   }
 
+  // Toggle Two-Factor Authentication
+  Future<void> toggleTwoFactor(bool enabled) async {
+    final currentUserId = _auth.currentUser!.uid;
+    await _firestore.collection('users').doc(currentUserId).set({
+      'two_factor_enabled': enabled,
+    }, SetOptions(merge: true));
+  }
+
   // Request to follow a private account
   Future<void> requestFollow(String targetUserId) async {
     final currentUserId = _auth.currentUser!.uid;
