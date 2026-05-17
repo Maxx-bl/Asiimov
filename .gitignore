@@ -46,3 +46,9 @@ app.*.map.json
 assets/env
 firebase.json
 assets/service-account.json
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
