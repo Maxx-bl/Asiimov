@@ -374,7 +374,7 @@ class _HomePageState extends State<HomePage> {
                 status,
                 style: TextStyle(
                   fontSize: 10,
-                  color: status == 'seen' ? Colors.orange : Colors.grey.shade500,
+                  color: status == 'seen' ? Theme.of(context).primaryColor : Colors.grey.shade500,
                   fontWeight: status == 'seen' ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
@@ -382,7 +382,7 @@ class _HomePageState extends State<HomePage> {
           Text(
             dateString,
             style: TextStyle(
-              color: conv.unreadCount > 0 ? Colors.orange : Colors.grey,
+              color: conv.unreadCount > 0 ? Theme.of(context).primaryColor : Colors.grey,
               fontSize: 11,
               fontWeight: conv.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
             ),
@@ -392,7 +392,7 @@ class _HomePageState extends State<HomePage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.orange,
+                color: Theme.of(context).primaryColor,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(

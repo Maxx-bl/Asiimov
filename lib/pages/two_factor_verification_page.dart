@@ -186,10 +186,10 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
                     color: Theme.of(context).colorScheme.secondary,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.security_rounded,
                     size: 80,
-                    color: Colors.orange,
+                    color: Theme.of(context).primaryColor,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -214,7 +214,7 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
                       const TextSpan(text: 'Please enter the 6-digit verification code sent to\n'),
                       TextSpan(
                         text: email,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor),
                       ),
                     ],
                   ),
@@ -284,7 +284,7 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
                 TextButton(
                   onPressed: canResend ? _send2faCode : null,
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.orange,
+                    foregroundColor: Theme.of(context).primaryColor,
                   ),
                   child: Text(
                     canResend ? 'Resend Code' : 'Resend Code in ${countdown}s',

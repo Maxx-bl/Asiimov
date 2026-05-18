@@ -9,6 +9,7 @@ class AuthService {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   static final ValueNotifier<bool> isTwoFactorVerifiedNotifier = ValueNotifier<bool>(false);
+  static bool isNewLoginFlow = false;
 
   static bool get isTwoFactorVerified => isTwoFactorVerifiedNotifier.value;
   static set isTwoFactorVerified(bool value) {
@@ -28,6 +29,7 @@ class AuthService {
         email: email,
         password: password,
       );
+      isNewLoginFlow = true; // Mark as new login flow for A2F gating
       saveUserToken();
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -94,6 +96,7 @@ class AuthService {
         'fcmToken': null,
       });
     }
+    isNewLoginFlow = false;
     isTwoFactorVerified = false;
     return await auth.signOut();
   }

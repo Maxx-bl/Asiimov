@@ -37,7 +37,7 @@ class AuthGate extends StatelessWidget {
                         final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
                         final is2faEnabled = userData?['two_factor_enabled'] ?? false;
                         
-                        if (is2faEnabled && !isVerified) {
+                        if (is2faEnabled && AuthService.isNewLoginFlow && !isVerified) {
                           return const TwoFactorVerificationPage();
                         }
                         

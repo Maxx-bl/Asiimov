@@ -188,7 +188,7 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
               ),
             )
           else
-            const Center(child: CircularProgressIndicator(color: Colors.orange)),
+            Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor)),
 
           // Top actions
           SafeArea(
@@ -236,7 +236,7 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
                           builder: (context, child) => CircularProgressIndicator(
                             value: _isRecording ? _animationController.value : 0.0,
                             strokeWidth: 6,
-                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
+                            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
                             backgroundColor: Colors.white.withValues(alpha: 0.3),
                           ),
                         ),
@@ -337,7 +337,7 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
                     ),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: Theme.of(context).primaryColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),

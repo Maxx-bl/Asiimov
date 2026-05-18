@@ -160,7 +160,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       padding: const EdgeInsets.only(left: 20, right: 15, top: 12, bottom: 12),
       child: Row(
         children: [
-          Icon(icon, size: 22, color: Colors.orange),
+          Icon(icon, size: 22, color: Theme.of(context).primaryColor),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -180,7 +180,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
           ),
           CupertinoSwitch(
             value: value,
-            activeTrackColor: Colors.orange,
+            activeTrackColor: Theme.of(context).primaryColor,
             onChanged: onChanged,
           ),
         ],

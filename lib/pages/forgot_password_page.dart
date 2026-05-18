@@ -107,10 +107,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     color: Theme.of(context).colorScheme.secondary,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.lock_reset_rounded,
                     size: 80,
-                    color: Colors.orange,
+                    color: Theme.of(context).primaryColor,
                   ),
                 ),
                 const SizedBox(height: 32),

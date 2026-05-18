@@ -71,9 +71,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Colors.orange,
-                  child: Icon(Icons.camera_alt, color: Colors.white),
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  child: const Icon(Icons.camera_alt, color: Colors.white),
                 ),
                 title: const Text('Take a Photo'),
                 onTap: () => Navigator.pop(context, 'camera_photo'),
@@ -88,7 +88,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
               ),
               ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Colors.orange.shade200,
+                  backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                   child: const Icon(Icons.photo_library, color: Colors.white),
                 ),
                 title: const Text('Choose from Gallery'),
@@ -247,7 +247,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   onPressed: isValid && !_isPosting ? _post : null,
                   style: TextButton.styleFrom(
                     backgroundColor:
-                        isValid ? Colors.orange : Colors.orange.withValues(alpha: 0.3),
+                        isValid ? Theme.of(context).primaryColor : Theme.of(context).primaryColor.withValues(alpha: 0.3),
                     foregroundColor: Colors.white,
                     padding:
                         const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -310,7 +310,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                       margin: const EdgeInsets.only(right: 12),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.orange, width: 2),
+                        border: Border.all(color: Theme.of(context).primaryColor, width: 2),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(10),
@@ -359,7 +359,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.image, color: Colors.orange, size: 28),
+                    icon: Icon(Icons.image, color: Theme.of(context).primaryColor, size: 28),
                     onPressed: !_isPosting ? _pickMedia : null,
                   ),
                   ValueListenableBuilder<TextEditingValue>(
@@ -370,7 +370,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                       if (remaining < 0) {
                         counterColor = Colors.red;
                       } else if (remaining < 30) {
-                        counterColor = Colors.orange;
+                        counterColor = Theme.of(context).primaryColor;
                       } else {
                         counterColor = Colors.grey;
                       }
@@ -387,8 +387,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                               color: remaining < 0
                                   ? Colors.red
                                   : remaining < 30
-                                      ? Colors.orange
-                                      : Colors.orange.shade200,
+                                      ? Theme.of(context).primaryColor
+                                      : Theme.of(context).primaryColor.withValues(alpha: 0.3),
                             ),
                           ),
                           const SizedBox(width: 8),

@@ -33,7 +33,7 @@ class ProfileAvatar extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: radius,
-                backgroundColor: Colors.orange.withValues(alpha: 0.2),
+                backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
                 backgroundImage: url != null && url.isNotEmpty
                     ? CachedNetworkImageProvider(url)
                     : null,
@@ -45,7 +45,7 @@ class ProfileAvatar extends StatelessWidget {
                         style: TextStyle(
                           fontSize: radius * 0.8,
                           fontWeight: FontWeight.bold,
-                          color: Colors.orange,
+                          color: Theme.of(context).primaryColor,
                         ),
                       )
                     : null,
@@ -57,7 +57,7 @@ class ProfileAvatar extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.orange,
+                      color: Theme.of(context).primaryColor,
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: Theme.of(context).colorScheme.surface,

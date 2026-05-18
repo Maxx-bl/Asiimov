@@ -162,7 +162,7 @@ class _FeedPageState extends State<FeedPage> {
             _onRefresh();
           }
         },
-        backgroundColor: Colors.orange,
+        backgroundColor: Theme.of(context).primaryColor,
         child: const Icon(Icons.edit, color: Colors.white),
       ),
     );

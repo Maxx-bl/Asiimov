@@ -53,7 +53,7 @@ class _MainScaffoldState extends State<MainScaffold> {
             curve: Curves.easeInOut,
           );
         },
-        selectedItemColor: Colors.orange,
+        selectedItemColor: Theme.of(context).primaryColor,
         unselectedItemColor: Theme.of(context).colorScheme.primary,
         backgroundColor: Theme.of(context).colorScheme.surface,
         type: BottomNavigationBarType.fixed,

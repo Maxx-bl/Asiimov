@@ -9,6 +9,8 @@ import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_linkify/flutter_linkify.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CommentTile extends StatelessWidget {
   final Comment comment;
@@ -41,37 +43,14 @@ class CommentTile extends StatelessWidget {
     
     Color scoreColor;
     if (comment.score > 0) {
-      scoreColor = Colors.orange;
+      scoreColor = Theme.of(context).primaryColor;
     } else if (comment.score < 0) {
       scoreColor = Colors.blue.shade400;
     } else {
       scoreColor = Colors.grey;
     }
 
-    void showDeleteDialog(BuildContext context) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Delete Comment'),
-          content: const Text('Are you sure you want to delete this comment?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final commentPath = '$parentPath/comments/${comment.id}';
-                await postService.deleteComment(commentPath);
-                if (onAction != null) onAction!();
-                if (context.mounted) Navigator.pop(context);
-              },
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        ),
-      );
-    }
+
 
     return GestureDetector(
       onTap: () async {
@@ -98,9 +77,6 @@ class CommentTile extends StatelessWidget {
         );
         if (onAction != null) onAction!();
       },
-      onLongPress: comment.authorID == currentUserId
-          ? () => showDeleteDialog(context)
-          : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
@@ -143,43 +119,198 @@ class CommentTile extends StatelessWidget {
                 children: [
                   // Header
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProfilePage(
-                                userId: comment.authorID,
-                                username: comment.authorUsername,
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ProfilePage(
+                                    userId: comment.authorID,
+                                    username: comment.authorUsername,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: UsernameDisplay(
+                              userId: comment.authorID,
+                              username: comment.authorUsername,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
                               ),
                             ),
-                          );
-                        },
-                        child: UsernameDisplay(
-                          userId: comment.authorID,
-                          username: comment.authorUsername,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
                           ),
-                        ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '· ${_timeAgo(comment.timestamp.toDate())}',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '· ${_timeAgo(comment.timestamp.toDate())}',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: 12,
+                      PopupMenuButton<String>(
+                        icon: const Icon(
+                          Icons.more_vert_rounded,
+                          size: 18,
+                          color: Colors.grey,
                         ),
+                        color: Theme.of(context).colorScheme.secondary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        onSelected: (value) async {
+                          if (value == 'delete') {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Delete Comment'),
+                                content: const Text('Are you sure you want to delete this comment?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, true),
+                                    child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirm == true) {
+                              final commentPath = '$parentPath/comments/${comment.id}';
+                              await postService.deleteComment(commentPath);
+                              if (onAction != null) onAction!();
+                            }
+                          } else if (value == 'report') {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Report Comment'),
+                                content: const Text('Are you sure you want to report this comment?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, true),
+                                    child: Text('Report', style: TextStyle(color: Theme.of(context).primaryColor)),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirm == true) {
+                              try {
+                                await postService.reportComment(
+                                  commentId: comment.id,
+                                  commentPath: '$parentPath/comments/${comment.id}',
+                                  content: comment.content,
+                                  authorId: comment.authorID,
+                                  authorUsername: comment.authorUsername,
+                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Comment successfully reported.'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: ${e.toString()}'),
+                                      backgroundColor: Colors.redAccent,
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                          }
+                        },
+                        itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                          if (comment.authorID == currentUserId)
+                            const PopupMenuItem<String>(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+                                ],
+                              ),
+                            ),
+                          PopupMenuItem<String>(
+                            value: 'report',
+                            child: Row(
+                              children: [
+                                Icon(Icons.flag_outlined, color: Theme.of(context).primaryColor, size: 18),
+                                SizedBox(width: 8),
+                                Text('Report', style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   if (comment.content.isNotEmpty)
-                    Text(
-                      comment.content,
-                      style: const TextStyle(fontSize: 14, height: 1.3),
+                    Linkify(
+                      onOpen: (link) async {
+                        final Uri url = Uri.parse(link.url);
+                        final bool? shouldLeave = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Leaving App'),
+                            content: Text('This link will take you to an external website:\n\n${link.url}\n\nDo you want to continue?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: Text('Continue', style: TextStyle(color: Theme.of(context).primaryColor)),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (shouldLeave == true) {
+                          try {
+                            await launchUrl(url, mode: LaunchMode.externalApplication);
+                          } catch (e) {
+                            debugPrint('Could not launch ${link.url}: $e');
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Could not open the link.')),
+                              );
+                            }
+                          }
+                        }
+                      },
+                      text: comment.content,
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.3,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      linkStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.none,
+                      ),
                     ),
                   if (comment.attachments != null && comment.attachments!.isNotEmpty)
                     PostAttachmentViewer(attachments: comment.attachments!),
@@ -206,7 +337,7 @@ class CommentTile extends StatelessWidget {
                         child: Icon(
                           Icons.arrow_upward_rounded,
                           size: 16,
-                          color: hasUpvoted ? Colors.orange : Colors.grey,
+                          color: hasUpvoted ? Theme.of(context).primaryColor : Colors.grey,
                         ),
                       ),
                       Padding(

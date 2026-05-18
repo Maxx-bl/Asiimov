@@ -14,4 +14,12 @@ class Preferences {
   bool? getTheme() {
     return prefs?.getBool('isDarkMode');
   }
+
+  void setDominantColor(String hexColor) {
+    prefs?.setString('dominantColor', hexColor);
+  }
+
+  String? getDominantColor() {
+    return prefs?.getString('dominantColor');
+  }
 }

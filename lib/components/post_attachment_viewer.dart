@@ -42,8 +42,8 @@ class PostAttachmentViewer extends StatelessWidget {
                     CachedNetworkImage(
                       imageUrl: url,
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange),
+                      placeholder: (context, url) => Center(
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).primaryColor),
                       ),
                       errorWidget: (context, url, error) => const Center(
                         child: Icon(Icons.video_file, size: 40, color: Colors.grey),
@@ -77,8 +77,8 @@ class PostAttachmentViewer extends StatelessWidget {
               : CachedNetworkImage(
                   imageUrl: url,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange),
+                  placeholder: (context, url) => Center(
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).primaryColor),
                   ),
                   errorWidget: (context, url, error) => const Center(
                     child: Icon(Icons.broken_image, size: 40, color: Colors.grey),

@@ -30,7 +30,7 @@ class ProfilePostCard extends StatelessWidget {
 
     Color totalColor;
     if (total > 0) {
-      totalColor = Colors.orange;
+      totalColor = Theme.of(context).primaryColor;
     } else if (total < 0) {
       totalColor = Colors.blue.shade400;
     } else {
@@ -105,13 +105,13 @@ class ProfilePostCard extends StatelessWidget {
               children: [
                 // Upvotes
                 Icon(Icons.arrow_upward_rounded,
-                    size: 16, color: Colors.orange.shade300),
+                    size: 16, color: Theme.of(context).primaryColor.withValues(alpha: 0.8)),
                 const SizedBox(width: 2),
                 Text(
                   '$upCount',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.orange.shade300,
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.8),
                     fontWeight: FontWeight.w600,
                   ),
                 ),

@@ -143,10 +143,10 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                   color: Theme.of(context).colorScheme.secondary,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.mark_email_unread_rounded,
                   size: 80,
-                  color: Colors.orange,
+                  color: Theme.of(context).primaryColor,
                 ),
               ),
               const SizedBox(height: 32),
@@ -171,7 +171,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                     const TextSpan(text: 'We\'ve sent a verification link to\n'),
                     TextSpan(
                       text: email,
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor),
                     ),
                     const TextSpan(text: '\n\nPlease click the link to activate your account.'),
                   ],
@@ -223,7 +223,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                 child: ElevatedButton(
                   onPressed: canResendEmail ? resendVerificationEmail : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
+                    backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: Colors.grey.shade400,
                     shape: RoundedRectangleBorder(

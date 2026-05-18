@@ -161,10 +161,10 @@ class _AddMembersSheetState extends State<AddMembersSheet> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: isSelected ? Colors.orange : Colors.grey,
+                                  color: isSelected ? Theme.of(context).primaryColor : Colors.grey,
                                   width: 2,
                                 ),
-                                color: isSelected ? Colors.orange : Colors.transparent,
+                                color: isSelected ? Theme.of(context).primaryColor : Colors.transparent,
                               ),
                               child: isSelected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
                             ),
@@ -182,7 +182,7 @@ class _AddMembersSheetState extends State<AddMembersSheet> {
             child: ElevatedButton(
               onPressed: (_selectedUserIds.isNotEmpty && !_isLoading) ? _addMembers : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
+                backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

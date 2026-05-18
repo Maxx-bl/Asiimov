@@ -175,9 +175,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Colors.orange,
-                  child: Icon(Icons.camera_alt, color: Colors.white),
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  child: const Icon(Icons.camera_alt, color: Colors.white),
                 ),
                 title: const Text('Take a Photo'),
                 onTap: () => Navigator.pop(context, 'camera_photo'),
@@ -192,7 +192,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
               ),
               ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Colors.orange.shade200,
+                  backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                   child: const Icon(Icons.photo_library, color: Colors.white),
                 ),
                 title: const Text('Choose from Gallery'),
@@ -457,7 +457,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                             margin: const EdgeInsets.only(right: 8),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.orange, width: 1.5),
+                              border: Border.all(color: Theme.of(context).primaryColor, width: 1.5),
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(6),
@@ -502,7 +502,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.image, color: Colors.orange),
+                        icon: Icon(Icons.image, color: Theme.of(context).primaryColor),
                         onPressed: !_isPostingComment ? _pickCommentMedia : null,
                       ),
                       const SizedBox(width: 4),
@@ -528,20 +528,20 @@ class _PostDetailPageState extends State<PostDetailPage> {
                       ),
                       const SizedBox(width: 8),
                       _isPostingComment
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 36,
                               height: 36,
                               child: Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange),
+                                padding: const EdgeInsets.all(8.0),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).primaryColor),
                               ),
                             )
                           : GestureDetector(
                               onTap: _addComment,
                               child: Container(
                                 padding: const EdgeInsets.all(10),
-                                decoration: const BoxDecoration(
-                                  color: Colors.orange,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).primaryColor,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(Icons.arrow_upward,

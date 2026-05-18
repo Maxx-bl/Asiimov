@@ -122,8 +122,8 @@ class _ProfilePageState extends State<ProfilePage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (_) => const Center(
-          child: CircularProgressIndicator(color: Colors.orange),
+        builder: (_) => Center(
+          child: CircularProgressIndicator(color: Theme.of(context).primaryColor),
         ),
       );
     }
@@ -381,7 +381,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               final isPublic = userData!['public_account'] ?? false;
 
                               String buttonText = 'Follow';
-                              Color buttonColor = Colors.orange;
+                              Color buttonColor = Theme.of(context).primaryColor;
                               Color textColor = Colors.white;
 
                               if (isFollowing) {

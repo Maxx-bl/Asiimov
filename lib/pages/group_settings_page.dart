@@ -139,7 +139,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
               showDialog(
                 context: dialogContext,
                 barrierDismissible: false,
-                builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.orange)),
+                builder: (context) => Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor)),
               );
 
               try {
@@ -179,8 +179,8 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (_) => const Center(
-          child: CircularProgressIndicator(color: Colors.orange),
+        builder: (_) => Center(
+          child: CircularProgressIndicator(color: Theme.of(context).primaryColor),
         ),
       );
     }
@@ -293,8 +293,8 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                           if (isAdmin)
                             Container(
                               padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.orange,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).primaryColor,
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
@@ -337,7 +337,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                 title: const Text("Mute Notifications"),
                 value: _isMuted,
                 onChanged: _toggleMute,
-                activeThumbColor: Colors.orange,
+                activeThumbColor: Theme.of(context).primaryColor,
               ),
               
               const SizedBox(height: 32),
@@ -399,7 +399,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                           radius: 20,
                         ),
                         title: UsernameDisplay(userId: uid, username: username),
-                        subtitle: isMemberAdmin ? const Text("Admin", style: TextStyle(color: Colors.orange, fontSize: 12)) : null,
+                        subtitle: isMemberAdmin ? Text("Admin", style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 12)) : null,
                         trailing: (isAdmin && uid != _currentUserId)
                             ? IconButton(
                                 icon: const Icon(Icons.remove_circle_outline, color: Colors.red),

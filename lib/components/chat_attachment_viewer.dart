@@ -99,10 +99,10 @@ class ChatAttachmentViewer extends StatelessWidget {
               child: CachedNetworkImage(
                 imageUrl: url,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => const Center(
+                placeholder: (context, url) => Center(
                   child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: CircularProgressIndicator(color: Colors.orange),
+                    padding: const EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(color: Theme.of(context).primaryColor),
                   ),
                 ),
                 errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
@@ -172,7 +172,7 @@ class ChatAttachmentViewer extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.insert_drive_file, size: 24, color: Colors.orange),
+                  Icon(Icons.insert_drive_file, size: 24, color: Theme.of(context).primaryColor),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -280,7 +280,7 @@ class _ImagePreviewScreen extends StatelessWidget {
             child: CachedNetworkImage(
               imageUrl: url,
               fit: BoxFit.contain,
-              placeholder: (context, url) => const CircularProgressIndicator(color: Colors.orange),
+              placeholder: (context, url) => CircularProgressIndicator(color: Theme.of(context).primaryColor),
               errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey, size: 50),
             ),
           ),
@@ -336,7 +336,7 @@ class _ChatVideoPlayerState extends State<_ChatVideoPlayer> {
           color: Colors.black12,
           borderRadius: BorderRadius.circular(widget.isFullScreen ? 0 : 12),
         ),
-        child: const Center(child: CircularProgressIndicator(color: Colors.orange)),
+        child: Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor)),
       );
     }
 
@@ -395,7 +395,7 @@ class _ChatVideoPlayerState extends State<_ChatVideoPlayer> {
                 child: VideoProgressIndicator(
                   _controller,
                   allowScrubbing: true,
-                  colors: const VideoProgressColors(playedColor: Colors.orange),
+                  colors: VideoProgressColors(playedColor: Theme.of(context).primaryColor),
                 ),
               ),
           ],
@@ -612,7 +612,7 @@ class _MediaCarouselScreenState extends State<MediaCarouselScreen> {
                   child: CachedNetworkImage(
                     imageUrl: url,
                     fit: BoxFit.contain,
-                    placeholder: (context, url) => const CircularProgressIndicator(color: Colors.orange),
+                    placeholder: (context, url) => CircularProgressIndicator(color: Theme.of(context).primaryColor),
                     errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey, size: 50),
                   ),
                 ),

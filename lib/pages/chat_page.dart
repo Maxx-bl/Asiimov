@@ -341,9 +341,9 @@ class _ChatPageState extends State<ChatPage> {
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Colors.orange,
-                  child: Icon(Icons.photo_library, color: Colors.white),
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  child: const Icon(Icons.photo_library, color: Colors.white),
                 ),
                 title: const Text('Photos & Videos'),
                 subtitle: const Text('From your gallery'),
@@ -365,7 +365,7 @@ class _ChatPageState extends State<ChatPage> {
               ),
               ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Colors.orange.shade200,
+                  backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                   child: const Icon(Icons.insert_drive_file, color: Colors.white),
                 ),
                 title: const Text('Documents'),
@@ -467,12 +467,12 @@ class _ChatPageState extends State<ChatPage> {
           if (_isUploading)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange)),
-                  SizedBox(width: 8),
-                  Text('Uploading...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).primaryColor)),
+                  const SizedBox(width: 8),
+                  const Text('Uploading...', style: TextStyle(fontSize: 12, color: Colors.grey)),
                 ],
               ),
             ),
@@ -583,7 +583,7 @@ class _ChatPageState extends State<ChatPage> {
             width: 4,
             height: 32,
             decoration: BoxDecoration(
-              color: Colors.orange,
+              color: Theme.of(context).primaryColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -595,14 +595,14 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.reply, size: 14, color: Colors.orange),
+                    Icon(Icons.reply, size: 14, color: Theme.of(context).primaryColor),
                     const SizedBox(width: 4),
                     Text(
                       _replyToSenderID == authService.getCurrentUser()!.uid
                           ? 'You'
                           : widget.receiverUsername,
-                      style: const TextStyle(
-                        color: Colors.orange,
+                      style: TextStyle(
+                        color: Theme.of(context).primaryColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -657,7 +657,7 @@ class _ChatPageState extends State<ChatPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            Icon(Icons.info_outline, color: Colors.orange, size: 24),
+            Icon(Icons.info_outline, color: Theme.of(context).primaryColor, size: 24),
             const SizedBox(width: 8),
             const Text(
               'Private Messages',
@@ -673,7 +673,7 @@ class _ChatPageState extends State<ChatPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(foregroundColor: Colors.orange),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).primaryColor),
             child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
@@ -721,7 +721,7 @@ class _ChatPageState extends State<ChatPage> {
                           value: progress,
                           strokeWidth: 2.5,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            progress >= 1.0 ? Colors.orange : Colors.grey.shade400,
+                            progress >= 1.0 ? Theme.of(context).primaryColor : Colors.grey.shade400,
                           ),
                           backgroundColor: Colors.grey.shade200,
                         ),
@@ -937,7 +937,7 @@ class _ChatPageState extends State<ChatPage> {
                                 children: [
                                   Icon(
                                     isVideo ? Icons.videocam : Icons.insert_drive_file,
-                                    color: Colors.orange,
+                                    color: Theme.of(context).primaryColor,
                                     size: 24,
                                   ),
                                   const SizedBox(height: 2),
@@ -1180,7 +1180,7 @@ class _ChatPageState extends State<ChatPage> {
                             if (!_hasText) ...[
                               GestureDetector(
                                 onTap: _openInstantCamera,
-                                child: const Icon(Icons.camera_alt_rounded, color: Colors.orange, size: 24),
+                                child: Icon(Icons.camera_alt_rounded, color: Theme.of(context).primaryColor, size: 24),
                               ),
                               const SizedBox(width: 12),
                             ],
@@ -1230,7 +1230,7 @@ class _ChatPageState extends State<ChatPage> {
                   child: Container(
                     height: 48,
                     width: 48,
-                    decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
                     child: const Icon(Icons.send_rounded, color: Colors.white, size: 24),
                   ),
                 )
@@ -1240,7 +1240,7 @@ class _ChatPageState extends State<ChatPage> {
                   child: Container(
                     height: 48,
                     width: 48,
-                    decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
                     child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 26),
                   ),
                 )
@@ -1260,7 +1260,7 @@ class _ChatPageState extends State<ChatPage> {
                   child: Container(
                     height: 48,
                     width: 48,
-                    decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
                     child: const Icon(Icons.mic, color: Colors.white, size: 26),
                   ),
                 ),

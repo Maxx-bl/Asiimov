@@ -328,7 +328,7 @@ class ChatBubbleState extends State<ChatBubble>
                         Navigator.pop(context);
                         ChatService().togglePinMessage(widget.otherUserId, widget.messageId, widget.isPinned, isGroup: widget.isGroup);
                       },
-                      color: widget.isPinned ? Colors.orange : null,
+                      color: widget.isPinned ? Theme.of(context).primaryColor : null,
                     ),
                     ],
                     Divider(height: 1, color: Colors.grey.withValues(alpha: 0.2)),
@@ -487,9 +487,9 @@ class ChatBubbleState extends State<ChatBubble>
                     ? Colors.grey.shade700.withValues(alpha: 0.5)
                     : Colors.grey.shade300.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(16),
-                border: const Border(
+                border: Border(
                   left: BorderSide(
-                    color: Colors.orange,
+                    color: Theme.of(context).primaryColor,
                     width: 4,
                   ),
                 ),
@@ -555,7 +555,7 @@ class ChatBubbleState extends State<ChatBubble>
           child: Container(
             decoration: BoxDecoration(
                 color: widget.isCurrentUser
-                    ? Colors.orange
+                    ? Theme.of(context).primaryColor
                     : (isDarkMode
                         ? Colors.grey.shade800
                         : Colors.grey.shade200),
@@ -587,7 +587,7 @@ class ChatBubbleState extends State<ChatBubble>
                                   ),
                                   TextButton(
                                     onPressed: () => Navigator.pop(context, true),
-                                    child: const Text('Continue', style: TextStyle(color: Colors.orange)),
+                                    child: Text('Continue', style: TextStyle(color: Theme.of(context).primaryColor)),
                                   ),
                                 ],
                               ),
@@ -612,10 +612,11 @@ class ChatBubbleState extends State<ChatBubble>
                                   ? Colors.white
                                   : (isDarkMode ? Colors.white : Colors.black)),
                           linkStyle: TextStyle(
-                              color: widget.isCurrentUser
-                                  ? Colors.white
-                                  : Colors.blue,
-                              decoration: TextDecoration.underline,
+                            color: widget.isCurrentUser
+                                ? Colors.white
+                                : (isDarkMode ? Colors.white : Colors.black),
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.none,
                           ),
                           options: const LinkifyOptions(humanize: false),
                         ),
@@ -625,13 +626,13 @@ class ChatBubbleState extends State<ChatBubble>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (widget.isPinned) ...[
-                        const Icon(Icons.push_pin, size: 10, color: Colors.orange),
+                        Icon(Icons.push_pin, size: 10, color: Theme.of(context).primaryColor),
                         const SizedBox(width: 2),
                         Text(
                           'pinned • ',
                           style: TextStyle(
                             fontSize: 10,
-                            color: widget.isCurrentUser ? Colors.white70 : Colors.orange,
+                            color: widget.isCurrentUser ? Colors.white70 : Theme.of(context).primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -700,7 +701,7 @@ class ChatBubbleState extends State<ChatBubble>
                   child: Icon(
                     Icons.reply,
                     color:
-                        _replyTriggered ? Colors.orange : Colors.grey.shade500,
+                        _replyTriggered ? Theme.of(context).primaryColor : Colors.grey.shade500,
                     size: 24,
                   ),
                 ),
@@ -819,11 +820,11 @@ class ChatBubbleState extends State<ChatBubble>
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: isUserReaction
-                ? Colors.orange.withValues(alpha: 0.3)
+                ? Theme.of(context).primaryColor.withValues(alpha: 0.3)
                 : (isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300),
             borderRadius: BorderRadius.circular(12),
             border: isUserReaction
-                ? Border.all(color: Colors.orange, width: 1)
+                ? Border.all(color: Theme.of(context).primaryColor, width: 1)
                 : null,
           ),
           child: Row(
@@ -953,7 +954,7 @@ class ChatBubbleState extends State<ChatBubble>
         decoration: BoxDecoration(
           color: isDarkMode ? Colors.grey.shade900 : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange, width: 1.5),
+          border: Border.all(color: Theme.of(context).primaryColor, width: 1.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -971,7 +972,7 @@ class ChatBubbleState extends State<ChatBubble>
                           CachedNetworkImage(
                             imageUrl: url,
                             fit: BoxFit.cover,
-                            placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange)),
+                            placeholder: (context, url) => Center(child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).primaryColor)),
                             errorWidget: (context, url, error) => const Icon(Icons.video_file, size: 40, color: Colors.grey),
                           ),
                           const Center(
@@ -986,7 +987,7 @@ class ChatBubbleState extends State<ChatBubble>
                     : CachedNetworkImage(
                         imageUrl: url,
                         fit: BoxFit.cover,
-                        placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange)),
+                        placeholder: (context, url) => Center(child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).primaryColor)),
                         errorWidget: (context, url, error) => const Icon(Icons.broken_image, size: 40, color: Colors.grey),
                       ),
               ),
@@ -1087,7 +1088,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         : (widget.isDarkMode ? Colors.white : Colors.black);
 
     final Color bgColor = widget.isCurrentUser
-        ? Colors.orange.shade400
+        ? Theme.of(context).primaryColor
         : (widget.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300);
 
     return Container(

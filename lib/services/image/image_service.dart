@@ -293,16 +293,16 @@ class ImageService {
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Colors.orange,
-                  child: Icon(Icons.camera_alt, color: Colors.white),
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  child: const Icon(Icons.camera_alt, color: Colors.white),
                 ),
                 title: const Text('Take a Photo'),
                 onTap: () => Navigator.pop(context, 'camera'),
               ),
               ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Colors.orange.shade200,
+                  backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                   child: const Icon(Icons.photo_library, color: Colors.white),
                 ),
                 title: const Text('Choose from Gallery'),

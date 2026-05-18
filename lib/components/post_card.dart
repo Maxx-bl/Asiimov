@@ -8,6 +8,8 @@ import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_linkify/flutter_linkify.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PostCard extends StatelessWidget {
   final Post post;
@@ -50,7 +52,7 @@ class PostCard extends StatelessWidget {
 
     Color scoreColor;
     if (score > 0) {
-      scoreColor = Colors.orange;
+      scoreColor = Theme.of(context).primaryColor;
     } else if (score < 0) {
       scoreColor = Colors.blue.shade400;
     } else {
@@ -59,32 +61,6 @@ class PostCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      onLongPress: () {
-        if (post.authorID == currentUserId && onDelete != null) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Delete post'),
-              content:
-                  const Text('Are you sure you want to delete this post?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    onDelete!();
-                  },
-                  child: const Text('Delete',
-                      style: TextStyle(color: Colors.red)),
-                ),
-              ],
-            ),
-          );
-        }
-      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
@@ -98,44 +74,154 @@ class PostCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: username + time
+            // Header: username + time + 3-dot menu
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProfilePage(
-                          userId: post.authorID,
-                          username: post.authorUsername,
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfilePage(
+                              userId: post.authorID,
+                              username: post.authorUsername,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Row(
+                        children: [
+                          ProfileAvatar(
+                            userId: post.authorID,
+                            username: post.authorUsername,
+                            radius: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          UsernameDisplay(
+                            userId: post.authorID,
+                            username: post.authorUsername,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '· ${_timeAgo(post.timestamp.toDate())}',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(
+                    Icons.more_vert_rounded,
+                    size: 20,
+                    color: Colors.grey,
+                  ),
+                  color: Theme.of(context).colorScheme.secondary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  onSelected: (value) async {
+                    if (value == 'delete') {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Delete Post'),
+                          content: const Text('Are you sure you want to delete this post?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true && onDelete != null) {
+                        onDelete!();
+                      }
+                    } else if (value == 'report') {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Report Post'),
+                          content: const Text('Are you sure you want to report this post?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: Text('Report', style: TextStyle(color: Theme.of(context).primaryColor)),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true) {
+                        try {
+                          await postService.reportPost(
+                            postId: post.id,
+                            content: post.content,
+                            authorId: post.authorID,
+                            authorUsername: post.authorUsername,
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Post successfully reported.'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: ${e.toString()}'),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                          }
+                        }
+                      }
+                    }
+                  },
+                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                    if (post.authorID == currentUserId)
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                            SizedBox(width: 8),
+                            Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                          ],
                         ),
                       ),
-                    );
-                  },
-                  child: Row(
-                    children: [
-                      ProfileAvatar(
-                        userId: post.authorID,
-                        username: post.authorUsername,
-                        radius: 18,
+                    PopupMenuItem<String>(
+                      value: 'report',
+                      child: Row(
+                        children: [
+                          Icon(Icons.flag_outlined, color: Theme.of(context).primaryColor, size: 20),
+                          const SizedBox(width: 8),
+                          Text('Report', style: TextStyle(color: Theme.of(context).primaryColor)),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      UsernameDisplay(
-                        userId: post.authorID,
-                        username: post.authorUsername,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '· ${_timeAgo(post.timestamp.toDate())}',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontSize: 13,
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -203,14 +289,52 @@ class PostCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        Text(
-                          parentPost!.content,
+                        Linkify(
+                          onOpen: (link) async {
+                            final Uri url = Uri.parse(link.url);
+                            final bool? shouldLeave = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Leaving App'),
+                                content: Text('This link will take you to an external website:\n\n${link.url}\n\nDo you want to continue?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, true),
+                                    child: Text('Continue', style: TextStyle(color: Theme.of(context).primaryColor)),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (shouldLeave == true) {
+                              try {
+                                await launchUrl(url, mode: LaunchMode.externalApplication);
+                              } catch (e) {
+                                debugPrint('Could not launch ${link.url}: $e');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Could not open the link.')),
+                                  );
+                                }
+                              }
+                            }
+                          },
+                          text: parentPost!.content,
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 13,
                             height: 1.3,
                             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                          ),
+                          linkStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.none,
                           ),
                         ),
                       ],
@@ -226,9 +350,51 @@ class PostCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (post.content.isNotEmpty)
-                    Text(
-                      post.content,
-                      style: const TextStyle(fontSize: 15, height: 1.4),
+                    Linkify(
+                      onOpen: (link) async {
+                        final Uri url = Uri.parse(link.url);
+                        final bool? shouldLeave = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Leaving App'),
+                            content: Text('This link will take you to an external website:\n\n${link.url}\n\nDo you want to continue?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: Text('Continue', style: TextStyle(color: Theme.of(context).primaryColor)),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (shouldLeave == true) {
+                          try {
+                            await launchUrl(url, mode: LaunchMode.externalApplication);
+                          } catch (e) {
+                            debugPrint('Could not launch ${link.url}: $e');
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Could not open the link.')),
+                              );
+                            }
+                          }
+                        }
+                      },
+                      text: post.content,
+                      style: TextStyle(
+                        fontSize: 15,
+                        height: 1.4,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      linkStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.none,
+                      ),
                     ),
                   if (post.attachments != null && post.attachments!.isNotEmpty)
                     PostAttachmentViewer(attachments: post.attachments!),
@@ -263,7 +429,7 @@ class PostCard extends StatelessWidget {
                     child: Icon(
                       Icons.arrow_upward_rounded,
                       size: 20,
-                      color: hasUpvoted ? Colors.orange : Colors.grey,
+                      color: hasUpvoted ? Theme.of(context).primaryColor : Colors.grey,
                     ),
                   ),
 

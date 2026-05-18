@@ -330,4 +330,48 @@ class PostService extends ChangeNotifier {
       'sharedBy': FieldValue.arrayUnion([userId]),
     });
   }
+
+  // Report a post
+  Future<void> reportPost({
+    required String postId,
+    required String content,
+    required String authorId,
+    required String authorUsername,
+  }) async {
+    final user = _auth.currentUser!;
+    await _firestore.collection('reports').add({
+      'postId': postId,
+      'postContent': content,
+      'postAuthorId': authorId,
+      'postAuthorUsername': authorUsername,
+      'reportedById': user.uid,
+      'reportedByUsername': user.displayName ?? 'Anonymous',
+      'timestamp': FieldValue.serverTimestamp(),
+      'status': 'pending',
+      'type': 'post',
+    });
+  }
+
+  // Report a comment
+  Future<void> reportComment({
+    required String commentId,
+    required String commentPath,
+    required String content,
+    required String authorId,
+    required String authorUsername,
+  }) async {
+    final user = _auth.currentUser!;
+    await _firestore.collection('reports').add({
+      'commentId': commentId,
+      'commentPath': commentPath,
+      'commentContent': content,
+      'commentAuthorId': authorId,
+      'commentAuthorUsername': authorUsername,
+      'reportedById': user.uid,
+      'reportedByUsername': user.displayName ?? 'Anonymous',
+      'timestamp': FieldValue.serverTimestamp(),
+      'status': 'pending',
+      'type': 'comment',
+    });
+  }
 }
