@@ -20,6 +20,7 @@ class PostCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final VoidCallback? onAction;
+  final bool isAdminView;
 
   const PostCard({
     super.key,
@@ -31,6 +32,7 @@ class PostCard extends StatelessWidget {
     this.onTap,
     this.onDelete,
     this.onAction,
+    this.isAdminView = false,
   });
 
   String _timeAgo(DateTime dateTime) {
@@ -177,6 +179,9 @@ class PostCard extends StatelessWidget {
                             content: post.content,
                             authorId: post.authorID,
                             authorUsername: post.authorUsername,
+                            attachmentTypes: post.attachments != null
+                                ? post.attachments!.map((a) => (a is Map && a['type'] != null) ? a['type'].toString() : 'media').toList()
+                                : [],
                           );
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -200,7 +205,7 @@ class PostCard extends StatelessWidget {
                     }
                   },
                   itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                    if (post.authorID == currentUserId)
+                    if (post.authorID == currentUserId || isAdminView)
                       const PopupMenuItem<String>(
                         value: 'delete',
                         child: Row(

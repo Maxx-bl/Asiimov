@@ -17,8 +17,14 @@ import 'package:video_player/video_player.dart';
 class PostDetailPage extends StatefulWidget {
   final Post post;
   final String docPath;
+  final bool isAdminView;
 
-  const PostDetailPage({super.key, required this.post, required this.docPath});
+  const PostDetailPage({
+    super.key,
+    required this.post,
+    required this.docPath,
+    this.isAdminView = false,
+  });
 
   @override
   State<PostDetailPage> createState() => _PostDetailPageState();
@@ -380,6 +386,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                             parentPost: _parentPost,
                             parentDocPath: _parentDocPath,
                             onAction: _onRefresh,
+                            isAdminView: widget.isAdminView,
                           );
                         }
                         // 1: Divider
@@ -421,6 +428,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                           parentPath: widget.docPath,
                           currentUserId: currentUserId,
                           onAction: _onRefresh,
+                          isAdminView: widget.isAdminView,
                         );
                       },
                     ),

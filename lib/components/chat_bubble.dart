@@ -424,27 +424,71 @@ class ChatBubbleState extends State<ChatBubble>
     );
   }
 
-  void reportMessage(BuildContext context, String messageId, String userId) {
-    showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-              title: const Text('Report message'),
-              content:
-                  const Text('Are you sure you want to report this message?'),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel')),
-                TextButton(
-                    onPressed: () {
-                      ChatService().reportUser(messageId, userId);
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Message reported!')));
-                    },
-                    child: const Text('Confirm')),
-              ],
-            ));
+  void reportMessage(BuildContext context, String messageId, String userId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Report Message'),
+        content: const Text('Are you sure you want to report this message?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Confirm', style: TextStyle(color: Theme.of(context).primaryColor)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        // Calculate chat room ID
+        String chatRoomId;
+        if (widget.isGroup) {
+          chatRoomId = widget.otherUserId;
+        } else {
+          List<String> ids = [widget.currentUserId, widget.otherUserId];
+          ids.sort();
+          chatRoomId = ids.join('_');
+        }
+
+        // Fetch usernames
+        final senderDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+        final reporterDoc = await FirebaseFirestore.instance.collection('users').doc(widget.currentUserId).get();
+
+        final senderUsername = senderDoc.data()?['username'] as String? ?? 'Anonymous';
+        final reporterUsername = reporterDoc.data()?['username'] as String? ?? 'Anonymous';
+
+        await ChatService().reportUser(
+          messageId,
+          userId,
+          widget.message,
+          chatRoomId,
+          senderUsername,
+          reporterUsername,
+          messageType: widget.messageType,
+          sharedPostId: widget.sharedPostId,
+          attachmentTypes: widget.attachments != null
+              ? widget.attachments!.map((a) => (a is Map && a['type'] != null) ? a['type'].toString() : 'media').toList()
+              : (widget.instantAttachment != null ? ['instant_photo'] : []),
+        );
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Message successfully reported.')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${e.toString()}')),
+          );
+        }
+      }
+    }
   }
 
 

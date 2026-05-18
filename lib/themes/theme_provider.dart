@@ -45,7 +45,7 @@ class ThemeProvider extends ChangeNotifier {
     
     // Load theme
     final isDark = _preferences.getTheme();
-    if (isDark != null && isDark) {
+    if (isDark == true) {
       _themeData = darkMode;
     } else {
       _themeData = lightMode;
@@ -53,7 +53,7 @@ class ThemeProvider extends ChangeNotifier {
 
     // Load dominant color
     final hexColor = _preferences.getDominantColor();
-    if (hexColor != null && hexColor.isNotEmpty) {
+    if (hexColor != null && hexColor.runtimeType == String && hexColor.isNotEmpty) {
       _dominantColor = hexToColor(hexColor);
     } else {
       _dominantColor = Colors.orange;

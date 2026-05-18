@@ -1,6 +1,8 @@
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/pages/settings_page.dart';
+import 'package:asiimov/pages/admin_dashboard_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class MyDrawer extends StatelessWidget {
@@ -68,6 +70,42 @@ class MyDrawer extends StatelessWidget {
               },
             ),
           ),
+
+          //admin panel
+          if (currentUser != null)
+            FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(currentUser.uid)
+                  .get(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.done &&
+                    snapshot.hasData) {
+                  final data = snapshot.data!.data() as Map<String, dynamic>?;
+                  final isAdmin = data?['isAdmin'] == true;
+
+                  if (isAdmin) {
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 25),
+                      child: ListTile(
+                        title: const Text('A D M I N   P A N E L'),
+                        leading: const Icon(Icons.admin_panel_settings, color: Colors.redAccent),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AdminDashboardPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  }
+                }
+                return const SizedBox.shrink();
+              },
+            ),
         ]),
 
         //logout

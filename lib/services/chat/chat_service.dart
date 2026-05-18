@@ -1195,27 +1195,124 @@ class ChatService extends ChangeNotifier {
   }
 
   //report user
-  Future<void> reportUser(String messageId, String userId) async {
+  Future<void> reportUser(
+      String messageId,
+      String userId,
+      String content,
+      String chatRoomId,
+      String senderUsername,
+      String reporterUsername, {
+      String messageType = 'text',
+      String? sharedPostId,
+      List<String>? attachmentTypes,
+  }) async {
     final currentUser = auth.currentUser;
-    final report = {
-      'reportedBy': currentUser!.uid,
-      'messageId': messageId,
-      'messageOwnerId': userId,
-      'timestamp': FieldValue.serverTimestamp(),
-    };
+    
+    // Check for an existing pending report for this message
+    final existing = await firestore.collection('reports')
+        .where('messageId', isEqualTo: messageId)
+        .where('chatRoomId', isEqualTo: chatRoomId)
+        .where('status', isEqualTo: 'pending')
+        .limit(1)
+        .get();
 
-    await firestore.collection('reports').add(report);
+    if (existing.docs.isNotEmpty) {
+      final reportDoc = existing.docs.first;
+      await reportDoc.reference.update({
+        'reportCount': FieldValue.increment(1),
+        'reportedByIds': FieldValue.arrayUnion([currentUser!.uid]),
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } else {
+      final report = {
+        'reportedById': currentUser!.uid,
+        'reportedByIds': [currentUser.uid],
+        'reportedByUsername': reporterUsername,
+        'messageId': messageId,
+        'messageOwnerId': userId,
+        'messageContent': content,
+        'chatRoomId': chatRoomId,
+        'messageAuthorUsername': senderUsername,
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'pending',
+        'type': 'message',
+        'messageType': messageType,
+        'sharedPostId': sharedPostId,
+        'attachmentTypes': attachmentTypes ?? [],
+        'reportCount': 1,
+      };
+      await firestore.collection('reports').add(report);
+    }
+
+    // Increment reportsCount for the sender
+    await firestore.collection('users').doc(userId).update({
+      'reportsCount': FieldValue.increment(1),
+    });
+  }
+
+  // delete message by room id (called by Admin Dashboard)
+  Future<void> deleteMessageByRoomId(String chatRoomId, String messageId) async {
+    final messageRef = firestore
+        .collection('chats')
+        .doc(chatRoomId)
+        .collection('messages')
+        .doc(messageId);
+
+    // Fetch message to check for attachments
+    final doc = await messageRef.get();
+    if (doc.exists) {
+      final data = doc.data() as Map<String, dynamic>;
+      final fileService = FileService();
+
+      final attachments = data['attachments'] as List<dynamic>?;
+      if (attachments != null && attachments.isNotEmpty) {
+        for (var attachment in attachments) {
+          final objectKey = attachment['objectKey'] as String?;
+          if (objectKey != null) {
+            await fileService.deleteAttachment(objectKey);
+          }
+        }
+      }
+
+      final instantAttachment = data['instantAttachment'] as Map<String, dynamic>?;
+      if (instantAttachment != null) {
+        final objectKey = instantAttachment['objectKey'] as String?;
+        if (objectKey != null) {
+          await fileService.deleteAttachment(objectKey);
+        }
+      }
+    }
+
+    await messageRef.delete();
   }
 
   //block user
   Future<void> blockUser(String userId) async {
     final currentUser = auth.currentUser;
-    await firestore
-        .collection('users')
-        .doc(currentUser!.uid)
-        .collection('blockedUsers')
-        .doc(userId)
-        .set({});
+    final currentUserId = currentUser!.uid;
+
+    final batch = firestore.batch();
+
+    // 1. Add to blockedUsers collection of current user
+    batch.set(
+      firestore.collection('users').doc(currentUserId).collection('blockedUsers').doc(userId),
+      <String, dynamic>{}
+    );
+
+    // 2. Unfollow each other & clear pending requests on both profiles
+    batch.update(firestore.collection('users').doc(currentUserId), {
+      'following': FieldValue.arrayRemove([userId]),
+      'followers': FieldValue.arrayRemove([userId]),
+      'follow_requests': FieldValue.arrayRemove([userId]),
+    });
+
+    batch.update(firestore.collection('users').doc(userId), {
+      'following': FieldValue.arrayRemove([currentUserId]),
+      'followers': FieldValue.arrayRemove([currentUserId]),
+      'follow_requests': FieldValue.arrayRemove([currentUserId]),
+    });
+
+    await batch.commit();
     notifyListeners();
   }
 

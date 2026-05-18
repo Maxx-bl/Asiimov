@@ -149,25 +149,34 @@ class PostService extends ChangeNotifier {
     });
   }
 
-  //delete a post (only if author)
   Future<void> deletePost(String postId) async {
     final userId = _auth.currentUser!.uid;
     final docRef = _firestore.collection('posts').doc(postId);
     final doc = await docRef.get();
-    if (doc.exists && doc['authorID'] == userId) {
-      final data = doc.data();
-      if (data != null) {
-        final attachments = data['attachments'] as List<dynamic>? ?? (data['attachment'] != null ? [data['attachment']] : []);
-        for (final att in attachments) {
-          final objectKey = att['objectKey'] as String?;
-          if (objectKey != null && objectKey.isNotEmpty) {
-            await FileService().deleteAttachment(objectKey);
-          }
+    if (doc.exists) {
+      bool isAllowed = doc['authorID'] == userId;
+      if (!isAllowed) {
+        final currentUserDoc = await _firestore.collection('users').doc(userId).get();
+        if (currentUserDoc.exists && currentUserDoc.data()?['isAdmin'] == true) {
+          isAllowed = true;
         }
       }
-      // Recursively delete all nested comments
-      await _deleteSubcollection(docRef);
-      await docRef.delete();
+
+      if (isAllowed) {
+        final data = doc.data();
+        if (data != null) {
+          final attachments = data['attachments'] as List<dynamic>? ?? (data['attachment'] != null ? [data['attachment']] : []);
+          for (final att in attachments) {
+            final objectKey = att['objectKey'] as String?;
+            if (objectKey != null && objectKey.isNotEmpty) {
+              await FileService().deleteAttachment(objectKey);
+            }
+          }
+        }
+        // Recursively delete all nested comments
+        await _deleteSubcollection(docRef);
+        await docRef.delete();
+      }
     }
   }
 
@@ -263,33 +272,42 @@ class PostService extends ChangeNotifier {
     });
   }
 
-  //delete a comment (only if author)
   Future<void> deleteComment(String commentPath) async {
     final userId = _auth.currentUser!.uid;
     final commentRef = _firestore.doc(commentPath);
 
     final doc = await commentRef.get();
-    if (doc.exists && doc['authorID'] == userId) {
-      final data = doc.data();
-      if (data != null) {
-        final attachments = data['attachments'] as List<dynamic>? ?? (data['attachment'] != null ? [data['attachment']] : []);
-        for (final att in attachments) {
-          final objectKey = att['objectKey'] as String?;
-          if (objectKey != null && objectKey.isNotEmpty) {
-            await FileService().deleteAttachment(objectKey);
-          }
+    if (doc.exists) {
+      bool isAllowed = doc['authorID'] == userId;
+      if (!isAllowed) {
+        final currentUserDoc = await _firestore.collection('users').doc(userId).get();
+        if (currentUserDoc.exists && currentUserDoc.data()?['isAdmin'] == true) {
+          isAllowed = true;
         }
       }
-      // Recursively delete all nested comments
-      await _deleteSubcollection(commentRef);
-      await commentRef.delete();
 
-      // Decrement comment count on parent
-      final parentRef = commentRef.parent.parent;
-      if (parentRef != null) {
-        await parentRef.update({
-          'commentCount': FieldValue.increment(-1),
-        });
+      if (isAllowed) {
+        final data = doc.data();
+        if (data != null) {
+          final attachments = data['attachments'] as List<dynamic>? ?? (data['attachment'] != null ? [data['attachment']] : []);
+          for (final att in attachments) {
+            final objectKey = att['objectKey'] as String?;
+            if (objectKey != null && objectKey.isNotEmpty) {
+              await FileService().deleteAttachment(objectKey);
+            }
+          }
+        }
+        // Recursively delete all nested comments
+        await _deleteSubcollection(commentRef);
+        await commentRef.delete();
+
+        // Decrement comment count on parent
+        final parentRef = commentRef.parent.parent;
+        if (parentRef != null) {
+          await parentRef.update({
+            'commentCount': FieldValue.increment(-1),
+          });
+        }
       }
     }
   }
@@ -337,18 +355,43 @@ class PostService extends ChangeNotifier {
     required String content,
     required String authorId,
     required String authorUsername,
+    List<String>? attachmentTypes,
   }) async {
     final user = _auth.currentUser!;
-    await _firestore.collection('reports').add({
-      'postId': postId,
-      'postContent': content,
-      'postAuthorId': authorId,
-      'postAuthorUsername': authorUsername,
-      'reportedById': user.uid,
-      'reportedByUsername': user.displayName ?? 'Anonymous',
-      'timestamp': FieldValue.serverTimestamp(),
-      'status': 'pending',
-      'type': 'post',
+    
+    // Check for an existing pending report for this post
+    final existing = await _firestore.collection('reports')
+        .where('postId', isEqualTo: postId)
+        .where('status', isEqualTo: 'pending')
+        .limit(1)
+        .get();
+
+    if (existing.docs.isNotEmpty) {
+      final reportDoc = existing.docs.first;
+      await reportDoc.reference.update({
+        'reportCount': FieldValue.increment(1),
+        'reportedByIds': FieldValue.arrayUnion([user.uid]),
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } else {
+      await _firestore.collection('reports').add({
+        'postId': postId,
+        'postContent': content,
+        'postAuthorId': authorId,
+        'postAuthorUsername': authorUsername,
+        'reportedById': user.uid,
+        'reportedByIds': [user.uid],
+        'reportedByUsername': user.displayName ?? 'Anonymous',
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'pending',
+        'type': 'post',
+        'attachmentTypes': attachmentTypes ?? [],
+        'reportCount': 1,
+      });
+    }
+
+    await _firestore.collection('users').doc(authorId).update({
+      'reportsCount': FieldValue.increment(1),
     });
   }
 
@@ -359,19 +402,44 @@ class PostService extends ChangeNotifier {
     required String content,
     required String authorId,
     required String authorUsername,
+    List<String>? attachmentTypes,
   }) async {
     final user = _auth.currentUser!;
-    await _firestore.collection('reports').add({
-      'commentId': commentId,
-      'commentPath': commentPath,
-      'commentContent': content,
-      'commentAuthorId': authorId,
-      'commentAuthorUsername': authorUsername,
-      'reportedById': user.uid,
-      'reportedByUsername': user.displayName ?? 'Anonymous',
-      'timestamp': FieldValue.serverTimestamp(),
-      'status': 'pending',
-      'type': 'comment',
+
+    // Check for an existing pending report for this comment
+    final existing = await _firestore.collection('reports')
+        .where('commentPath', isEqualTo: commentPath)
+        .where('status', isEqualTo: 'pending')
+        .limit(1)
+        .get();
+
+    if (existing.docs.isNotEmpty) {
+      final reportDoc = existing.docs.first;
+      await reportDoc.reference.update({
+        'reportCount': FieldValue.increment(1),
+        'reportedByIds': FieldValue.arrayUnion([user.uid]),
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } else {
+      await _firestore.collection('reports').add({
+        'commentId': commentId,
+        'commentPath': commentPath,
+        'commentContent': content,
+        'commentAuthorId': authorId,
+        'commentAuthorUsername': authorUsername,
+        'reportedById': user.uid,
+        'reportedByIds': [user.uid],
+        'reportedByUsername': user.displayName ?? 'Anonymous',
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'pending',
+        'type': 'comment',
+        'attachmentTypes': attachmentTypes ?? [],
+        'reportCount': 1,
+      });
+    }
+
+    await _firestore.collection('users').doc(authorId).update({
+      'reportsCount': FieldValue.increment(1),
     });
   }
 }

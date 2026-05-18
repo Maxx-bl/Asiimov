@@ -17,6 +17,7 @@ class CommentTile extends StatelessWidget {
   final String currentUserId;
   final String parentPath;
   final VoidCallback? onAction;
+  final bool isAdminView;
 
   const CommentTile({
     super.key,
@@ -24,6 +25,7 @@ class CommentTile extends StatelessWidget {
     required this.currentUserId,
     required this.parentPath,
     this.onAction,
+    this.isAdminView = false,
   });
 
   String _timeAgo(DateTime dateTime) {
@@ -210,13 +212,16 @@ class CommentTile extends StatelessWidget {
 
                             if (confirm == true) {
                               try {
-                                await postService.reportComment(
-                                  commentId: comment.id,
-                                  commentPath: '$parentPath/comments/${comment.id}',
-                                  content: comment.content,
-                                  authorId: comment.authorID,
-                                  authorUsername: comment.authorUsername,
-                                );
+                                 await postService.reportComment(
+                                   commentId: comment.id,
+                                   commentPath: '$parentPath/comments/${comment.id}',
+                                   content: comment.content,
+                                   authorId: comment.authorID,
+                                   authorUsername: comment.authorUsername,
+                                   attachmentTypes: comment.attachments != null
+                                       ? comment.attachments!.map((a) => (a is Map && a['type'] != null) ? a['type'].toString() : 'media').toList()
+                                       : [],
+                                 );
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -239,7 +244,7 @@ class CommentTile extends StatelessWidget {
                           }
                         },
                         itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                          if (comment.authorID == currentUserId)
+                          if (comment.authorID == currentUserId || isAdminView)
                             const PopupMenuItem<String>(
                               value: 'delete',
                               child: Row(

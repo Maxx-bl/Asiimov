@@ -20,11 +20,13 @@ import 'package:flutter/material.dart';
 class ProfilePage extends StatefulWidget {
   final String userId;
   final String username;
+  final bool isAdminView;
 
   const ProfilePage({
     super.key,
     required this.userId,
     required this.username,
+    this.isAdminView = false,
   });
 
   @override
@@ -42,6 +44,8 @@ class _ProfilePageState extends State<ProfilePage> {
   bool hasRequested = false;
   int requestCount = 0;
   bool isLoading = true;
+  bool isBlockedByMe = false;
+  bool hasBlockedMe = false;
 
   @override
   void initState() {
@@ -51,16 +55,50 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _refreshData() async {
     try {
+      final isOwnProfile = currentUserId == widget.userId;
+
+      if (!isOwnProfile) {
+        final blockedByMeDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUserId)
+            .collection('blockedUsers')
+            .doc(widget.userId)
+            .get();
+        isBlockedByMe = blockedByMeDoc.exists;
+
+        final blockedMeDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.userId)
+            .collection('blockedUsers')
+            .doc(currentUserId)
+            .get();
+        hasBlockedMe = blockedMeDoc.exists;
+      } else {
+        isBlockedByMe = false;
+        hasBlockedMe = false;
+      }
+
+      if (hasBlockedMe) {
+        posts = [];
+        isFollowing = false;
+        hasRequested = false;
+        userData = {}; // Empty map to bypass the "User not found" check
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
+        return;
+      }
+
       final userDoc = await userService.getUserFuture(widget.userId);
       if (userDoc.exists) {
         userData = userDoc.data() as Map<String, dynamic>;
         final followers = List<String>.from(userData!['followers'] ?? []);
         isFollowing = followers.contains(currentUserId);
-        
         final isPublic = userData!['public_account'] ?? false;
-        final isOwnProfile = currentUserId == widget.userId;
-
-        if (isOwnProfile || isPublic || isFollowing) {
+        
+        if (isOwnProfile || isPublic || isFollowing || widget.isAdminView) {
           final postsSnapshot = await postService.getUserPostsFuture(widget.userId);
           posts = postsSnapshot.docs.map((doc) => Post.fromFirestore(doc)).toList();
           posts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
@@ -211,9 +249,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: const Icon(Icons.notifications_outlined),
               ),
             ),
-          if (!isOwnProfile)
+          if (!isOwnProfile && !hasBlockedMe)
             PopupMenuButton<String>(
-              onSelected: (value) {
+              onSelected: (value) async {
                 if (value == 'block') {
                   showDialog(
                     context: context,
@@ -234,7 +272,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('User blocked!')),
                               );
-                              Navigator.pop(context);
+                              _refreshData();
                             }
                           },
                           child: const Text('Block', style: TextStyle(color: Colors.red)),
@@ -242,19 +280,40 @@ class _ProfilePageState extends State<ProfilePage> {
                       ],
                     ),
                   );
+                } else if (value == 'unblock') {
+                  final chatService = ChatService();
+                  await chatService.unblockUser(widget.userId);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('User unblocked.')),
+                    );
+                    _refreshData();
+                  }
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                const PopupMenuItem<String>(
-                  value: 'block',
-                  child: Row(
-                    children: [
-                      Icon(Icons.block, color: Colors.red, size: 20),
-                      SizedBox(width: 8),
-                      Text('Block User', style: TextStyle(color: Colors.red)),
-                    ],
+                if (isBlockedByMe)
+                  const PopupMenuItem<String>(
+                    value: 'unblock',
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle_outline, color: Colors.green, size: 20),
+                        SizedBox(width: 8),
+                        Text('Unblock User', style: TextStyle(color: Colors.green)),
+                      ],
+                    ),
+                  )
+                else
+                  const PopupMenuItem<String>(
+                    value: 'block',
+                    child: Row(
+                      children: [
+                        Icon(Icons.block, color: Colors.red, size: 20),
+                        SizedBox(width: 8),
+                        Text('Block User', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
         ],
@@ -263,9 +322,90 @@ class _ProfilePageState extends State<ProfilePage> {
         onRefresh: _refreshData,
         child: isLoading
             ? const Center(child: CircularProgressIndicator())
-            : userData == null
-                ? const Center(child: Text('User not found.'))
-                : SingleChildScrollView(
+            : hasBlockedMe
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.block,
+                            size: 64,
+                            color: Colors.redAccent.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'This user blocked you',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'You cannot view this profile or follow this account.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : isBlockedByMe
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 40),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.block,
+                                size: 64,
+                                color: Theme.of(context).primaryColor.withValues(alpha: 0.5),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'You blocked this user',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'You cannot view their posts or interact with them.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.grey, fontSize: 14),
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  final chatService = ChatService();
+                                  await chatService.unblockUser(widget.userId);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('User unblocked.')),
+                                    );
+                                    _refreshData();
+                                  }
+                                },
+                                icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+                                label: const Text('Unblock', style: TextStyle(fontWeight: FontWeight.bold)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Theme.of(context).primaryColor,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : userData == null
+                        ? const Center(child: Text('User not found.'))
+                        : SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     child: Column(
                       children: [
@@ -535,7 +675,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   );
                                   _updateSinglePost(posts[index].id);
                                 },
-                                onDelete: isOwnProfile
+                                onDelete: (isOwnProfile || widget.isAdminView)
                                     ? () async {
                                         await postService.deletePost(posts[index].id);
                                         _refreshData();

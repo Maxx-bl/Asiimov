@@ -2,6 +2,8 @@ import 'package:asiimov/services/auth/login_or_register.dart';
 import 'package:asiimov/pages/main_scaffold.dart';
 import 'package:asiimov/pages/verify_email_page.dart';
 import 'package:asiimov/pages/two_factor_verification_page.dart';
+import 'package:asiimov/pages/suspended_account_page.dart';
+import 'package:asiimov/pages/user_warning_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -35,6 +37,18 @@ class AuthGate extends StatelessWidget {
                         }
                         
                         final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
+                        final isSuspended = userData?['isSuspended'] == true;
+                        final suspensionReason = userData?['suspensionReason'] as String? ?? "No reason provided.";
+                        
+                        if (isSuspended) {
+                          return SuspendedAccountPage(reason: suspensionReason);
+                        }
+
+                        final activeWarning = userData?['activeWarning'] as Map<String, dynamic>?;
+                        if (activeWarning != null) {
+                          return UserWarningPage(warningData: activeWarning);
+                        }
+
                         final is2faEnabled = userData?['two_factor_enabled'] ?? false;
                         
                         if (is2faEnabled && AuthService.isNewLoginFlow && !isVerified) {

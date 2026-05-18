@@ -7,6 +7,14 @@ class UsernameDisplay extends StatefulWidget {
   final TextStyle? style;
   final double iconSize;
 
+  static final Map<String, bool> verificationCache = {};
+  static final Map<String, String> usernameCache = {};
+
+  static void clearCacheForUser(String userId) {
+    verificationCache.remove(userId);
+    usernameCache.remove(userId);
+  }
+
   const UsernameDisplay({
     super.key,
     required this.userId,
@@ -20,8 +28,6 @@ class UsernameDisplay extends StatefulWidget {
 }
 
 class _UsernameDisplayState extends State<UsernameDisplay> {
-  static final Map<String, bool> _verificationCache = {};
-  static final Map<String, String> _usernameCache = {};
   bool? _isVerified;
   String? _username;
 
@@ -40,14 +46,14 @@ class _UsernameDisplayState extends State<UsernameDisplay> {
   }
 
   void _initData() {
-    _username = widget.username.isNotEmpty ? widget.username : _usernameCache[widget.userId];
-    _isVerified = _verificationCache[widget.userId];
+    _username = widget.username.isNotEmpty ? widget.username : UsernameDisplay.usernameCache[widget.userId];
+    _isVerified = UsernameDisplay.verificationCache[widget.userId];
     _fetchUserData();
   }
 
   Future<void> _fetchUserData() async {
-    if (_verificationCache.containsKey(widget.userId) && 
-        (widget.username.isNotEmpty || _usernameCache.containsKey(widget.userId))) {
+    if (UsernameDisplay.verificationCache.containsKey(widget.userId) && 
+        (widget.username.isNotEmpty || UsernameDisplay.usernameCache.containsKey(widget.userId))) {
       return;
     }
 
@@ -62,8 +68,8 @@ class _UsernameDisplayState extends State<UsernameDisplay> {
         final bool isOfficial = data['official'] == true;
         final String fetchedUsername = data['username'] ?? "Unknown";
         
-        _verificationCache[widget.userId] = isOfficial;
-        _usernameCache[widget.userId] = fetchedUsername;
+        UsernameDisplay.verificationCache[widget.userId] = isOfficial;
+        UsernameDisplay.usernameCache[widget.userId] = fetchedUsername;
         
         if (mounted) {
           setState(() {
