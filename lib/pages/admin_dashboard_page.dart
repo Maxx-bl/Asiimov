@@ -101,6 +101,91 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
     super.dispose();
   }
 
+  // --- Admin UI tokens (neutral, low-chrome) ---
+
+  Color _surfaceColor(bool isDark) =>
+      isDark ? const Color(0xFF0E1116) : const Color(0xFFF4F5F7);
+
+  Color _cardColor(bool isDark) =>
+      isDark ? const Color(0xFF161B22) : Colors.white;
+
+  Color _borderColor(bool isDark) =>
+      isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade300;
+
+  Color _mutedColor(bool isDark) =>
+      isDark ? Colors.white60 : Colors.black54;
+
+  Color _fillColor(bool isDark) =>
+      isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey.shade100;
+
+  ShapeBorder _cardShape(bool isDark) => RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: _borderColor(isDark)),
+      );
+
+  Widget _chip(String label, bool isDark, {bool emphasized = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: emphasized ? _fillColor(isDark) : null,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: _borderColor(isDark)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: emphasized
+              ? (isDark ? Colors.white : Colors.black87)
+              : _mutedColor(isDark),
+        ),
+      ),
+    );
+  }
+
+  String _typeLabel(String type) {
+    switch (type) {
+      case 'post':
+        return 'Post';
+      case 'comment':
+        return 'Comment';
+      case 'message':
+        return 'Message';
+      default:
+        return type;
+    }
+  }
+
+  void _showSnack(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isError
+            ? Theme.of(context).colorScheme.errorContainer
+            : null,
+      ),
+    );
+  }
+
+  ButtonStyle _adminOutlinedStyle(bool isDark) => OutlinedButton.styleFrom(
+        foregroundColor: isDark ? Colors.white70 : Colors.black87,
+        side: BorderSide(color: _borderColor(isDark)),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+      );
+
+  ButtonStyle _adminFilledStyle(bool isDark) => FilledButton.styleFrom(
+        backgroundColor: isDark ? Colors.white : Colors.grey.shade900,
+        foregroundColor: isDark ? Colors.black87 : Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+      );
+
   // --- PAGINATED FETCH METHODS (15 by 15) ---
 
   Future<void> _fetchUsers({bool refresh = false}) async {
@@ -300,19 +385,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
         await _adminService.toggleOfficialBadge(userId, !currentVal);
         UsernameDisplay.clearCacheForUser(userId);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Verification status updated for @$username'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          _showSnack('Verification status updated for @$username');
           _fetchUsers(refresh: true);
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.redAccent),
-          );
+          _showSnack('Error: ${e.toString()}', isError: true);
         }
       }
     }
@@ -334,7 +412,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Unsuspend', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              child: const Text('Unsuspend', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -344,17 +422,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
         try {
           await _adminService.unsuspendUser(userId);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('@$username successfully reinstated!'), backgroundColor: Colors.green),
-            );
+            _showSnack('@$username successfully reinstated!');
             _fetchUsers(refresh: true);
             _fetchSuspendedUsers(refresh: true);
           }
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.redAccent),
-            );
+            _showSnack('Error: ${e.toString()}', isError: true);
           }
         }
       }
@@ -391,7 +465,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Suspend', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+              child: const Text('Suspend', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -402,17 +476,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
           await _adminService.suspendUser(userId, reasonController.text.trim());
 
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('@$username suspended successfully.'), backgroundColor: Colors.redAccent),
-            );
+            _showSnack('@$username suspended successfully.');
             _fetchUsers(refresh: true);
             _fetchSuspendedUsers(refresh: true);
           }
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.redAccent),
-            );
+            _showSnack('Error: ${e.toString()}', isError: true);
           }
         }
       }
@@ -469,7 +539,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                 Navigator.pop(context, true);
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -505,17 +575,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
         }
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Content deleted, warning sent to user, and case resolved!'), backgroundColor: Colors.green),
-          );
+          _showSnack('Content deleted, warning sent to user, and case resolved.');
           _fetchReports(refresh: true);
           _fetchResolvedReports(refresh: true);
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.redAccent),
-          );
+          _showSnack('Error: ${e.toString()}', isError: true);
         }
       }
     }
@@ -545,17 +611,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
       try {
         await _adminService.resolveReport(reportId, action: 'dismissed');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Report dismissed successfully!'), backgroundColor: Colors.green),
-          );
+          _showSnack('Report dismissed successfully!');
           _fetchReports(refresh: true);
           _fetchResolvedReports(refresh: true);
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.redAccent),
-          );
+          _showSnack('Error: ${e.toString()}', isError: true);
         }
       }
     }
@@ -568,24 +630,25 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF0C0F14) : Colors.grey.shade100,
+      backgroundColor: _surfaceColor(isDarkMode),
       appBar: AppBar(
         title: const Text(
-          'ADMIN PANEL',
-          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2),
+          'Admin',
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
         ),
-        foregroundColor: Colors.redAccent,
+        centerTitle: false,
         elevation: 0,
+        scrolledUnderElevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.redAccent,
-          labelColor: Colors.redAccent,
-          unselectedLabelColor: Colors.grey,
+          indicatorWeight: 2,
+          labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          unselectedLabelStyle: const TextStyle(fontSize: 12),
           tabs: const [
-            Tab(icon: Icon(Icons.people_outline), text: 'Users'),
-            Tab(icon: Icon(Icons.block_outlined), text: 'Suspended'),
-            Tab(icon: Icon(Icons.gavel_outlined), text: 'Reports'),
-            Tab(icon: Icon(Icons.history_outlined), text: 'History'),
+            Tab(text: 'Users'),
+            Tab(text: 'Suspended'),
+            Tab(text: 'Reports'),
+            Tab(text: 'History'),
           ],
         ),
       ),
@@ -621,10 +684,21 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                 },
               ),
               filled: true,
-              fillColor: isDarkMode ? const Color(0xFF171D26) : Colors.white,
+              fillColor: _cardColor(isDarkMode),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: _borderColor(isDarkMode)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 1,
+                ),
+              ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: _borderColor(isDarkMode)),
               ),
             ),
             onChanged: (val) {
@@ -661,60 +735,56 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                           final reportsCount = userData['reportsCount'] as int? ?? 0;
 
                           return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                            color: isDarkMode ? const Color(0xFF171D26) : Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                            elevation: 0,
+                            color: _cardColor(isDarkMode),
+                            shape: _cardShape(isDarkMode),
                             child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                               leading: ProfileAvatar(userId: userId, username: username, radius: 20),
                               title: Row(
                                 children: [
-                                  Text(
-                                    username,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  Flexible(
+                                    child: Text(
+                                      username,
+                                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                   if (official) ...[
                                     const SizedBox(width: 4),
-                                    const Icon(Icons.verified, color: Colors.blue, size: 16),
+                                    Icon(Icons.verified, color: _mutedColor(isDarkMode), size: 16),
                                   ],
                                   if (isSuspended) ...[
                                     const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.redAccent.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: const Text(
-                                        'SUSPENDED',
-                                        style: TextStyle(color: Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
+                                    _chip('Suspended', isDarkMode, emphasized: true),
                                   ],
                                 ],
                               ),
                               subtitle: Text(
-                                'Reports filed: $reportsCount',
+                                '$reportsCount report${reportsCount == 1 ? '' : 's'} filed',
                                 style: TextStyle(
-                                  color: reportsCount > 0 ? Colors.redAccent : Colors.grey,
-                                  fontWeight: reportsCount > 0 ? FontWeight.bold : FontWeight.normal,
+                                  color: _mutedColor(isDarkMode),
+                                  fontSize: 12,
+                                  fontWeight: reportsCount > 0 ? FontWeight.w500 : FontWeight.normal,
                                 ),
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // Official badge toggle
                                   IconButton(
+                                    tooltip: official ? 'Remove badge' : 'Grant badge',
                                     icon: Icon(
                                       official ? Icons.verified : Icons.verified_outlined,
-                                      color: official ? Colors.blue : Colors.grey,
+                                      color: _mutedColor(isDarkMode),
                                     ),
                                     onPressed: () => _showOfficialBadgeDialog(userId, username, official),
                                   ),
-                                  // Suspension button
                                   IconButton(
+                                    tooltip: isSuspended ? 'Reinstate' : 'Suspend',
                                     icon: Icon(
-                                      isSuspended ? Icons.lock_open : Icons.lock_outline,
-                                      color: isSuspended ? Colors.green : Colors.redAccent,
+                                      isSuspended ? Icons.lock_open_outlined : Icons.lock_outline,
+                                      color: _mutedColor(isDarkMode),
                                     ),
                                     onPressed: () => _showSuspensionDialog(userId, username, isSuspended: isSuspended),
                                   ),
@@ -757,32 +827,42 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                     final reason = userData['suspensionReason'] as String? ?? 'No reason provided.';
 
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      color: isDarkMode ? const Color(0xFF171D26) : Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: ListTile(
-                        leading: ProfileAvatar(userId: userId, username: username, radius: 20),
-                        title: Text(
-                          username,
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent),
-                        ),
-                        subtitle: Column(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      elevation: 0,
+                      color: _cardColor(isDarkMode),
+                      shape: _cardShape(isDarkMode),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                ProfileAvatar(userId: userId, username: username, radius: 20),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    username,
+                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                                  ),
+                                ),
+                                OutlinedButton(
+                                  onPressed: () => _showSuspensionDialog(userId, username, isSuspended: true),
+                                  style: _adminOutlinedStyle(isDarkMode),
+                                  child: const Text('Reinstate'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
                             Text(
-                              'Reason: $reason',
-                              style: TextStyle(color: isDarkMode ? Colors.grey.shade300 : Colors.black87),
+                              reason,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: _mutedColor(isDarkMode),
+                                height: 1.35,
+                              ),
                             ),
                           ],
-                        ),
-                        trailing: ElevatedButton(
-                          onPressed: () => _showSuspensionDialog(userId, username, isSuspended: true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: const Text('Reinstate', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                         ),
                       ),
                     );
@@ -817,11 +897,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
             margin: const EdgeInsets.only(bottom: 6),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: isDarkMode ? 0.12 : 0.08),
+              color: _fillColor(isDarkMode),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.orange.withValues(alpha: 0.25),
-              ),
+              border: Border.all(color: _borderColor(isDarkMode)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -829,10 +907,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                 if (reasons.length > 1)
                   Text(
                     '@${entry['username']}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Colors.orange,
+                      color: _mutedColor(isDarkMode),
                     ),
                   ),
                 if (reasons.length > 1) const SizedBox(height: 2),
@@ -841,6 +919,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                   style: TextStyle(
                     fontSize: 13,
                     color: isDarkMode ? Colors.white : Colors.black87,
+                    height: 1.35,
                   ),
                 ),
               ],
@@ -905,18 +984,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
             if (type == 'message') {
               final msgType = data['messageType'] as String? ?? 'text';
               if (msgType == 'audio') {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
                 return Container(
                   margin: const EdgeInsets.only(top: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                    color: _fillColor(isDark),
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: _borderColor(isDark)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.mic, color: Theme.of(context).primaryColor, size: 20),
+                      Icon(Icons.mic, color: _mutedColor(isDark), size: 18),
                       const SizedBox(width: 8),
-                      Text('Active Voice Message (Audio)', style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 13, fontWeight: FontWeight.w500)),
+                      Text(
+                        'Voice message',
+                        style: TextStyle(color: _mutedColor(isDark), fontSize: 13),
+                      ),
                     ],
                   ),
                 );
@@ -949,19 +1033,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                   );
                 }
               } else if (msgType == 'shared_post') {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
                 return Container(
                   margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                    color: _fillColor(isDark),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.2)),
+                    border: Border.all(color: _borderColor(isDark)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.share, color: Theme.of(context).primaryColor, size: 18),
+                      Icon(Icons.share_outlined, color: _mutedColor(isDark), size: 18),
                       const SizedBox(width: 8),
-                      const Text('Active Shared Post Link', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                      Text(
+                        'Shared post',
+                        style: TextStyle(fontSize: 12, color: _mutedColor(isDark)),
+                      ),
                     ],
                   ),
                 );
@@ -1010,46 +1098,24 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
             if (cachedMsgType == 'audio') displayType = 'voice message';
             if (cachedMsgType == 'instant_photo') displayType = 'instant photo';
             if (cachedMsgType == 'shared_post') displayType = 'shared post';
-            return Container(
-              margin: const EdgeInsets.only(top: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.redAccent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.redAccent, size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Media deleted ($displayType)',
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.w500),
-                  ),
-                ],
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Media removed · $displayType',
+                style: TextStyle(fontSize: 12, color: _mutedColor(isDark)),
               ),
             );
           }
         } else {
           if (cachedAttachmentTypes.isNotEmpty) {
             final displayTypes = cachedAttachmentTypes.join(', ');
-            return Container(
-              margin: const EdgeInsets.only(top: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.redAccent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.redAccent, size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Media deleted ($displayTypes)',
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.w500),
-                  ),
-                ],
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Media removed · $displayTypes',
+                style: TextStyle(fontSize: 12, color: _mutedColor(isDark)),
               ),
             );
           }
@@ -1075,18 +1141,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
           curve: Curves.easeInOut,
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected
-                ? (isDarkMode ? Colors.white12 : Colors.white)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: isSelected && !isDarkMode
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    )
-                  ]
+            color: isSelected ? _fillColor(isDarkMode) : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            border: isSelected
+                ? Border.all(color: _borderColor(isDarkMode))
                 : null,
           ),
           child: Text(
@@ -1120,14 +1178,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
 
     return Column(
       children: [
-        // Premium Segmented Filter Bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           child: Container(
             decoration: BoxDecoration(
-              color: isDarkMode ? const Color(0xFF171D26) : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: isDarkMode ? Colors.white10 : Colors.grey.shade200),
+              color: _cardColor(isDarkMode),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _borderColor(isDarkMode)),
             ),
             padding: const EdgeInsets.all(4),
             child: Row(
@@ -1153,8 +1210,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                           const SizedBox(height: 12),
                           Text(
                             _selectedReportFilter == 'all'
-                                ? 'Perfect! No pending report cases.'
-                                : 'No pending reports in this category.',
+                                ? 'No pending reports.'
+                                : 'No reports in this category.',
                             style: const TextStyle(color: Colors.grey, fontSize: 15),
                           ),
                         ],
@@ -1202,74 +1259,51 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                             authorId = reportData['messageOwnerId'] as String? ?? '';
                           }
 
-                          Color typeColor = Colors.orange;
-                          if (type == 'comment') typeColor = Colors.purple;
-                          if (type == 'message') typeColor = Colors.blue;
-
                           return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      color: isDarkMode ? const Color(0xFF171D26) : Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      elevation: 0,
+                      color: _cardColor(isDarkMode),
+                      shape: _cardShape(isDarkMode),
                       child: Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.all(14.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Header: Case type and date
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Row(
                                   children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: typeColor.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(color: typeColor.withValues(alpha: 0.2)),
-                                      ),
-                                      child: Text(
-                                        type.toUpperCase(),
-                                        style: TextStyle(color: typeColor, fontSize: 10, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
+                                    _chip(_typeLabel(type), isDarkMode, emphasized: true),
                                     if (reportCount > 1) ...[
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.redAccent.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
-                                        ),
-                                        child: Text(
-                                          'REPORTED $reportCount TIMES',
-                                          style: const TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
+                                      const SizedBox(width: 6),
+                                      _chip('$reportCount reports', isDarkMode),
                                     ],
                                   ],
                                 ),
                                 Text(
                                   date != null ? '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}' : '',
-                                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                  style: TextStyle(color: _mutedColor(isDarkMode), fontSize: 12),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 12),
 
-                            // Reported content preview
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: isDarkMode ? Colors.black26 : Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: isDarkMode ? Colors.white10 : Colors.grey.shade200),
+                                color: _fillColor(isDarkMode),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: _borderColor(isDarkMode)),
                               ),
                               child: Text(
-                                content != '' ? content : '[Media Content]',
-                                style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+                                content != '' ? content : '[Media content]',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: isDarkMode ? Colors.white70 : Colors.black87,
+                                  height: 1.4,
+                                ),
                               ),
                             ),
                             _buildReportedMediaPreview(reportData),
@@ -1286,8 +1320,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                                     Row(
                                       children: [
                                         Text(
-                                          'Author: @$author',
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                          '@$author',
+                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                                         ),
                                         const SizedBox(width: 8),
                                         FutureBuilder<DocumentSnapshot>(
@@ -1296,81 +1330,42 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                                             if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
                                               final userData = snapshot.data!.data() as Map<String, dynamic>?;
                                               final count = userData?['reportsCount'] as int? ?? 0;
-                                              return Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.redAccent.withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(4),
-                                                  border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
-                                                ),
-                                                child: Text(
-                                                  '$count total reports',
-                                                  style: const TextStyle(
-                                                    color: Colors.redAccent,
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              );
+                                              return _chip('$count prior reports', isDarkMode);
                                             }
                                             return const SizedBox();
                                           },
                                         ),
                                       ],
                                     ),
+                                    const SizedBox(height: 2),
                                     Text(
-                                      'Reported by: @$reporter',
-                                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                      'Reported by @$reporter',
+                                      style: TextStyle(color: _mutedColor(isDarkMode), fontSize: 12),
                                     ),
                                   ],
                                 ),
                               ],
                             ),
-                            const Divider(height: 24),
+                            Divider(height: 24, color: _borderColor(isDarkMode)),
 
-                            // Action buttons
                             Wrap(
                               spacing: 8,
                               runSpacing: 8,
-                              alignment: WrapAlignment.spaceBetween,
                               children: [
-                                // Dismiss report without deleting
-                                OutlinedButton.icon(
+                                OutlinedButton(
                                   onPressed: () => _showDismissReportDialog(reportId),
-                                  icon: const Icon(Icons.close, size: 14),
-                                  label: const Text('Dismiss', style: TextStyle(fontSize: 12)),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.green,
-                                    side: const BorderSide(color: Colors.green),
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
+                                  style: _adminOutlinedStyle(isDarkMode),
+                                  child: const Text('Dismiss'),
                                 ),
-                                
-                                // Suspend Author
-                                OutlinedButton.icon(
+                                OutlinedButton(
                                   onPressed: () => _showSuspensionDialog(authorId, author),
-                                  icon: const Icon(Icons.block, size: 14),
-                                  label: const Text('Suspend', style: TextStyle(fontSize: 12)),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.redAccent,
-                                    side: const BorderSide(color: Colors.redAccent),
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
+                                  style: _adminOutlinedStyle(isDarkMode),
+                                  child: const Text('Suspend author'),
                                 ),
-
-                                // Delete Content
-                                ElevatedButton.icon(
+                                FilledButton(
                                   onPressed: () => _showDeleteContentDialog(reportDoc),
-                                  icon: const Icon(Icons.delete_outline, size: 14),
-                                  label: const Text('Delete', style: TextStyle(fontSize: 12)),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.redAccent,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
+                                  style: _adminFilledStyle(isDarkMode),
+                                  child: const Text('Delete content'),
                                 ),
                               ],
                             ),
@@ -1429,16 +1424,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                       author = reportData['messageAuthorUsername'] as String? ?? 'Anonymous';
                     }
 
-                    Color typeColor = Colors.orange;
-                    if (type == 'comment') typeColor = Colors.purple;
-                    if (type == 'message') typeColor = Colors.blue;
+                    final resolutionLabel = resolutionAction == 'deleted'
+                        ? 'Content deleted'
+                        : resolutionAction == 'dismissed'
+                            ? 'Dismissed'
+                            : 'Resolved';
 
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      color: isDarkMode ? const Color(0xFF171D26) : Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      elevation: 0,
+                      color: _cardColor(isDarkMode),
+                      shape: _cardShape(isDarkMode),
                       child: Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.all(14.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1447,38 +1445,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                               children: [
                                 Row(
                                   children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: typeColor.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(color: typeColor.withValues(alpha: 0.2)),
-                                      ),
-                                      child: Text(
-                                        type.toUpperCase(),
-                                        style: TextStyle(color: typeColor, fontSize: 10, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
+                                    _chip(_typeLabel(type), isDarkMode, emphasized: true),
                                     if (reportCount > 1) ...[
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.redAccent.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
-                                        ),
-                                        child: Text(
-                                          'REPORTED $reportCount TIMES',
-                                          style: const TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
+                                      const SizedBox(width: 6),
+                                      _chip('$reportCount reports', isDarkMode),
                                     ],
                                   ],
                                 ),
                                 Text(
                                   date != null ? '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}' : '',
-                                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                  style: TextStyle(color: _mutedColor(isDarkMode), fontSize: 12),
                                 ),
                               ],
                             ),
@@ -1488,13 +1464,17 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                               width: double.infinity,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: isDarkMode ? Colors.black26 : Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: isDarkMode ? Colors.white10 : Colors.grey.shade200),
+                                color: _fillColor(isDarkMode),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: _borderColor(isDarkMode)),
                               ),
                               child: Text(
-                                content != '' ? content : '[Media Content]',
-                                style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+                                content != '' ? content : '[Media content]',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: isDarkMode ? Colors.white70 : Colors.black87,
+                                  height: 1.4,
+                                ),
                               ),
                             ),
                             _buildReportedMediaPreview(reportData),
@@ -1508,61 +1488,34 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Author: @$author',
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                      '@$author',
+                                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                                     ),
                                     Text(
-                                      'Reported by: @$reporter',
-                                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                      'Reported by @$reporter',
+                                      style: TextStyle(color: _mutedColor(isDarkMode), fontSize: 12),
                                     ),
                                   ],
                                 ),
                               ],
                             ),
-                            const Divider(height: 24),
+                            Divider(height: 24, color: _borderColor(isDarkMode)),
 
-                            // Resolved Status Indicator (No action buttons!)
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      resolutionAction == 'deleted'
-                                          ? Icons.delete_outline
-                                          : resolutionAction == 'dismissed'
-                                              ? Icons.gavel_outlined
-                                              : Icons.check_circle_outline,
-                                      color: resolutionAction == 'deleted'
-                                          ? Colors.redAccent
-                                          : resolutionAction == 'dismissed'
-                                              ? Colors.green
-                                              : Colors.grey,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      resolutionAction == 'deleted'
-                                          ? 'Content Deleted'
-                                          : resolutionAction == 'dismissed'
-                                              ? 'Report Dismissed'
-                                              : 'Resolved',
-                                      style: TextStyle(
-                                        color: resolutionAction == 'deleted'
-                                            ? Colors.redAccent
-                                            : resolutionAction == 'dismissed'
-                                                ? Colors.green
-                                                : Colors.grey,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
+                                Text(
+                                  resolutionLabel,
+                                  style: TextStyle(
+                                    color: _mutedColor(isDarkMode),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
                                 ),
                                 if (resolvedDate != null)
                                   Text(
                                     '${resolvedDate.day}/${resolvedDate.month} ${resolvedDate.hour}:${resolvedDate.minute.toString().padLeft(2, '0')}',
-                                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                    style: TextStyle(color: _mutedColor(isDarkMode), fontSize: 12),
                                   ),
                               ],
                             ),
@@ -1572,16 +1525,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: isDarkMode ? Colors.black12 : Colors.grey.shade50,
+                                  color: _fillColor(isDarkMode),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: isDarkMode ? Colors.white10 : Colors.grey.shade100),
+                                  border: Border.all(color: _borderColor(isDarkMode)),
                                 ),
                                 child: Text(
-                                  'Reason: "${reportData['resolutionReason']}"',
-                                  style: const TextStyle(
-                                    color: Colors.grey,
+                                  reportData['resolutionReason'] as String,
+                                  style: TextStyle(
+                                    color: isDarkMode ? Colors.white70 : Colors.black87,
                                     fontSize: 12,
-                                    fontStyle: FontStyle.italic,
+                                    height: 1.35,
                                   ),
                                 ),
                               ),
