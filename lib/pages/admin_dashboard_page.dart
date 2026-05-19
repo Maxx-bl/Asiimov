@@ -1,4 +1,5 @@
 import 'package:asiimov/components/profile_avatar.dart';
+import 'package:asiimov/utils/report_reasons_helper.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/widgets/safe_network_image.dart';
 import 'package:asiimov/services/admin/admin_service.dart';
@@ -790,6 +791,66 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
               );
   }
 
+  Widget _buildReportReasonsSection(
+    Map<String, dynamic> reportData,
+    bool isDarkMode,
+  ) {
+    final reasons = ReportReasonsHelper.parseReportReasons(reportData);
+    if (reasons.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        Text(
+          'Report reason${reasons.length > 1 ? 's' : ''}',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: isDarkMode ? Colors.white70 : Colors.black54,
+          ),
+        ),
+        const SizedBox(height: 6),
+        ...reasons.map((entry) {
+          return Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: isDarkMode ? 0.12 : 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.orange.withValues(alpha: 0.25),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (reasons.length > 1)
+                  Text(
+                    '@${entry['username']}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange,
+                    ),
+                  ),
+                if (reasons.length > 1) const SizedBox(height: 2),
+                Text(
+                  entry['reason']!,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   Widget _buildReportedMediaPreview(Map<String, dynamic> reportData) {
     final type = reportData['type'] as String;
 
@@ -1212,6 +1273,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                               ),
                             ),
                             _buildReportedMediaPreview(reportData),
+                            _buildReportReasonsSection(reportData, isDarkMode),
                             const SizedBox(height: 12),
 
                             // Author / Reporter info
@@ -1436,6 +1498,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                               ),
                             ),
                             _buildReportedMediaPreview(reportData),
+                            _buildReportReasonsSection(reportData, isDarkMode),
                             const SizedBox(height: 12),
 
                             Row(

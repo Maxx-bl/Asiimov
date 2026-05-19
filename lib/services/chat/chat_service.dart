@@ -1202,12 +1202,18 @@ class ChatService extends ChangeNotifier {
       String chatRoomId,
       String senderUsername,
       String reporterUsername, {
+      required String reason,
       String messageType = 'text',
       String? sharedPostId,
       List<String>? attachmentTypes,
   }) async {
-    final currentUser = auth.currentUser;
-    
+    final currentUser = auth.currentUser!;
+    final reasonEntry = {
+      'userId': currentUser.uid,
+      'username': reporterUsername,
+      'reason': reason.trim(),
+    };
+
     // Check for an existing pending report for this message
     final existing = await firestore.collection('reports')
         .where('messageId', isEqualTo: messageId)
@@ -1220,14 +1226,17 @@ class ChatService extends ChangeNotifier {
       final reportDoc = existing.docs.first;
       await reportDoc.reference.update({
         'reportCount': FieldValue.increment(1),
-        'reportedByIds': FieldValue.arrayUnion([currentUser!.uid]),
+        'reportedByIds': FieldValue.arrayUnion([currentUser.uid]),
+        'reporterReasons': FieldValue.arrayUnion([reasonEntry]),
         'timestamp': FieldValue.serverTimestamp(),
       });
     } else {
       final report = {
-        'reportedById': currentUser!.uid,
+        'reportedById': currentUser.uid,
         'reportedByIds': [currentUser.uid],
         'reportedByUsername': reporterUsername,
+        'reportReason': reasonEntry['reason'],
+        'reporterReasons': [reasonEntry],
         'messageId': messageId,
         'messageOwnerId': userId,
         'messageContent': content,

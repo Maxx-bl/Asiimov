@@ -1,3 +1,4 @@
+import 'package:asiimov/components/report_reason_dialog.dart';
 import 'package:asiimov/components/post_attachment_viewer.dart';
 import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/share_sheet.dart';
@@ -192,25 +193,12 @@ class CommentTile extends StatelessWidget {
                               if (onAction != null) onAction!();
                             }
                           } else if (value == 'report') {
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Report Comment'),
-                                content: const Text('Are you sure you want to report this comment?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context, false),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context, true),
-                                    child: Text('Report', style: TextStyle(color: Theme.of(context).primaryColor)),
-                                  ),
-                                ],
-                              ),
+                            final reason = await ReportReasonDialog.show(
+                              context,
+                              title: 'Report Comment',
                             );
 
-                            if (confirm == true) {
+                            if (reason != null) {
                               try {
                                  await postService.reportComment(
                                    commentId: comment.id,
@@ -218,6 +206,7 @@ class CommentTile extends StatelessWidget {
                                    content: comment.content,
                                    authorId: comment.authorID,
                                    authorUsername: comment.authorUsername,
+                                   reason: reason,
                                    attachmentTypes: comment.attachments != null
                                        ? comment.attachments!.map((a) => (a is Map && a['type'] != null) ? a['type'].toString() : 'media').toList()
                                        : [],

@@ -1,3 +1,4 @@
+import 'package:asiimov/components/report_reason_dialog.dart';
 import 'package:asiimov/models/post.dart';
 import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
@@ -425,25 +426,12 @@ class ChatBubbleState extends State<ChatBubble>
   }
 
   void reportMessage(BuildContext context, String messageId, String userId) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Report Message'),
-        content: const Text('Are you sure you want to report this message?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Confirm', style: TextStyle(color: Theme.of(context).primaryColor)),
-          ),
-        ],
-      ),
+    final reason = await ReportReasonDialog.show(
+      context,
+      title: 'Report Message',
     );
 
-    if (confirm == true) {
+    if (reason != null) {
       try {
         // Calculate chat room ID
         String chatRoomId;
@@ -469,6 +457,7 @@ class ChatBubbleState extends State<ChatBubble>
           chatRoomId,
           senderUsername,
           reporterUsername,
+          reason: reason,
           messageType: widget.messageType,
           sharedPostId: widget.sharedPostId,
           attachmentTypes: widget.attachments != null

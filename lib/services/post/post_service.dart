@@ -349,16 +349,30 @@ class PostService extends ChangeNotifier {
     });
   }
 
+  Future<Map<String, String>> _reporterReasonEntry(String reason) async {
+    final user = _auth.currentUser!;
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final username =
+        userDoc.data()?['username'] as String? ?? user.displayName ?? 'Anonymous';
+    return {
+      'userId': user.uid,
+      'username': username,
+      'reason': reason.trim(),
+    };
+  }
+
   // Report a post
   Future<void> reportPost({
     required String postId,
     required String content,
     required String authorId,
     required String authorUsername,
+    required String reason,
     List<String>? attachmentTypes,
   }) async {
     final user = _auth.currentUser!;
-    
+    final reasonEntry = await _reporterReasonEntry(reason);
+
     // Check for an existing pending report for this post
     final existing = await _firestore.collection('reports')
         .where('postId', isEqualTo: postId)
@@ -371,6 +385,7 @@ class PostService extends ChangeNotifier {
       await reportDoc.reference.update({
         'reportCount': FieldValue.increment(1),
         'reportedByIds': FieldValue.arrayUnion([user.uid]),
+        'reporterReasons': FieldValue.arrayUnion([reasonEntry]),
         'timestamp': FieldValue.serverTimestamp(),
       });
     } else {
@@ -381,7 +396,9 @@ class PostService extends ChangeNotifier {
         'postAuthorUsername': authorUsername,
         'reportedById': user.uid,
         'reportedByIds': [user.uid],
-        'reportedByUsername': user.displayName ?? 'Anonymous',
+        'reportedByUsername': reasonEntry['username'],
+        'reportReason': reasonEntry['reason'],
+        'reporterReasons': [reasonEntry],
         'timestamp': FieldValue.serverTimestamp(),
         'status': 'pending',
         'type': 'post',
@@ -402,9 +419,11 @@ class PostService extends ChangeNotifier {
     required String content,
     required String authorId,
     required String authorUsername,
+    required String reason,
     List<String>? attachmentTypes,
   }) async {
     final user = _auth.currentUser!;
+    final reasonEntry = await _reporterReasonEntry(reason);
 
     // Check for an existing pending report for this comment
     final existing = await _firestore.collection('reports')
@@ -418,6 +437,7 @@ class PostService extends ChangeNotifier {
       await reportDoc.reference.update({
         'reportCount': FieldValue.increment(1),
         'reportedByIds': FieldValue.arrayUnion([user.uid]),
+        'reporterReasons': FieldValue.arrayUnion([reasonEntry]),
         'timestamp': FieldValue.serverTimestamp(),
       });
     } else {
@@ -429,7 +449,9 @@ class PostService extends ChangeNotifier {
         'commentAuthorUsername': authorUsername,
         'reportedById': user.uid,
         'reportedByIds': [user.uid],
-        'reportedByUsername': user.displayName ?? 'Anonymous',
+        'reportedByUsername': reasonEntry['username'],
+        'reportReason': reasonEntry['reason'],
+        'reporterReasons': [reasonEntry],
         'timestamp': FieldValue.serverTimestamp(),
         'status': 'pending',
         'type': 'comment',

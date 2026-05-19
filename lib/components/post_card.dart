@@ -1,3 +1,4 @@
+import 'package:asiimov/components/report_reason_dialog.dart';
 import 'package:asiimov/components/post_attachment_viewer.dart';
 import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/share_sheet.dart';
@@ -154,31 +155,19 @@ class PostCard extends StatelessWidget {
                         onDelete!();
                       }
                     } else if (value == 'report') {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Report Post'),
-                          content: const Text('Are you sure you want to report this post?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: Text('Report', style: TextStyle(color: Theme.of(context).primaryColor)),
-                            ),
-                          ],
-                        ),
+                      final reason = await ReportReasonDialog.show(
+                        context,
+                        title: 'Report Post',
                       );
 
-                      if (confirm == true) {
+                      if (reason != null) {
                         try {
                           await postService.reportPost(
                             postId: post.id,
                             content: post.content,
                             authorId: post.authorID,
                             authorUsername: post.authorUsername,
+                            reason: reason,
                             attachmentTypes: post.attachments != null
                                 ? post.attachments!.map((a) => (a is Map && a['type'] != null) ? a['type'].toString() : 'media').toList()
                                 : [],
