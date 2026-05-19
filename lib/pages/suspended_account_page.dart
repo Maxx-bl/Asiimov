@@ -1,4 +1,4 @@
-import 'package:asiimov/services/auth/auth_service.dart';
+import 'package:asiimov/components/logout_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 
 class SuspendedAccountPage extends StatelessWidget {
@@ -116,9 +116,7 @@ class SuspendedAccountPage extends StatelessWidget {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    AuthService().signOut();
-                  },
+                  onPressed: () => confirmAndSignOut(context),
                   icon: const Icon(Icons.logout, color: Colors.white),
                   label: const Text(
                     'Logout / Sign Out',

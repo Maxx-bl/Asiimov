@@ -98,7 +98,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -108,7 +109,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     color: Theme.of(context).colorScheme.secondary,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.05),
                     ),
                   ),
                   padding: const EdgeInsets.all(20.0),
@@ -136,15 +140,14 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                       CupertinoSwitch(
                         value: themeProvider.isDarkMode,
                         activeTrackColor: activeColor,
-                        onChanged: (value) =>
-                            themeProvider.toggleTheme(),
+                        onChanged: (value) => themeProvider.toggleTheme(),
                       ),
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Section 2: Dominant Color Header
                 Text(
                   'DOMINANT COLOR',
@@ -152,7 +155,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.6),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -160,18 +166,24 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                   'Select a vibrant accent color that will be applied across the entire app interface instead of the classic orange.',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.5),
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Section 2 Panel
                 Container(
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.secondary,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.05),
                     ),
                   ),
                   padding: const EdgeInsets.all(20.0),
@@ -187,7 +199,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       // Curated horizontal list
                       SizedBox(
                         height: 48,
@@ -197,8 +209,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           itemBuilder: (context, index) {
                             final hex = _curatedColors[index];
                             final color = ThemeProvider.hexToColor(hex);
-                            final isSelected = ThemeProvider.colorToHex(activeColor) == hex;
-                            
+                            final isSelected =
+                                ThemeProvider.colorToHex(activeColor) == hex;
+
                             return GestureDetector(
                               onTap: () {
                                 _hexController.text = hex;
@@ -215,7 +228,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                                   color: color,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: isSelected ? Colors.white : Colors.transparent,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.transparent,
                                     width: 3,
                                   ),
                                   boxShadow: [
@@ -238,12 +253,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           },
                         ),
                       ),
-                      
+
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 16.0),
                         child: Divider(height: 1),
                       ),
-                      
+
                       Text(
                         'Custom Hex Code',
                         style: TextStyle(
@@ -253,7 +268,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       Row(
                         children: [
                           // Prefix #
@@ -266,7 +281,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          
+
                           // Input box
                           Expanded(
                             child: TextField(
@@ -276,23 +291,31 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                               textCapitalization: TextCapitalization.characters,
                               inputFormatters: [
                                 LengthLimitingTextInputFormatter(6),
-                                FilteringTextInputFormatter.allow(RegExp(r'[0-9a-fA-F]')),
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'[0-9a-fA-F]')),
                               ],
                               decoration: InputDecoration(
                                 hintText: 'FFFFFF',
                                 counterText: '',
                                 errorText: _errorMessage,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),
                                   borderSide: BorderSide(
-                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withValues(alpha: 0.15),
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),
                                   borderSide: BorderSide(
-                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withValues(alpha: 0.15),
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
@@ -311,7 +334,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                             ),
                           ),
                           const SizedBox(width: 16),
-                          
+
                           // Color preview box
                           Container(
                             width: 44,
@@ -334,21 +357,24 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 20),
-                      
+
                       // Apply Button
                       SizedBox(
                         width: double.infinity,
                         height: 48,
                         child: ElevatedButton(
-                          onPressed: _hexController.text.length == 6 && _errorMessage == null
-                              ? () => _applyColor(_previewColor, _hexController.text)
+                          onPressed: _hexController.text.length == 6 &&
+                                  _errorMessage == null
+                              ? () => _applyColor(
+                                  _previewColor, _hexController.text)
                               : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: activeColor,
                             foregroundColor: Colors.white,
-                            disabledBackgroundColor: activeColor.withValues(alpha: 0.3),
+                            disabledBackgroundColor:
+                                activeColor.withValues(alpha: 0.3),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),

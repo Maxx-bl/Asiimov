@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:asiimov/components/asiimov_mono_logo.dart';
 import 'package:asiimov/pages/main_scaffold.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -137,18 +138,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondary,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.mark_email_unread_rounded,
-                  size: 80,
-                  color: Theme.of(context).primaryColor,
-                ),
-              ),
+              const AsiimovMonoLogo(),
               const SizedBox(height: 32),
               const Text(
                 'Check your inbox',

@@ -1,3 +1,4 @@
+import 'package:asiimov/components/asiimov_mono_logo.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/components/my_button.dart';
 import 'package:asiimov/components/my_textfield.dart';
@@ -101,11 +102,7 @@ class RegisterPage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               //logo
-              Image.asset(
-                'assets/asiimov-logo.png',
-                width: 100,
-                height: 100,
-              ),
+              const AsiimovMonoLogo(),
 
               const SizedBox(height: 50),
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:asiimov/components/asiimov_mono_logo.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/components/my_button.dart';
 import 'package:asiimov/components/my_textfield.dart';
@@ -180,18 +181,7 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.secondary,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.security_rounded,
-                    size: 80,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
+                const AsiimovMonoLogo(),
                 const SizedBox(height: 32),
                 const Text(
                   'Two-Factor Auth',

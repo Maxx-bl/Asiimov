@@ -1,3 +1,4 @@
+import 'package:asiimov/components/logout_confirmation_dialog.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/pages/settings_page.dart';
 import 'package:asiimov/pages/admin_dashboard_page.dart';
@@ -7,11 +8,6 @@ import 'package:flutter/material.dart';
 
 class MyDrawer extends StatelessWidget {
   const MyDrawer({super.key});
-
-  void logout() {
-    final auth = AuthService();
-    auth.signOut();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +110,10 @@ class MyDrawer extends StatelessWidget {
           child: ListTile(
             title: const Text('L O G O U T'),
             leading: const Icon(Icons.logout),
-            onTap: logout,
+            onTap: () {
+              Navigator.pop(context);
+              confirmAndSignOut(context);
+            },
           ),
         ),
       ]),
