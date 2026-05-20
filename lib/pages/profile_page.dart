@@ -97,10 +97,19 @@ class _ProfilePageState extends State<ProfilePage> {
         final followers = List<String>.from(userData!['followers'] ?? []);
         isFollowing = followers.contains(currentUserId);
         final isPublic = userData!['public_account'] ?? false;
+        final isSuspended = userData!['isSuspended'] == true;
         
-        if (isOwnProfile || isPublic || isFollowing || widget.isAdminView) {
+        if (!isSuspended && (isOwnProfile || isPublic || isFollowing || widget.isAdminView)) {
           final postsSnapshot = await postService.getUserPostsFuture(widget.userId);
-          posts = postsSnapshot.docs.map((doc) => Post.fromFirestore(doc)).toList();
+          posts = postsSnapshot.docs
+              .map((doc) => Post.fromFirestore(doc))
+              .where((post) {
+                if (post.isCloseFriendsOnly) {
+                  return post.authorID == currentUserId || post.visibleTo.contains(currentUserId);
+                }
+                return true;
+              })
+              .toList();
           posts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
         } else {
           posts = [];
@@ -423,14 +432,38 @@ class _ProfilePageState extends State<ProfilePage> {
                         const SizedBox(height: 12),
 
                         // Username
-                        UsernameDisplay(
-                          userId: widget.userId,
-                          username: widget.username,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          iconSize: 20,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            UsernameDisplay(
+                              userId: widget.userId,
+                              username: widget.username,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              iconSize: 20,
+                            ),
+                            if (userData!['isSuspended'] == true) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.redAccent, width: 1),
+                                ),
+                                child: const Text(
+                                  'Suspended',
+                                  style: TextStyle(
+                                    color: Colors.redAccent,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
 
                         const SizedBox(height: 16),
@@ -515,7 +548,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         const SizedBox(height: 16),
 
                         // Follow/Unfollow button (only on other profiles)
-                        if (!isOwnProfile)
+                        if (!isOwnProfile && userData!['isSuspended'] != true)
                           Builder(
                             builder: (context) {
                               final isPublic = userData!['public_account'] ?? false;
@@ -614,7 +647,38 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
 
                         // Posts
-                        if (!isOwnProfile && !(userData!['public_account'] ?? false) && !isFollowing)
+                        if (userData!['isSuspended'] == true)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 40),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.gavel_rounded,
+                                  size: 64,
+                                  color: Colors.redAccent.withValues(alpha: 0.8),
+                                ),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'Account Suspended',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'This user has been suspended for violating our community guidelines.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (!isOwnProfile && !(userData!['public_account'] ?? false) && !isFollowing)
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 40),
                             child: Column(

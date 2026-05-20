@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:asiimov/services/file/file_service.dart';
 import 'package:asiimov/services/image/image_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
@@ -198,6 +200,183 @@ class _CreatePostPageState extends State<CreatePostPage> {
     });
   }
 
+  Future<bool?> _showAudienceSelection(bool isPublic) {
+    return showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final primaryColor = Theme.of(context).primaryColor;
+        return Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Grab handle
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Choose Audience',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Who should see this post?',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: colorScheme.primary.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Option: Everyone / Followers
+              InkWell(
+                onTap: () => Navigator.pop(context, false),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.secondary,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: colorScheme.primary.withValues(alpha: 0.05),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isPublic ? Icons.public_rounded : Icons.group_rounded,
+                          color: primaryColor,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isPublic ? 'Everyone' : 'Followers',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              isPublic
+                                  ? 'Anyone on Asiimov can see this post.'
+                                  : 'Only your followers can see this post.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.primary.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 16,
+                        color: colorScheme.primary.withValues(alpha: 0.3),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Option: Close Friends
+              InkWell(
+                onTap: () => Navigator.pop(context, true),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.secondary,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.greenAccent.shade400.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.greenAccent.shade400.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.people_alt_rounded,
+                          color: Colors.greenAccent.shade700,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Close Friends',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Only selected close friends can see this post.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.primary.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 16,
+                        color: colorScheme.primary.withValues(alpha: 0.3),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _post() async {
     if ((_controller.text.trim().isEmpty && _attachments.isEmpty) || _isPosting) return;
 
@@ -205,6 +384,32 @@ class _CreatePostPageState extends State<CreatePostPage> {
     final cleanContent = _controller.text.trim().replaceAll(RegExp(r'(\r?\n){2,}'), '\n');
     
     try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId == null) throw Exception("User not authenticated.");
+
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUserId).get();
+      if (!userDoc.exists) throw Exception("User data not found.");
+
+      final userData = userDoc.data() ?? {};
+      final bool isCFEnabled = userData['closeFriendsEnabled'] ?? false;
+      final List<String> cfList = List<String>.from(userData['closeFriends'] ?? []);
+      final bool isPublic = userData['public_account'] ?? false;
+
+      bool isCloseFriendsOnly = false;
+      List<String> visibleTo = [];
+
+      if (isCFEnabled) {
+        final bool? chosen = await _showAudienceSelection(isPublic);
+        if (chosen == null) {
+          setState(() => _isPosting = false);
+          return;
+        }
+        isCloseFriendsOnly = chosen;
+        if (isCloseFriendsOnly) {
+          visibleTo = cfList;
+        }
+      }
+
       List<dynamic> uploadedAttachments = [];
       for (final att in _attachments) {
         final attachmentMap = await FileService().uploadChatAttachment(att.file, 'post');
@@ -215,7 +420,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
         }
       }
 
-      await PostService().createPost(cleanContent, uploadedAttachments.isNotEmpty ? uploadedAttachments : null);
+      await PostService().createPost(
+        cleanContent,
+        attachments: uploadedAttachments.isNotEmpty ? uploadedAttachments : null,
+        isCloseFriendsOnly: isCloseFriendsOnly,
+        visibleTo: visibleTo,
+      );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       setState(() => _isPosting = false);

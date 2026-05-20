@@ -354,6 +354,52 @@ class _PostDetailPageState extends State<PostDetailPage> {
   Widget build(BuildContext context) {
     final currentUserId = AuthService().getCurrentUser()!.uid;
 
+    final isCFOnly = _post.isCloseFriendsOnly;
+    final isAuthor = _post.authorID == currentUserId;
+    final isAuthorized = !isCFOnly || isAuthor || _post.visibleTo.contains(currentUserId);
+
+    if (!isAuthorized) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Access Denied'),
+          foregroundColor: Theme.of(context).colorScheme.primary,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.lock_rounded,
+                  size: 80,
+                  color: Colors.redAccent.withValues(alpha: 0.8),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Restricted Access',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "This post is reserved for the author's close friends.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Post'),

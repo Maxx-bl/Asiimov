@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'theme_settings_page.dart';
 import 'privacy_settings_page.dart';
+import 'close_friends_page.dart';
 import 'security_settings_page.dart';
 import 'notification_settings_page.dart';
 import 'blocked_users_page.dart';
@@ -37,6 +38,12 @@ class SettingsPage extends StatelessWidget {
                 icon: Icons.lock_person_outlined,
                 title: 'Privacy',
                 destination: const PrivacySettingsPage(),
+              ),
+
+              SettingCategoryTile(
+                icon: Icons.people_alt_rounded,
+                title: 'Close Friends',
+                destination: const CloseFriendsPage(),
               ),
               
               SettingCategoryTile(

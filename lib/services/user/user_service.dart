@@ -305,4 +305,22 @@ class UserService {
     final doc = await _firestore.collection('users').doc(userId).get();
     return List<String>.from(doc.data()?['follow_requests'] ?? []);
   }
+
+  // Toggle close friends functionality
+  Future<void> toggleCloseFriendsFeature(bool enabled) async {
+    final currentUserId = _auth.currentUser!.uid;
+    await _firestore.collection('users').doc(currentUserId).set({
+      'closeFriendsEnabled': enabled,
+    }, SetOptions(merge: true));
+  }
+
+  // Update a user in current user's close friends list
+  Future<void> updateCloseFriend(String targetUid, bool isAdded) async {
+    final currentUserId = _auth.currentUser!.uid;
+    await _firestore.collection('users').doc(currentUserId).update({
+      'closeFriends': isAdded
+          ? FieldValue.arrayUnion([targetUid])
+          : FieldValue.arrayRemove([targetUid]),
+    });
+  }
 }

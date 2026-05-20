@@ -12,6 +12,8 @@ class Post {
   final int shareCount;
   final List<String> sharedBy;
   final List<dynamic>? attachments;
+  final bool isCloseFriendsOnly;
+  final List<String> visibleTo;
 
   Post({
     required this.id,
@@ -25,6 +27,8 @@ class Post {
     required this.shareCount,
     required this.sharedBy,
     this.attachments,
+    this.isCloseFriendsOnly = false,
+    this.visibleTo = const [],
   });
 
   int get score => upvotes.length - downvotes.length;
@@ -44,6 +48,8 @@ class Post {
       sharedBy: List<String>.from(data['sharedBy'] ?? []),
       attachments: data['attachments'] as List<dynamic>? ??
           (data['attachment'] != null ? [data['attachment']] : null),
+      isCloseFriendsOnly: data['isCloseFriendsOnly'] ?? false,
+      visibleTo: List<String>.from(data['visibleTo'] ?? []),
     );
   }
 
@@ -59,6 +65,8 @@ class Post {
       'shareCount': shareCount,
       'sharedBy': sharedBy,
       'attachments': attachments,
+      'isCloseFriendsOnly': isCloseFriendsOnly,
+      'visibleTo': visibleTo,
     };
   }
 }

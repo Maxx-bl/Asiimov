@@ -9,7 +9,12 @@ class PostService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   //create a new post
-  Future<void> createPost(String content, [List<dynamic>? attachments]) async {
+  Future<void> createPost(
+    String content, {
+    List<dynamic>? attachments,
+    bool isCloseFriendsOnly = false,
+    List<String>? visibleTo,
+  }) async {
     final user = _auth.currentUser!;
 
     // Check for cooldown (120 seconds)
@@ -42,6 +47,8 @@ class PostService extends ChangeNotifier {
       'shareCount': 0,
       'sharedBy': [],
       'attachments': attachments,
+      'isCloseFriendsOnly': isCloseFriendsOnly,
+      'visibleTo': visibleTo ?? [],
     });
   }
 

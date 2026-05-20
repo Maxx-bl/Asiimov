@@ -71,10 +71,21 @@ class _FeedPageState extends State<FeedPage> {
       final snapshot = await postService.getPostsFuture(_limit);
       final fetchedPosts = snapshot.docs
           .map((doc) => Post.fromFirestore(doc))
-          .where((post) =>
-              (_allowedUserIds.contains(post.authorID) ||
-                  post.authorUsername.toLowerCase() == 'asiimov') &&
-              !_blockedUserIds.contains(post.authorID))
+          .where((post) {
+            // Blocked?
+            if (_blockedUserIds.contains(post.authorID)) return false;
+
+            // Close Friends Filter
+            if (post.isCloseFriendsOnly) {
+              if (post.authorID != currentUserId && !post.visibleTo.contains(currentUserId)) {
+                return false;
+              }
+            }
+
+            // Normal feed rules
+            return _allowedUserIds.contains(post.authorID) ||
+                post.authorUsername.toLowerCase() == 'asiimov';
+          })
           .toList();
 
       if (mounted) {

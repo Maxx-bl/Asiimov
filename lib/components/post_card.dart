@@ -121,17 +121,57 @@ class PostCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                PopupMenuButton<String>(
-                  icon: const Icon(
-                    Icons.more_vert_rounded,
-                    size: 20,
-                    color: Colors.grey,
-                  ),
-                  color: Theme.of(context).colorScheme.secondary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  onSelected: (value) async {
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (post.isCloseFriendsOnly) ...[
+                      GestureDetector(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                'Visible to Close Friends',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              width: 220,
+                              duration: const Duration(seconds: 2),
+                              backgroundColor: Colors.greenAccent.shade700,
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: Colors.greenAccent.shade400.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.people_alt_rounded,
+                            color: Colors.greenAccent.shade400,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    PopupMenuButton<String>(
+                      icon: const Icon(
+                        Icons.more_vert_rounded,
+                        size: 20,
+                        color: Colors.grey,
+                      ),
+                      color: Theme.of(context).colorScheme.secondary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      onSelected: (value) async {
                     if (value == 'delete') {
                       final confirm = await showDialog<bool>(
                         context: context,
@@ -217,6 +257,8 @@ class PostCard extends StatelessWidget {
                     ),
                   ],
                 ),
+              ],
+            ),
               ],
             ),
 
