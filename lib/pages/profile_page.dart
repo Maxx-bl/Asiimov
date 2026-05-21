@@ -8,6 +8,9 @@ import 'package:asiimov/pages/chat_page.dart';
 import 'package:asiimov/pages/follow_list_page.dart';
 import 'package:asiimov/pages/follow_requests_page.dart';
 import 'package:asiimov/pages/post_detail_page.dart';
+import 'package:asiimov/pages/settings_page.dart';
+import 'package:asiimov/pages/admin_dashboard_page.dart';
+import 'package:asiimov/components/logout_confirmation_dialog.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/image/image_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
@@ -242,7 +245,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         foregroundColor: Theme.of(context).colorScheme.primary,
         actions: [
-          if (isOwnProfile)
+          if (isOwnProfile) ...[
             IconButton(
               onPressed: () async {
                 await Navigator.push(
@@ -258,6 +261,65 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: const Icon(Icons.notifications_outlined),
               ),
             ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) async {
+                if (value == 'settings') {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsPage(),
+                    ),
+                  );
+                } else if (value == 'admin') {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdminDashboardPage(),
+                    ),
+                  );
+                } else if (value == 'logout') {
+                  confirmAndSignOut(context);
+                }
+              },
+              itemBuilder: (BuildContext context) {
+                final isAdmin = userData?['isAdmin'] == true;
+                return [
+                  const PopupMenuItem<String>(
+                    value: 'settings',
+                    child: Row(
+                      children: [
+                        Icon(Icons.settings, size: 20),
+                        SizedBox(width: 8),
+                        Text('Settings'),
+                      ],
+                    ),
+                  ),
+                  if (isAdmin)
+                    const PopupMenuItem<String>(
+                      value: 'admin',
+                      child: Row(
+                        children: [
+                          Icon(Icons.admin_panel_settings, color: Colors.redAccent, size: 20),
+                          SizedBox(width: 8),
+                          Text('Admin Panel', style: TextStyle(color: Colors.redAccent)),
+                        ],
+                      ),
+                    ),
+                  const PopupMenuItem<String>(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        Icon(Icons.logout, color: Colors.red, size: 20),
+                        SizedBox(width: 8),
+                        Text('Logout', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ];
+              },
+            ),
+          ],
           if (!isOwnProfile && !hasBlockedMe)
             PopupMenuButton<String>(
               onSelected: (value) async {

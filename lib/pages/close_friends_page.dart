@@ -60,9 +60,19 @@ class _CloseFriendsPageState extends State<CloseFriendsPage> {
       final userData = doc.data() ?? {};
       final followers = List<String>.from(userData['followers'] ?? []);
       final following = List<String>.from(userData['following'] ?? []);
+      final closeFriends = List<String>.from(userData['closeFriends'] ?? []);
 
       // Mutual followers: intersection of followers and following
       final mutuals = followers.toSet().intersection(following.toSet()).toList();
+
+      // Sort mutuals so that existing close friends are placed at the top of the list
+      mutuals.sort((a, b) {
+        final aIsCF = closeFriends.contains(a);
+        final bIsCF = closeFriends.contains(b);
+        if (aIsCF && !bIsCF) return -1;
+        if (!aIsCF && bIsCF) return 1;
+        return 0;
+      });
 
       if (mounted) {
         setState(() {
@@ -286,68 +296,85 @@ class _CloseFriendsPageState extends State<CloseFriendsPage> {
                           ),
                         ),
                       )
-                    else
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _loadedUsers.length + (_isLoadingMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == _loadedUsers.length) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16.0),
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
+                    else ...[
+                      Builder(
+                        builder: (context) {
+                          // Sort loaded users dynamically so close friends always float to the top
+                          final sortedUsers = List<Map<String, dynamic>>.from(_loadedUsers);
+                          sortedUsers.sort((a, b) {
+                            final aUid = a['uid'] ?? '';
+                            final bUid = b['uid'] ?? '';
+                            final aIsCF = closeFriendsList.contains(aUid);
+                            final bIsCF = closeFriendsList.contains(bUid);
+                            if (aIsCF && !bIsCF) return -1;
+                            if (!aIsCF && bIsCF) return 1;
+                            return 0;
+                          });
 
-                          final user = _loadedUsers[index];
-                          final uid = user['uid'] ?? '';
-                          final username = user['username'] ?? 'Unknown';
-                          final isCloseFriend = closeFriendsList.contains(uid);
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: sortedUsers.length + (_isLoadingMore ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == sortedUsers.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                                  child: Center(child: CircularProgressIndicator()),
+                                );
+                              }
 
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8.0),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.secondary,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withValues(alpha: 0.03),
-                              ),
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                              leading: ProfileAvatar(
-                                userId: uid,
-                                username: username,
-                                radius: 20,
-                              ),
-                              title: UsernameDisplay(
-                                userId: uid,
-                                username: username,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
+                              final user = sortedUsers[index];
+                              final uid = user['uid'] ?? '';
+                              final username = user['username'] ?? 'Unknown';
+                              final isCloseFriend = closeFriendsList.contains(uid);
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8.0),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.secondary,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withValues(alpha: 0.03),
+                                  ),
                                 ),
-                              ),
-                              trailing: Checkbox(
-                                activeColor: Colors.greenAccent.shade400,
-                                checkColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                                  leading: ProfileAvatar(
+                                    userId: uid,
+                                    username: username,
+                                    radius: 20,
+                                  ),
+                                  title: UsernameDisplay(
+                                    userId: uid,
+                                    username: username,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  trailing: Checkbox(
+                                    activeColor: Colors.greenAccent.shade400,
+                                    checkColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    value: isCloseFriend,
+                                    onChanged: (bool? value) async {
+                                      if (value != null) {
+                                        await _userService.updateCloseFriend(uid, value);
+                                      }
+                                    },
+                                  ),
                                 ),
-                                value: isCloseFriend,
-                                onChanged: (bool? value) async {
-                                  if (value != null) {
-                                    await _userService.updateCloseFriend(uid, value);
-                                  }
-                                },
-                              ),
-                            ),
+                              );
+                            },
                           );
-                        },
+                        }
                       ),
+                    ],
                   ],
                 ],
               ),

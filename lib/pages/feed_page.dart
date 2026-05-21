@@ -1,11 +1,13 @@
 import 'dart:async';
 
-import 'package:asiimov/components/my_drawer.dart';
 import 'package:asiimov/components/post_card.dart';
+import 'package:asiimov/components/user_tile.dart';
 import 'package:asiimov/models/post.dart';
 import 'package:asiimov/pages/create_post_page.dart';
 import 'package:asiimov/pages/post_detail_page.dart';
+import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
+import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -21,6 +23,7 @@ class FeedPage extends StatefulWidget {
 class _FeedPageState extends State<FeedPage> {
   final PostService postService = PostService();
   final UserService userService = UserService();
+  final ChatService chatService = ChatService();
   final String currentUserId = AuthService().getCurrentUser()!.uid;
 
   final ScrollController _scrollController = ScrollController();
@@ -32,11 +35,22 @@ class _FeedPageState extends State<FeedPage> {
   List<String> _blockedUserIds = [];
   List<String> _allowedUserIds = [];
 
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+  String _searchQuery = "";
+  Timer? _debounce;
+  final FocusNode _searchFocusNode = FocusNode();
+
+  final ScrollController _searchScrollController = ScrollController();
+  int _searchLimit = 20;
+  bool _isLoadingMoreSearch = false;
+
   @override
   void initState() {
     super.initState();
     _initializeFeed();
     _scrollController.addListener(_onScroll);
+    _searchScrollController.addListener(_onSearchScroll);
   }
 
   Future<void> _initializeFeed() async {
@@ -110,7 +124,43 @@ class _FeedPageState extends State<FeedPage> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchScrollController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onSearchScroll() {
+    if (_searchScrollController.position.pixels >=
+        _searchScrollController.position.maxScrollExtent - 200) {
+      if (!_isLoadingMoreSearch && _isSearching) {
+        setState(() {
+          _isLoadingMoreSearch = true;
+          _searchLimit += 20;
+        });
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) setState(() => _isLoadingMoreSearch = false);
+        });
+      }
+    }
+  }
+
+  void _startSearch() {
+    setState(() {
+      _isSearching = true;
+      _searchLimit = 20;
+    });
+    Future.microtask(() => _searchFocusNode.requestFocus());
+  }
+
+  void _stopSearch() {
+    setState(() {
+      _isSearching = false;
+      _searchQuery = "";
+      _searchController.clear();
+      _searchLimit = 20;
+    });
   }
 
   Future<void> _onRefresh() async {
@@ -148,34 +198,148 @@ class _FeedPageState extends State<FeedPage> {
     }
   }
 
+  Widget buildSearchList() {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: userService.getUserStream(currentUserId),
+      builder: (context, userSnapshot) {
+        final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
+        final following = List<String>.from(userData?['following'] ?? []);
+
+        return StreamBuilder<List<Map<String, dynamic>>>(
+          stream: chatService.getUsersStreamExcludingBlocked(limit: _searchLimit),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) return const Center(child: Text("Error"));
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                _searchLimit == 20) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final users = snapshot.data ?? [];
+            final filteredUsers = users.where((u) {
+              final username = u['username'].toString().toLowerCase();
+              final matchesQuery =
+                  _searchQuery.isEmpty || username.contains(_searchQuery);
+              final isFollowing = following.contains(u['uid']);
+              return (_searchQuery.isEmpty ? isFollowing : matchesQuery);
+            }).toList();
+
+            if (filteredUsers.isEmpty &&
+                snapshot.connectionState != ConnectionState.waiting) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey),
+                    const SizedBox(height: 8),
+                    const Text(
+                      "No user found",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ListView.builder(
+              controller: _searchScrollController,
+              itemCount: filteredUsers.length + (_isLoadingMoreSearch ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == filteredUsers.length) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final u = filteredUsers[index];
+                return UserTile(
+                  text: u['username'],
+                  userId: u['uid'],
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfilePage(
+                          userId: u['uid'],
+                          username: u['username'],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text(
-          'A S I I M O V',
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2),
-        ),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                decoration: InputDecoration(
+                  hintText: 'Search user...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                onChanged: (value) {
+                  if (_debounce?.isActive ?? false) _debounce!.cancel();
+                  _debounce = Timer(const Duration(milliseconds: 300), () {
+                    setState(() {
+                      _searchQuery = value.trim().toLowerCase();
+                      _searchLimit = 20;
+                    });
+                  });
+                },
+              )
+            : const Text(
+                'A S I I M O V',
+                style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2),
+              ),
         foregroundColor: Theme.of(context).colorScheme.primary,
+        actions: [
+          _isSearching
+              ? IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: _stopSearch,
+                )
+              : IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: _startSearch,
+                ),
+        ],
       ),
-      drawer: const MyDrawer(),
-      body: _isLoading ? const Center(child: CircularProgressIndicator()) : buildFeedList(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const CreatePostPage(),
+      body: _isSearching
+          ? buildSearchList()
+          : (_isLoading ? const Center(child: CircularProgressIndicator()) : buildFeedList()),
+      floatingActionButton: _isSearching
+          ? null
+          : FloatingActionButton(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CreatePostPage(),
+                  ),
+                );
+                if (result == true) {
+                  _onRefresh();
+                }
+              },
+              backgroundColor: Theme.of(context).primaryColor,
+              child: const Icon(Icons.edit, color: Colors.white),
             ),
-          );
-          if (result == true) {
-            _onRefresh();
-          }
-        },
-        backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.edit, color: Colors.white),
-      ),
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:asiimov/pages/feed_page.dart';
 import 'package:asiimov/pages/home_page.dart';
+import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -13,18 +14,24 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _currentIndex = 0;
   final PageController _pageController = PageController();
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
     // Ensure FCM token is updated in Firestore
     AuthService().saveUserToken();
-  }
 
-  final List<Widget> _pages = const [
-    FeedPage(),
-    HomePage(),
-  ];
+    final currentUser = AuthService().getCurrentUser();
+    _pages = [
+      const FeedPage(),
+      const HomePage(),
+      ProfilePage(
+        userId: currentUser?.uid ?? '',
+        username: currentUser?.displayName ?? 'User',
+      ),
+    ];
+  }
 
   @override
   void dispose() {
@@ -69,6 +76,11 @@ class _MainScaffoldState extends State<MainScaffold> {
             icon: Icon(Icons.chat_bubble_outline),
             activeIcon: Icon(Icons.chat_bubble),
             label: 'Messages',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
       ),

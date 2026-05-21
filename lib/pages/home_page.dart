@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:asiimov/components/group_creation_sheet.dart';
-import 'package:asiimov/components/my_drawer.dart';
 import 'package:asiimov/components/group_icon.dart';
 import 'package:asiimov/components/user_tile.dart';
 import 'package:asiimov/components/username_display.dart';
@@ -178,7 +177,6 @@ class _HomePageState extends State<HomePage> {
                 ),
         ],
       ),
-      drawer: const MyDrawer(),
       body: RefreshIndicator(
         key: _refreshIndicatorKey,
         onRefresh: _refreshList,
@@ -197,28 +195,33 @@ class _HomePageState extends State<HomePage> {
           final following = List<String>.from(userData?['following'] ?? []);
 
           return StreamBuilder<List<Map<String, dynamic>>>(
-            stream: chatService.getUsersStreamExcludingBlocked(limit: _searchLimit),
+            stream:
+                chatService.getUsersStreamExcludingBlocked(limit: _searchLimit),
             builder: (context, snapshot) {
               if (snapshot.hasError) return const Center(child: Text("Error"));
-              if (snapshot.connectionState == ConnectionState.waiting && _searchLimit == 20) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  _searchLimit == 20) {
                 return const Center(child: CircularProgressIndicator());
               }
 
               final users = snapshot.data ?? [];
               final filteredUsers = users.where((u) {
                 final username = u['username'].toString().toLowerCase();
-                final matchesQuery = _searchQuery.isEmpty || username.contains(_searchQuery);
+                final matchesQuery =
+                    _searchQuery.isEmpty || username.contains(_searchQuery);
                 final isFollowing = following.contains(u['uid']);
                 return (_searchQuery.isEmpty ? isFollowing : matchesQuery);
               }).toList();
 
-              if (filteredUsers.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
+              if (filteredUsers.isEmpty &&
+                  snapshot.connectionState != ConnectionState.waiting) {
                 return _buildEmptyState();
               }
 
               return ListView.builder(
                 controller: _searchScrollController,
-                itemCount: filteredUsers.length + (_isLoadingMoreSearch ? 1 : 0),
+                itemCount:
+                    filteredUsers.length + (_isLoadingMoreSearch ? 1 : 0),
                 itemBuilder: (context, index) {
                   if (index == filteredUsers.length) {
                     return const Padding(
@@ -304,10 +307,14 @@ class _HomePageState extends State<HomePage> {
     String dateString = '';
     final DateTime date = conv.lastActive;
     final DateTime now = DateTime.now();
-    if (date.year == now.year && date.month == now.month && date.day == now.day) {
-      dateString = '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
+      dateString =
+          '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     } else {
-      dateString = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
+      dateString =
+          '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
     }
 
     // Decrypt preview
@@ -316,32 +323,38 @@ class _HomePageState extends State<HomePage> {
       try {
         final lastMsg = conv.lastMessage!;
         final rawMsg = lastMsg['message'];
-        
+
         if (lastMsg['isSystemMessage'] == true) {
           messagePreview = rawMsg;
         } else {
           final decrypted = chatService.encryption.decrypt(rawMsg);
-          final senderName = lastMsg['senderID'] == authService.getCurrentUser()!.uid ? 'You' : lastMsg['senderUsername'];
-          
-          String displayMsg = decrypted.isEmpty ? 'Sent an attachment 📎' : decrypted;
+          final senderName =
+              lastMsg['senderID'] == authService.getCurrentUser()!.uid
+                  ? 'You'
+                  : lastMsg['senderUsername'];
+
+          String displayMsg =
+              decrypted.isEmpty ? 'Sent an attachment 📎' : decrypted;
 
           if (conv.isGroup) {
             messagePreview = '$senderName: $displayMsg';
           } else {
-            messagePreview = lastMsg['senderID'] == authService.getCurrentUser()!.uid
-                ? 'You: $displayMsg'
-                : displayMsg;
+            messagePreview =
+                lastMsg['senderID'] == authService.getCurrentUser()!.uid
+                    ? 'You: $displayMsg'
+                    : displayMsg;
           }
         }
       } catch (e) {
         messagePreview = "Encrypted message";
       }
     }
-    
+
     // Determine status (sent/seen) if I am the sender
     String? status;
     if (conv.lastMessage != null && !conv.isGroup) {
-      final isMyMessage = conv.lastMessage!['senderID'] == authService.getCurrentUser()!.uid;
+      final isMyMessage =
+          conv.lastMessage!['senderID'] == authService.getCurrentUser()!.uid;
       if (isMyMessage) {
         status = conv.lastMessage!['isRead'] == true ? 'seen' : 'sent';
       }
@@ -350,7 +363,9 @@ class _HomePageState extends State<HomePage> {
     return UserTile(
       text: conv.otherUsername,
       userId: conv.isGroup ? '' : conv.otherUserId,
-      leading: conv.isGroup ? GroupIcon(size: 40, imageUrl: conv.groupIconUrl) : null,
+      leading: conv.isGroup
+          ? GroupIcon(size: 40, imageUrl: conv.groupIconUrl)
+          : null,
       subtitle: Text(
         messagePreview,
         maxLines: 1,
@@ -360,7 +375,8 @@ class _HomePageState extends State<HomePage> {
               ? Theme.of(context).colorScheme.primary
               : Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
           fontSize: 13,
-          fontWeight: conv.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+          fontWeight:
+              conv.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
         ),
       ),
       trailing: Column(
@@ -374,17 +390,23 @@ class _HomePageState extends State<HomePage> {
                 status,
                 style: TextStyle(
                   fontSize: 10,
-                  color: status == 'seen' ? Theme.of(context).primaryColor : Colors.grey.shade500,
-                  fontWeight: status == 'seen' ? FontWeight.bold : FontWeight.normal,
+                  color: status == 'seen'
+                      ? Theme.of(context).primaryColor
+                      : Colors.grey.shade500,
+                  fontWeight:
+                      status == 'seen' ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
             ),
           Text(
             dateString,
             style: TextStyle(
-              color: conv.unreadCount > 0 ? Theme.of(context).primaryColor : Colors.grey,
+              color: conv.unreadCount > 0
+                  ? Theme.of(context).primaryColor
+                  : Colors.grey,
               fontSize: 11,
-              fontWeight: conv.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+              fontWeight:
+                  conv.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
             ),
           ),
           if (conv.unreadCount > 0) ...[
@@ -397,7 +419,10 @@ class _HomePageState extends State<HomePage> {
               ),
               child: Text(
                 '+${conv.unreadCount}',
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold),
               ),
             ),
           ],
