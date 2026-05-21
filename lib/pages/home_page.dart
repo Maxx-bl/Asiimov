@@ -276,8 +276,16 @@ class _HomePageState extends State<HomePage> {
         final conversations = snapshot.data ?? [];
         if (conversations.isEmpty) return _buildEmptyState();
 
-        return ListView.builder(
+        return ListView.separated(
           itemCount: conversations.length,
+          separatorBuilder: (context, index) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Divider(
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+              thickness: 1,
+              height: 1,
+            ),
+          ),
           itemBuilder: (context, index) {
             return buildConversationItem(conversations[index]);
           },

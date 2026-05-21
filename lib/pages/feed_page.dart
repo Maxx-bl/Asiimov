@@ -325,20 +325,49 @@ class _FeedPageState extends State<FeedPage> {
           : (_isLoading ? const Center(child: CircularProgressIndicator()) : buildFeedList()),
       floatingActionButton: _isSearching
           ? null
-          : FloatingActionButton(
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CreatePostPage(),
+          : Container(
+              height: 48,
+              width: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).primaryColor,
+                    Theme.of(context).primaryColor.withValues(alpha: 0.85),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.18),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
-                );
-                if (result == true) {
-                  _onRefresh();
-                }
-              },
-              backgroundColor: Theme.of(context).primaryColor,
-              child: const Icon(Icons.edit, color: Colors.white),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CreatePostPage(),
+                      ),
+                    );
+                    if (result == true) {
+                      _onRefresh();
+                    }
+                  },
+                  child: const Icon(
+                    Icons.history_edu_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+              ),
             ),
     );
   }

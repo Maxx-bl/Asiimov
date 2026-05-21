@@ -51,36 +51,94 @@ class _MainScaffoldState extends State<MainScaffold> {
         },
         children: _pages,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          _pageController.animateToPage(
-            index,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
-        },
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Theme.of(context).colorScheme.primary,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        type: BottomNavigationBarType.fixed,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Feed',
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24.0, 4.0, 24.0, 16.0),
+          child: Container(
+            height: 50,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+              border: Border.all(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildNavItem(0, Icons.home_outlined, Icons.home, 'Feed'),
+                _buildNavItem(1, Icons.chat_bubble_outline, Icons.chat_bubble, 'Messages'),
+                _buildNavItem(2, Icons.person_outline, Icons.person, 'Profile'),
+              ],
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
-            label: 'Messages',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData unselectedIcon, IconData selectedIcon, String label) {
+    final isSelected = _currentIndex == index;
+    final primaryColor = Theme.of(context).primaryColor;
+    final unselectedColor = Theme.of(context).colorScheme.primary.withValues(alpha: 0.5);
+
+    return GestureDetector(
+      onTap: () {
+        _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? primaryColor.withValues(alpha: 0.12)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isSelected ? selectedIcon : unselectedIcon,
+                  color: isSelected ? primaryColor : unselectedColor,
+                  size: 24,
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  child: SizedBox(
+                    width: isSelected ? 8 : 0,
+                    height: 0,
+                  ),
+                ),
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                    color: isSelected ? primaryColor : unselectedColor,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: isSelected ? 13 : 0,
+                  ),
+                  child: isSelected ? Text(label) : const Text(''),
+                ),
+              ],
+            ),
           ),
         ],
       ),
