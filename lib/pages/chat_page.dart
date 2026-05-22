@@ -4,7 +4,9 @@ import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:asiimov/components/chat_bubble.dart';
+import 'package:asiimov/components/group_icon.dart';
 import 'package:asiimov/components/instant_camera_screen.dart';
+import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/pages/group_settings_page.dart';
 import 'package:asiimov/pages/pinned_messages_page.dart';
@@ -701,6 +703,51 @@ class _ChatPageState extends State<ChatPage> {
         final docs = snapshot.data?.docs ?? [];
         _loadedMessageIds = docs.map((doc) => doc.id).toList();
 
+        // Empty conversation state — show profile picture centered like Instagram
+        if (docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.isGroup)
+                  // Fetch group icon from Firestore
+                  FutureBuilder<DocumentSnapshot>(
+                    future: FirebaseFirestore.instance.collection('chats').doc(widget.receiverID).get(),
+                    builder: (context, groupSnap) {
+                      final groupIconUrl = groupSnap.data?.data() is Map<String, dynamic>
+                          ? (groupSnap.data!.data() as Map<String, dynamic>)['groupIconUrl'] as String?
+                          : null;
+                      return GroupIcon(size: 120, imageUrl: groupIconUrl);
+                    },
+                  )
+                else
+                  ProfileAvatar(
+                    userId: widget.receiverID,
+                    username: widget.receiverUsername,
+                    radius: 60,
+                  ),
+                const SizedBox(height: 16),
+                Text(
+                  widget.receiverUsername,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.isGroup ? 'No messages yet in this group.' : 'No messages yet.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
         // Calculate how much to push the content down (capped at 80px visual displacement)
         final double displacement = (_overscrollAmount / _overscrollThreshold * 80).clamp(0.0, 80.0);
         final double progress = (_overscrollAmount / _overscrollThreshold).clamp(0.0, 1.0);
@@ -765,6 +812,7 @@ class _ChatPageState extends State<ChatPage> {
                   itemBuilder: (context, index) {
                     final data = docs[index].data() as Map<String, dynamic>;
                     bool showUsername = widget.isGroup;
+                    bool showAvatar = widget.isGroup;
                     
                     // Don't show username if previous message (index + 1) was from same sender
                     if (widget.isGroup && index < docs.length - 1) {
@@ -774,7 +822,15 @@ class _ChatPageState extends State<ChatPage> {
                       }
                     }
 
-                    return buildMessageItem(docs[index], isLast: index == 0, showUsername: showUsername);
+                    // Show avatar on the first (top-most) message of a consecutive sender series (same logic as username)
+                    if (widget.isGroup && index < docs.length - 1) {
+                      final prevData = docs[index + 1].data() as Map<String, dynamic>;
+                      if (prevData['senderID'] == data['senderID'] && prevData['isSystemMessage'] != true) {
+                        showAvatar = false;
+                      }
+                    }
+
+                    return buildMessageItem(docs[index], isLast: index == 0, showUsername: showUsername, showAvatar: showAvatar);
                   },
                 ),
               ),
@@ -785,7 +841,7 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget buildMessageItem(DocumentSnapshot doc, {required bool isLast, required bool showUsername}) {
+  Widget buildMessageItem(DocumentSnapshot doc, {required bool isLast, required bool showUsername, bool showAvatar = false}) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
     // Handle System Messages
@@ -880,12 +936,15 @@ class _ChatPageState extends State<ChatPage> {
       },
     );
 
+    // In group chats, show avatar next to other users' messages
+    final bool showGroupAvatar = widget.isGroup && !isCurrentUser;
+
     return Column(
       crossAxisAlignment: isCurrentUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
         if (showUsername && !isCurrentUser)
           Padding(
-            padding: const EdgeInsets.only(left: 25, bottom: 2, top: 8),
+            padding: EdgeInsets.only(left: showGroupAvatar ? 48 : 25, bottom: 2, top: 8),
             child: Text(
               '@${data['senderUsername'] ?? 'unknown'}',
               style: TextStyle(
@@ -895,7 +954,37 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
           ),
-        bubble,
+        if (showGroupAvatar)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 10, top: 6),
+                child: showAvatar
+                    ? ProfileAvatar(
+                        userId: data['senderID'],
+                        username: data['senderUsername'] ?? '?',
+                        radius: 16,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProfilePage(
+                                userId: data['senderID'],
+                                username: data['senderUsername'] ?? '',
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    : const SizedBox(width: 32), // invisible spacer to keep alignment
+              ),
+              const SizedBox(width: 6),
+              Expanded(child: bubble),
+            ],
+          )
+        else
+          bubble,
       ],
     );
   }

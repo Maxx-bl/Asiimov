@@ -747,7 +747,12 @@ class ChatBubbleState extends State<ChatBubble>
               alignment: widget.isCurrentUser
                   ? Alignment.centerRight
                   : Alignment.centerLeft,
-              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 25),
+              padding: EdgeInsets.only(
+                top: 2,
+                bottom: 2,
+                left: widget.isCurrentUser ? 25 : (widget.isGroup ? 0 : 25),
+                right: widget.isCurrentUser ? 25 : 25,
+              ),
               child: bubbleContent,
             ),
           ),

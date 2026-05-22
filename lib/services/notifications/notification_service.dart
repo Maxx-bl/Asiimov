@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'package:asiimov/themes/theme_provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Top-level background message handler (must be top-level function)
 @pragma('vm:entry-point')
@@ -60,13 +62,7 @@ class NotificationService {
       provisional: false,
     );
 
-    // Create the Android notification channel
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(_chatChannel);
-
-    // Initialize local notifications plugin
+    // Initialize local notifications plugin FIRST (required before resolvePlatformSpecificImplementation)
     const androidSettings =
         AndroidInitializationSettings('@drawable/ic_notification');
 
@@ -76,6 +72,12 @@ class NotificationService {
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationResponse,
     );
+
+    // Create the Android notification channel AFTER initialization
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(_chatChannel);
 
     // We handle foreground notifications manually via local notifications
     await _fcm.setForegroundNotificationPresentationOptions(
@@ -116,8 +118,22 @@ class NotificationService {
     }
   }
 
+  /// Read the user's dominant color from SharedPreferences
+  Future<Color> _getDominantColor() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hexColor = prefs.getString('dominantColor');
+      if (hexColor != null && hexColor.isNotEmpty) {
+        return ThemeProvider.hexToColor(hexColor);
+      }
+    } catch (e) {
+      debugPrint('Error reading dominant color: $e');
+    }
+    return const Color(0xFFFF9800); // Default orange
+  }
+
   /// Handle foreground messages — show notification unless we're in that conversation
-  void _handleForegroundMessage(RemoteMessage message) {
+  void _handleForegroundMessage(RemoteMessage message) async {
     final senderID = message.data['senderID'];
     final senderUsername = message.data['senderUsername'] ?? 'Someone';
     final type = message.data['type'];
@@ -195,7 +211,7 @@ class NotificationService {
             priority: Priority.high,
             styleInformation: messagingStyle,
             groupKey: historyKey,
-            color: const Color(0xFFFF9800),
+            color: await _getDominantColor(),
             // We set the ticker to the full message for accessibility
             ticker: bodyText,
           ),
@@ -215,7 +231,7 @@ class NotificationService {
             channelDescription: _chatChannel.description,
             importance: Importance.high,
             priority: Priority.high,
-            color: const Color(0xFFFF9800),
+            color: await _getDominantColor(),
           ),
         ),
         payload: jsonEncode(message.data),
