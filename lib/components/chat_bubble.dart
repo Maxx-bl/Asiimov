@@ -16,6 +16,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:asiimov/components/chat_attachment_viewer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ChatBubble extends StatefulWidget {
   final String message;
@@ -36,6 +37,7 @@ class ChatBubble extends StatefulWidget {
   final bool isGroup;
   final bool isEdited;
   final bool isPinned;
+  final bool isPending;
   final List<dynamic>? attachments;
   final Map<String, dynamic>? instantAttachment;
   final void Function(String emoji)? onReact;
@@ -63,6 +65,7 @@ class ChatBubble extends StatefulWidget {
     this.isGroup = false,
     this.isEdited = false,
     this.isPinned = false,
+    this.isPending = false,
     this.attachments,
     this.instantAttachment,
     this.onReact,
@@ -180,7 +183,7 @@ class ChatBubbleState extends State<ChatBubble>
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
               title:
-                  const Text('Delete', style: TextStyle(color: Colors.red)),
+                  Text('Delete', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(context);
                 confirmDeleteMessage(context, messageId, userId);
@@ -188,7 +191,7 @@ class ChatBubbleState extends State<ChatBubble>
             ),
             ListTile(
               leading: const Icon(Icons.cancel),
-              title: const Text('Cancel'),
+              title: Text('cancel'.tr()),
               onTap: () => Navigator.pop(context),
             ),
           ]));
@@ -200,19 +203,19 @@ class ChatBubbleState extends State<ChatBubble>
     showDialog(
         context: context,
         builder: (context) => AlertDialog(
-              title: const Text('Delete message'),
+              title: Text('delete_message'.tr()),
               content:
-                  const Text('Are you sure you want to delete this message?'),
+                  Text('are_you_sure_you_want_to_delet_1'.tr()),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel')),
+                    child: Text('cancel'.tr())),
                 TextButton(
                     onPressed: () {
                       ChatService().deleteMessage(widget.otherUserId, messageId, isGroup: widget.isGroup);
                       Navigator.pop(context);
                     },
-                    child: const Text('Delete',
+                    child: Text('Delete',
                         style: TextStyle(color: Colors.red))),
               ],
             ));
@@ -310,8 +313,8 @@ class ChatBubbleState extends State<ChatBubble>
                         Navigator.pop(context);
                         Clipboard.setData(ClipboardData(text: widget.message));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Copied to clipboard"),
+                          SnackBar(
+                            content: Text('copied_to_clipboard'.tr()),
                             duration: Duration(seconds: 1),
                             behavior: SnackBarBehavior.floating,
                           ),
@@ -428,7 +431,7 @@ class ChatBubbleState extends State<ChatBubble>
   void reportMessage(BuildContext context, String messageId, String userId) async {
     final reason = await ReportReasonDialog.show(
       context,
-      title: 'Report Message',
+      title: 'report_message'.tr(),
     );
 
     if (reason != null) {
@@ -467,7 +470,7 @@ class ChatBubbleState extends State<ChatBubble>
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Message successfully reported.')),
+            SnackBar(content: Text('message_successfully_reported'.tr())),
           );
         }
       } catch (e) {
@@ -611,12 +614,12 @@ class ChatBubbleState extends State<ChatBubble>
                             final bool? shouldLeave = await showDialog<bool>(
                               context: context,
                               builder: (context) => AlertDialog(
-                                title: const Text('Leaving App'),
+                                title: Text('leaving_app'.tr()),
                                 content: Text('This link will take you to an external website:\n\n${link.url}\n\nDo you want to continue?'),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context, false),
-                                    child: const Text('Cancel'),
+                                    child: Text('cancel'.tr()),
                                   ),
                                   TextButton(
                                     onPressed: () => Navigator.pop(context, true),
@@ -633,7 +636,7 @@ class ChatBubbleState extends State<ChatBubble>
                                 debugPrint('Could not launch ${link.url}: $e');
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Could not open the link.')),
+                                    SnackBar(content: Text('could_not_open_the_link'.tr())),
                                   );
                                 }
                               }
@@ -674,7 +677,9 @@ class ChatBubbleState extends State<ChatBubble>
                         (widget.isEdited ? 'edited • ' : '') +
                         _formatTimestamp(widget.timestamp!) +
                             (widget.showStatus
-                                ? (widget.isSeen ? ' • seen' : ' • sent')
+                                ? (widget.isPending
+                                    ? ' • sending...'
+                                    : (widget.isSeen ? ' • seen' : ' • sent'))
                                 : ''),
                         style: TextStyle(
                           fontSize: 10,
@@ -753,7 +758,10 @@ class ChatBubbleState extends State<ChatBubble>
                 left: widget.isCurrentUser ? 25 : (widget.isGroup ? 0 : 25),
                 right: widget.isCurrentUser ? 25 : 25,
               ),
-              child: bubbleContent,
+              child: Opacity(
+                opacity: widget.isPending ? 0.45 : 1.0,
+                child: bubbleContent,
+              ),
             ),
           ),
         ],
@@ -785,7 +793,7 @@ class ChatBubbleState extends State<ChatBubble>
                 ),
               ),
               const SizedBox(height: 15),
-              const Text(
+              Text(
                 "Reactions",
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
@@ -897,7 +905,7 @@ class ChatBubbleState extends State<ChatBubble>
       future: FirebaseFirestore.instance.doc(docPath).get(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const Text("Post unavailable", style: TextStyle(fontStyle: FontStyle.italic));
+          return Text("Post unavailable", style: TextStyle(fontStyle: FontStyle.italic));
         }
 
         final post = Post.fromFirestore(snapshot.data!);
@@ -945,7 +953,7 @@ class ChatBubbleState extends State<ChatBubble>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text("View post", style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold)),
+                    Text("View post", style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold)),
                     Icon(Icons.arrow_forward_ios, size: 10, color: Colors.blue),
                   ],
                 ),
@@ -1013,7 +1021,7 @@ class ChatBubbleState extends State<ChatBubble>
                             placeholder: (context, url) => Center(child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).primaryColor)),
                             errorWidget: (context, url, error) => const Icon(Icons.video_file, size: 40, color: Colors.grey),
                           ),
-                          const Center(
+                          Center(
                             child: CircleAvatar(
                               backgroundColor: Colors.black54,
                               radius: 20,

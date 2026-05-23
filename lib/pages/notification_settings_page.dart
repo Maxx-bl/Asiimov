@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
   const NotificationSettingsPage({super.key});
@@ -55,11 +56,11 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text('notifications'.tr()),
         foregroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator())
           : Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 600),
@@ -82,8 +83,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                     // Messages
                     _buildToggleTile(
                       icon: Icons.chat_bubble_outline,
-                      title: 'Messages',
-                      subtitle: 'Private messages and group chats',
+                      title: 'messages'.tr(),
+                      subtitle: 'private_messages_and_group_cha'.tr(),
                       value: _messages,
                       onChanged: (value) {
                         setState(() => _messages = value);
@@ -94,8 +95,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                     // Followers
                     _buildToggleTile(
                       icon: Icons.person_add_outlined,
-                      title: 'Followers',
-                      subtitle: 'New followers and follow requests',
+                      title: 'followers'.tr(),
+                      subtitle: 'new_followers_and_follow_reque'.tr(),
                       value: _followers,
                       onChanged: (value) {
                         setState(() => _followers = value);
@@ -106,8 +107,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                     // Comments
                     _buildToggleTile(
                       icon: Icons.comment_outlined,
-                      title: 'Comments',
-                      subtitle: 'Comments on your posts',
+                      title: 'comments'.tr(),
+                      subtitle: 'comments_on_your_posts'.tr(),
                       value: _comments,
                       onChanged: (value) {
                         setState(() => _comments = value);

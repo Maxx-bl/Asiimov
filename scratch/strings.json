@@ -1,0 +1,522 @@
+{
+  "2FA Verification": {
+    "key": "2fa_verification",
+    "en": "2FA Verification",
+    "fr": ""
+  },
+  "6-digit Code": {
+    "key": "6digit_code",
+    "en": "6-digit Code",
+    "fr": ""
+  },
+  "Access Denied": {
+    "key": "access_denied",
+    "en": "Access Denied",
+    "fr": ""
+  },
+  "Add a comment...": {
+    "key": "add_a_comment",
+    "en": "Add a comment...",
+    "fr": ""
+  },
+  "Are you sure you want to delete this comment?": {
+    "key": "are_you_sure_you_want_to_delet",
+    "en": "Are you sure you want to delete this comment?",
+    "fr": ""
+  },
+  "Are you sure you want to delete this message?": {
+    "key": "are_you_sure_you_want_to_delet_1",
+    "en": "Are you sure you want to delete this message?",
+    "fr": ""
+  },
+  "Are you sure you want to delete this post?": {
+    "key": "are_you_sure_you_want_to_delet_2",
+    "en": "Are you sure you want to delete this post?",
+    "fr": ""
+  },
+  "Are you sure you want to dismiss this report? The content will remain in the app, and the report will be resolved.": {
+    "key": "are_you_sure_you_want_to_dismi",
+    "en": "Are you sure you want to dismiss this report? The content will remain in the app, and the report will be resolved.",
+    "fr": ""
+  },
+  "Are you sure you want to leave this discussion?": {
+    "key": "are_you_sure_you_want_to_leave",
+    "en": "Are you sure you want to leave this discussion?",
+    "fr": ""
+  },
+  "Are you sure you want to sign out?": {
+    "key": "are_you_sure_you_want_to_sign_",
+    "en": "Are you sure you want to sign out?",
+    "fr": ""
+  },
+  "Are you sure you want to unblock this user?": {
+    "key": "are_you_sure_you_want_to_unblo",
+    "en": "Are you sure you want to unblock this user?",
+    "fr": ""
+  },
+  "Block User": {
+    "key": "block_user",
+    "en": "Block User",
+    "fr": ""
+  },
+  "Blocked users": {
+    "key": "blocked_users",
+    "en": "Blocked users",
+    "fr": ""
+  },
+  "Change Privacy?": {
+    "key": "change_privacy",
+    "en": "Change Privacy?",
+    "fr": ""
+  },
+  "Choose from Gallery": {
+    "key": "choose_from_gallery",
+    "en": "Choose from Gallery",
+    "fr": ""
+  },
+  "Close Friends": {
+    "key": "close_friends",
+    "en": "Close Friends",
+    "fr": ""
+  },
+  "Comment successfully reported.": {
+    "key": "comment_successfully_reported",
+    "en": "Comment successfully reported.",
+    "fr": ""
+  },
+  "Copied to clipboard": {
+    "key": "copied_to_clipboard",
+    "en": "Copied to clipboard",
+    "fr": ""
+  },
+  "Could not open the link.": {
+    "key": "could_not_open_the_link",
+    "en": "Could not open the link.",
+    "fr": ""
+  },
+  "Delete Comment": {
+    "key": "delete_comment",
+    "en": "Delete Comment",
+    "fr": ""
+  },
+  "Delete Post": {
+    "key": "delete_post",
+    "en": "Delete Post",
+    "fr": ""
+  },
+  "Delete content": {
+    "key": "delete_content",
+    "en": "Delete content",
+    "fr": ""
+  },
+  "Delete message": {
+    "key": "delete_message",
+    "en": "Delete message",
+    "fr": ""
+  },
+  "Delete post": {
+    "key": "delete_post_1",
+    "en": "Delete post",
+    "fr": ""
+  },
+  "Describe the issue...": {
+    "key": "describe_the_issue",
+    "en": "Describe the issue...",
+    "fr": ""
+  },
+  "Dismiss Report": {
+    "key": "dismiss_report",
+    "en": "Dismiss Report",
+    "fr": ""
+  },
+  "Downloaded to Documents": {
+    "key": "downloaded_to_documents",
+    "en": "Downloaded to Documents",
+    "fr": ""
+  },
+  "Enter reason (e.g., Harassment, SPAM...)": {
+    "key": "enter_reason_eg_harassment_spa",
+    "en": "Enter reason (e.g., Harassment, SPAM...)",
+    "fr": ""
+  },
+  "Error loading list.": {
+    "key": "error_loading_list",
+    "en": "Error loading list.",
+    "fr": ""
+  },
+  "Error loading pinned messages": {
+    "key": "error_loading_pinned_messages",
+    "en": "Error loading pinned messages",
+    "fr": ""
+  },
+  "Error loading requests.": {
+    "key": "error_loading_requests",
+    "en": "Error loading requests.",
+    "fr": ""
+  },
+  "Error loading...": {
+    "key": "error_loading",
+    "en": "Error loading...",
+    "fr": ""
+  },
+  "Failed to delete group picture.": {
+    "key": "failed_to_delete_group_picture",
+    "en": "Failed to delete group picture.",
+    "fr": ""
+  },
+  "Failed to delete profile picture.": {
+    "key": "failed_to_delete_profile_pictu",
+    "en": "Failed to delete profile picture.",
+    "fr": ""
+  },
+  "Failed to download file.": {
+    "key": "failed_to_download_file",
+    "en": "Failed to download file.",
+    "fr": ""
+  },
+  "Failed to download image.": {
+    "key": "failed_to_download_image",
+    "en": "Failed to download image.",
+    "fr": ""
+  },
+  "Failed to download media.": {
+    "key": "failed_to_download_media",
+    "en": "Failed to download media.",
+    "fr": ""
+  },
+  "Failed to update group picture.": {
+    "key": "failed_to_update_group_picture",
+    "en": "Failed to update group picture.",
+    "fr": ""
+  },
+  "Failed to upload attachment.": {
+    "key": "failed_to_upload_attachment",
+    "en": "Failed to upload attachment.",
+    "fr": ""
+  },
+  "Failed to upload voice message.": {
+    "key": "failed_to_upload_voice_message",
+    "en": "Failed to upload voice message.",
+    "fr": ""
+  },
+  "Follow Requests": {
+    "key": "follow_requests",
+    "en": "Follow Requests",
+    "fr": ""
+  },
+  "From your gallery": {
+    "key": "from_your_gallery",
+    "en": "From your gallery",
+    "fr": ""
+  },
+  "Group Name...": {
+    "key": "group_name",
+    "en": "Group Name...",
+    "fr": ""
+  },
+  "Group Settings": {
+    "key": "group_settings",
+    "en": "Group Settings",
+    "fr": ""
+  },
+  "Group not found": {
+    "key": "group_not_found",
+    "en": "Group not found",
+    "fr": ""
+  },
+  "Group picture deleted.": {
+    "key": "group_picture_deleted",
+    "en": "Group picture deleted.",
+    "fr": ""
+  },
+  "Group picture updated!": {
+    "key": "group_picture_updated",
+    "en": "Group picture updated!",
+    "fr": ""
+  },
+  "Leave Group?": {
+    "key": "leave_group",
+    "en": "Leave Group?",
+    "fr": ""
+  },
+  "Leaving App": {
+    "key": "leaving_app",
+    "en": "Leaving App",
+    "fr": ""
+  },
+  "Log out": {
+    "key": "log_out",
+    "en": "Log out",
+    "fr": ""
+  },
+  "Message successfully reported.": {
+    "key": "message_successfully_reported",
+    "en": "Message successfully reported.",
+    "fr": ""
+  },
+  "Message unavailable or too old": {
+    "key": "message_unavailable_or_too_old",
+    "en": "Message unavailable or too old",
+    "fr": ""
+  },
+  "Microphone permission required": {
+    "key": "microphone_permission_required",
+    "en": "Microphone permission required",
+    "fr": ""
+  },
+  "Mute Notifications": {
+    "key": "mute_notifications",
+    "en": "Mute Notifications",
+    "fr": ""
+  },
+  "New name": {
+    "key": "new_name",
+    "en": "New name",
+    "fr": ""
+  },
+  "No blocked users": {
+    "key": "no_blocked_users",
+    "en": "No blocked users",
+    "fr": ""
+  },
+  "No more followers to add.": {
+    "key": "no_more_followers_to_add",
+    "en": "No more followers to add.",
+    "fr": ""
+  },
+  "No pinned messages.": {
+    "key": "no_pinned_messages",
+    "en": "No pinned messages.",
+    "fr": ""
+  },
+  "No recent chats": {
+    "key": "no_recent_chats",
+    "en": "No recent chats",
+    "fr": ""
+  },
+  "No resolved reports history.": {
+    "key": "no_resolved_reports_history",
+    "en": "No resolved reports history.",
+    "fr": ""
+  },
+  "No suspended users listed.": {
+    "key": "no_suspended_users_listed",
+    "en": "No suspended users listed.",
+    "fr": ""
+  },
+  "No user found": {
+    "key": "no_user_found",
+    "en": "No user found",
+    "fr": ""
+  },
+  "No users found.": {
+    "key": "no_users_found",
+    "en": "No users found.",
+    "fr": ""
+  },
+  "No users to add": {
+    "key": "no_users_to_add",
+    "en": "No users to add",
+    "fr": ""
+  },
+  "PDF, ZIP, and more": {
+    "key": "pdf_zip_and_more",
+    "en": "PDF, ZIP, and more",
+    "fr": ""
+  },
+  "Password reset email sent! Check your SPAM folder.": {
+    "key": "password_reset_email_sent_chec",
+    "en": "Password reset email sent! Check your SPAM folder.",
+    "fr": ""
+  },
+  "Password reset link sent! Check your inbox (and spam).": {
+    "key": "password_reset_link_sent_check",
+    "en": "Password reset link sent! Check your inbox (and spam).",
+    "fr": ""
+  },
+  "Photos & Videos": {
+    "key": "photos__videos",
+    "en": "Photos & Videos",
+    "fr": ""
+  },
+  "Pinned Messages": {
+    "key": "pinned_messages",
+    "en": "Pinned Messages",
+    "fr": ""
+  },
+  "Please enter the 6-digit code.": {
+    "key": "please_enter_the_6digit_code",
+    "en": "Please enter the 6-digit code.",
+    "fr": ""
+  },
+  "Please enter the 6-digit verification code sent to\\n": {
+    "key": "please_enter_the_6digit_verifi",
+    "en": "Please enter the 6-digit verification code sent to\\n",
+    "fr": ""
+  },
+  "Please enter your email address.": {
+    "key": "please_enter_your_email_addres",
+    "en": "Please enter your email address.",
+    "fr": ""
+  },
+  "Post successfully reported.": {
+    "key": "post_successfully_reported",
+    "en": "Post successfully reported.",
+    "fr": ""
+  },
+  "Profile picture deleted.": {
+    "key": "profile_picture_deleted",
+    "en": "Profile picture deleted.",
+    "fr": ""
+  },
+  "Profile picture updated!": {
+    "key": "profile_picture_updated",
+    "en": "Profile picture updated!",
+    "fr": ""
+  },
+  "Provide a clear reason for the suspension. This will be shown to the user.": {
+    "key": "provide_a_clear_reason_for_the",
+    "en": "Provide a clear reason for the suspension. This will be shown to the user.",
+    "fr": ""
+  },
+  "Record a Video": {
+    "key": "record_a_video",
+    "en": "Record a Video",
+    "fr": ""
+  },
+  "Remove Follower": {
+    "key": "remove_follower",
+    "en": "Remove Follower",
+    "fr": ""
+  },
+  "Remove Member?": {
+    "key": "remove_member",
+    "en": "Remove Member?",
+    "fr": ""
+  },
+  "Rename Group": {
+    "key": "rename_group",
+    "en": "Rename Group",
+    "fr": ""
+  },
+  "Reset Password": {
+    "key": "reset_password",
+    "en": "Reset Password",
+    "fr": ""
+  },
+  "Search following...": {
+    "key": "search_following",
+    "en": "Search following...",
+    "fr": ""
+  },
+  "Search user by username...": {
+    "key": "search_user_by_username",
+    "en": "Search user by username...",
+    "fr": ""
+  },
+  "Search user...": {
+    "key": "search_user",
+    "en": "Search user...",
+    "fr": ""
+  },
+  "Skipped unsupported file format.": {
+    "key": "skipped_unsupported_file_forma",
+    "en": "Skipped unsupported file format.",
+    "fr": ""
+  },
+  "Suspend author": {
+    "key": "suspend_author",
+    "en": "Suspend author",
+    "fr": ""
+  },
+  "Take a Photo": {
+    "key": "take_a_photo",
+    "en": "Take a Photo",
+    "fr": ""
+  },
+  "This account is private. Follow them to send messages.": {
+    "key": "this_account_is_private_follow",
+    "en": "This account is private. Follow them to send messages.",
+    "fr": ""
+  },
+  "Total size exceeds the 20MB limit.": {
+    "key": "total_size_exceeds_the_20mb_li",
+    "en": "Total size exceeds the 20MB limit.",
+    "fr": ""
+  },
+  "Two-Factor Auth": {
+    "key": "twofactor_auth",
+    "en": "Two-Factor Auth",
+    "fr": ""
+  },
+  "Unblock user": {
+    "key": "unblock_user",
+    "en": "Unblock user",
+    "fr": ""
+  },
+  "Unfollow Private Account?": {
+    "key": "unfollow_private_account",
+    "en": "Unfollow Private Account?",
+    "fr": ""
+  },
+  "Unsuspend User": {
+    "key": "unsuspend_user",
+    "en": "Unsuspend User",
+    "fr": ""
+  },
+  "User blocked!": {
+    "key": "user_blocked",
+    "en": "User blocked!",
+    "fr": ""
+  },
+  "User not logged in": {
+    "key": "user_not_logged_in",
+    "en": "User not logged in",
+    "fr": ""
+  },
+  "User reported.": {
+    "key": "user_reported",
+    "en": "User reported.",
+    "fr": ""
+  },
+  "User unblocked!": {
+    "key": "user_unblocked",
+    "en": "User unblocked!",
+    "fr": ""
+  },
+  "User unblocked.": {
+    "key": "user_unblocked_1",
+    "en": "User unblocked.",
+    "fr": ""
+  },
+  "Verification email resent!": {
+    "key": "verification_email_resent",
+    "en": "Verification email resent!",
+    "fr": ""
+  },
+  "Verify Email": {
+    "key": "verify_email",
+    "en": "Verify Email",
+    "fr": ""
+  },
+  "Video duration cannot exceed 10 seconds.": {
+    "key": "video_duration_cannot_exceed_1",
+    "en": "Video duration cannot exceed 10 seconds.",
+    "fr": ""
+  },
+  "What's on your mind?": {
+    "key": "whats_on_your_mind",
+    "en": "What's on your mind?",
+    "fr": ""
+  },
+  "\\n\\nPlease click the link to activate your account.": {
+    "key": "nnplease_click_the_link_to_act",
+    "en": "\\n\\nPlease click the link to activate your account.",
+    "fr": ""
+  },
+  "e.g. Inappropriate content, Hate speech, Spam...": {
+    "key": "eg_inappropriate_content_hate_",
+    "en": "e.g. Inappropriate content, Hate speech, Spam...",
+    "fr": ""
+  }
+}

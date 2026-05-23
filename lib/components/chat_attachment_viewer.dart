@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ChatAttachmentViewer extends StatelessWidget {
   final Map<String, dynamic> attachment;
@@ -52,12 +53,12 @@ class ChatAttachmentViewer extends StatelessWidget {
       }
 
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Downloaded to Documents')),
+        SnackBar(content: Text('downloaded_to_documents'.tr())),
       );
     } catch (e) {
       debugPrint("Error downloading file: $e");
       scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Failed to download file.')),
+        SnackBar(content: Text('failed_to_download_file'.tr())),
       );
     }
   }
@@ -137,14 +138,14 @@ class ChatAttachmentViewer extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              const Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 50)),
+              Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 50)),
               Positioned(
                 bottom: 8,
                 left: 8,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(4)),
-                  child: const Text('VIDEO', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  child: Text('VIDEO', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -198,7 +199,7 @@ class ChatAttachmentViewer extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text("Tap to download", style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold)),
+                  Text("Tap to download", style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold)),
                   const Icon(Icons.download_rounded, size: 14, color: Colors.blue),
                 ],
               ),
@@ -248,11 +249,11 @@ class _ImagePreviewScreen extends StatelessWidget {
       }
 
       scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Downloaded to Documents')),
+        SnackBar(content: Text('downloaded_to_documents'.tr())),
       );
     } catch (e) {
       scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Failed to download image.')),
+        SnackBar(content: Text('failed_to_download_image'.tr())),
       );
     }
   }
@@ -441,7 +442,7 @@ class ChatMediaGrid extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Container(color: Colors.black),
-          const Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 40)),
+          Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 40)),
         ],
       );
     } else {
@@ -573,11 +574,11 @@ class _MediaCarouselScreenState extends State<MediaCarouselScreen> {
       }
 
       scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Downloaded to Documents')),
+        SnackBar(content: Text('downloaded_to_documents'.tr())),
       );
     } catch (e) {
       scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Failed to download media.')),
+        SnackBar(content: Text('failed_to_download_media'.tr())),
       );
     }
   }

@@ -4,6 +4,7 @@ import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class GroupCreationSheet extends StatefulWidget {
   const GroupCreationSheet({super.key});
@@ -130,7 +131,7 @@ class _GroupCreationSheetState extends State<GroupCreationSheet> {
             maxLength: 30,
             maxLines: 1,
             decoration: InputDecoration(
-              hintText: "Group Name...",
+              hintText: 'group_name'.tr().tr(),
               helperText: "3-30 chars: a-z, 0-9, . , - , _",
               helperStyle: TextStyle(
                 fontSize: 10,
@@ -154,7 +155,7 @@ class _GroupCreationSheetState extends State<GroupCreationSheet> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: "Search following...",
+              hintText: 'search_following'.tr().tr(),
               prefixIcon: const Icon(Icons.search),
               filled: true,
               fillColor: Theme.of(context).colorScheme.secondary,
@@ -174,9 +175,9 @@ class _GroupCreationSheetState extends State<GroupCreationSheet> {
           // User list
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator())
                 : filteredUsers.isEmpty
-                    ? const Center(child: Text("No users to add"))
+                    ? Center(child: Text('no_users_to_add'.tr()))
                     : ListView.builder(
                         itemCount: filteredUsers.length,
                         itemBuilder: (context, index) {

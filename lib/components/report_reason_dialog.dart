@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 /// Compact dialog to collect a report reason (max 100 characters).
 class ReportReasonDialog {
@@ -40,8 +41,8 @@ class ReportReasonDialog {
                       maxLength: maxLength,
                       maxLines: 3,
                       textCapitalization: TextCapitalization.sentences,
-                      decoration: const InputDecoration(
-                        hintText: 'Describe the issue...',
+                      decoration: InputDecoration(
+                        hintText: 'describe_the_issue'.tr().tr(),
                         border: OutlineInputBorder(),
                         isDense: true,
                         contentPadding: EdgeInsets.all(12),
@@ -54,7 +55,7 @@ class ReportReasonDialog {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel'),
+                  child: Text('cancel'.tr()),
                 ),
                 TextButton(
                   onPressed: canSubmit

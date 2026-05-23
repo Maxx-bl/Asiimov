@@ -10,6 +10,7 @@ import 'package:asiimov/services/image/image_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class GroupSettingsPage extends StatefulWidget {
   final String groupId;
@@ -61,13 +62,13 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
-          title: const Text("Rename Group"),
+          title: Text('rename_group'.tr()),
           content: TextField(
             controller: controller,
             maxLength: 30,
             maxLines: 1,
             decoration: InputDecoration(
-              hintText: "New name",
+              hintText: 'new_name'.tr().tr(),
               helperText: "3-30 chars: a-z, 0-9, . , - , _",
               errorText: _isNameValid(controller.text) ? null : "Invalid name",
               counterText: "",
@@ -75,7 +76,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
             onChanged: (value) => setDialogState(() {}),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text("Cancel")),
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text("Cancel")),
             TextButton(
               onPressed: _isNameValid(controller.text) 
                 ? () async {
@@ -85,7 +86,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                     setState(() {}); // Refresh
                   }
                 : null,
-              child: const Text("Save"),
+              child: Text("Save"),
             ),
           ],
         ),
@@ -97,10 +98,10 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text("Remove Member?"),
+        title: Text('remove_member'.tr()),
         content: Text("Are you sure you want to remove @$username from the group?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text("Cancel")),
           TextButton(
             onPressed: () async {
               final nav = Navigator.of(dialogContext);
@@ -111,7 +112,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
               await _chatService.updateGroupMembers(widget.groupId, newMembers.where((m) => m != _currentUserId).toList());
               if (mounted) nav.pop();
             },
-            child: const Text("Remove", style: TextStyle(color: Colors.red)),
+            child: Text("Remove", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -127,10 +128,10 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text("Leave Group?"),
-        content: const Text("Are you sure you want to leave this discussion?"),
+        title: Text('leave_group'.tr()),
+        content: Text('are_you_sure_you_want_to_leave'.tr()),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text("Cancel")),
           TextButton(
             onPressed: () async {
               final nav = Navigator.of(dialogContext);
@@ -159,7 +160,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                 }
               }
             },
-            child: const Text("Leave", style: TextStyle(color: Colors.red)),
+            child: Text("Leave", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -193,13 +194,13 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
         await _chatService.logGroupPictureUpdate(widget.groupId, true);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Group picture deleted.')),
+            SnackBar(content: Text('group_picture_deleted'.tr())),
           );
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to delete group picture.')),
+            SnackBar(content: Text('failed_to_delete_group_picture'.tr())),
           );
         }
       }
@@ -220,7 +221,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
       if (mounted) {
         Navigator.pop(context); // Pop loading
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('File is too large (max 20MB).', style: TextStyle(color: Colors.white)), 
             backgroundColor: Colors.red,
           ),
@@ -237,13 +238,13 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
       await _chatService.logGroupPictureUpdate(widget.groupId, false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Group picture updated!')),
+          SnackBar(content: Text('group_picture_updated'.tr())),
         );
       }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update group picture.')),
+          SnackBar(content: Text('failed_to_update_group_picture'.tr())),
         );
       }
     }
@@ -253,7 +254,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Group Settings"),
+        title: Text('group_settings'.tr()),
         centerTitle: true,
         actions: [
           IconButton(
@@ -266,10 +267,10 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance.collection('chats').doc(widget.groupId).snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
           
           final data = snapshot.data!.data() as Map<String, dynamic>?;
-          if (data == null) return const Center(child: Text("Group not found"));
+          if (data == null) return Center(child: Text('group_not_found'.tr()));
 
           final name = data['groupName'] ?? widget.groupName;
           final creatorId = data['creatorId'] ?? widget.creatorId;
@@ -331,10 +332,10 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
               const SizedBox(height: 32),
 
               // Settings Section
-              const Text("Settings", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text("Settings", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 8),
               SwitchListTile(
-                title: const Text("Mute Notifications"),
+                title: Text('mute_notifications'.tr()),
                 value: _isMuted,
                 onChanged: _toggleMute,
                 activeThumbColor: Theme.of(context).primaryColor,
@@ -346,7 +347,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text("Members", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text("Members", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   if (isAdmin)
                     TextButton.icon(
                       onPressed: () {
@@ -361,7 +362,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                         );
                       },
                       icon: const Icon(Icons.person_add, size: 18),
-                      label: const Text("Add"),
+                      label: Text("Add"),
                     ),
                 ],
               ),

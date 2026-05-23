@@ -12,6 +12,7 @@ import 'package:asiimov/services/post/post_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class FeedPage extends StatefulWidget {
   const FeedPage({super.key});
@@ -208,10 +209,10 @@ class _FeedPageState extends State<FeedPage> {
         return StreamBuilder<List<Map<String, dynamic>>>(
           stream: chatService.getUsersStreamExcludingBlocked(limit: _searchLimit),
           builder: (context, snapshot) {
-            if (snapshot.hasError) return const Center(child: Text("Error"));
+            if (snapshot.hasError) return Center(child: Text("Error"));
             if (snapshot.connectionState == ConnectionState.waiting &&
                 _searchLimit == 20) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(child: CircularProgressIndicator());
             }
 
             final users = snapshot.data ?? [];
@@ -231,7 +232,7 @@ class _FeedPageState extends State<FeedPage> {
                   children: [
                     const Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       "No user found",
                       style: TextStyle(color: Colors.grey),
                     ),
@@ -284,7 +285,7 @@ class _FeedPageState extends State<FeedPage> {
                 controller: _searchController,
                 focusNode: _searchFocusNode,
                 decoration: InputDecoration(
-                  hintText: 'Search user...',
+                  hintText: 'search_user'.tr().tr(),
                   border: InputBorder.none,
                   hintStyle: TextStyle(
                     color: Theme.of(context).colorScheme.primary,
@@ -303,7 +304,7 @@ class _FeedPageState extends State<FeedPage> {
                   });
                 },
               )
-            : const Text(
+            : Text(
                 'A S I I M O V',
                 style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2),
               ),
@@ -322,7 +323,7 @@ class _FeedPageState extends State<FeedPage> {
       ),
       body: _isSearching
           ? buildSearchList()
-          : (_isLoading ? const Center(child: CircularProgressIndicator()) : buildFeedList()),
+          : (_isLoading ? Center(child: CircularProgressIndicator()) : buildFeedList()),
       floatingActionButton: _isSearching
           ? null
           : Container(
@@ -443,7 +444,7 @@ class _FeedPageState extends State<FeedPage> {
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: _onRefresh,
-                  child: const Text("Refresh"),
+                  child: Text("Refresh"),
                 ),
               ],
             ),

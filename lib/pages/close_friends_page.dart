@@ -6,6 +6,7 @@ import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class CloseFriendsPage extends StatefulWidget {
   const CloseFriendsPage({super.key});
@@ -158,15 +159,15 @@ class _CloseFriendsPageState extends State<CloseFriendsPage> {
   Widget build(BuildContext context) {
     final currentUserId = _auth.currentUser?.uid;
     if (currentUserId == null) {
-      return const Scaffold(
-        body: Center(child: Text('User not logged in')),
+      return Scaffold(
+        body: Center(child: Text('user_not_logged_in'.tr())),
       );
     }
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Close Friends'),
+        title: Text('close_friends'.tr()),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -176,7 +177,7 @@ class _CloseFriendsPageState extends State<CloseFriendsPage> {
         stream: _userService.getUserStream(currentUserId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting && _isFirstLoad) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator());
           }
 
           final userData = snapshot.data?.data() as Map<String, dynamic>? ?? {};

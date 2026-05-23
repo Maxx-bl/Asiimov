@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:asiimov/services/encryption/encryption_service.dart';
 
 class Post {
   final String id;
@@ -35,11 +37,23 @@ class Post {
 
   factory Post.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    
+    final encryption = EncryptionService(dotenv.env['ENCRYPTION_KEY'] ?? '');
+    String rawContent = data['content'] ?? '';
+    String decryptedContent = rawContent;
+    if (rawContent.isNotEmpty && rawContent.startsWith('{') && rawContent.contains('"iv"')) {
+      try {
+        decryptedContent = encryption.decrypt(rawContent);
+      } catch (e) {
+        decryptedContent = rawContent;
+      }
+    }
+
     return Post(
       id: doc.id,
       authorID: data['authorID'] ?? '',
       authorUsername: data['authorUsername'] ?? '',
-      content: data['content'] ?? '',
+      content: decryptedContent,
       timestamp: data['timestamp'] ?? Timestamp.now(),
       upvotes: List<String>.from(data['upvotes'] ?? []),
       downvotes: List<String>.from(data['downvotes'] ?? []),

@@ -4,6 +4,7 @@ import 'package:asiimov/services/encryption/encryption_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class PinnedMessagesPage extends StatefulWidget {
   final String receiverID;
@@ -52,22 +53,22 @@ class _PinnedMessagesPageState extends State<PinnedMessagesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pinned Messages'),
+        title: Text('pinned_messages'.tr()),
         foregroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _pinnedMessagesStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(child: Text('Error loading pinned messages'));
+            return Center(child: Text('error_loading_pinned_messages'.tr()));
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator());
           }
 
           final messages = snapshot.data?.docs ?? [];
           if (messages.isEmpty) {
-            return const Center(child: Text('No pinned messages.'));
+            return Center(child: Text('no_pinned_messages'.tr()));
           }
 
           // Sort locally to avoid needing a composite index in Firestore

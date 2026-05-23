@@ -1,5 +1,6 @@
 import 'package:asiimov/models/post.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ProfilePostCard extends StatelessWidget {
   final Post post;
@@ -44,19 +45,19 @@ class ProfilePostCard extends StatelessWidget {
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Delete post'),
-              content: const Text('Are you sure you want to delete this post?'),
+              title: Text('delete_post_1'.tr()),
+              content: Text('are_you_sure_you_want_to_delet_2'.tr()),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: Text('cancel'.tr()),
                 ),
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context);
                     onDelete!();
                   },
-                  child: const Text('Delete',
+                  child: Text('Delete',
                       style: TextStyle(color: Colors.red)),
                 ),
               ],

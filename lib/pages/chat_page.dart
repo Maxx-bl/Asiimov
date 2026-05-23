@@ -20,6 +20,7 @@ import 'package:asiimov/services/notifications/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ChatPage extends StatefulWidget {
   final String receiverUsername;
@@ -193,9 +194,9 @@ class _ChatPageState extends State<ChatPage> {
       } else {
         // Not loaded in current view or deleted
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Message unavailable or too old"),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text('message_unavailable_or_too_old'.tr()),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -337,7 +338,7 @@ class _ChatPageState extends State<ChatPage> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Text(
+              Text(
                 'Send Attachment',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
@@ -347,8 +348,8 @@ class _ChatPageState extends State<ChatPage> {
                   backgroundColor: Theme.of(context).primaryColor,
                   child: const Icon(Icons.photo_library, color: Colors.white),
                 ),
-                title: const Text('Photos & Videos'),
-                subtitle: const Text('From your gallery'),
+                title: Text('photos__videos'.tr()),
+                subtitle: Text('from_your_gallery'.tr()),
                 onTap: () async {
                   Navigator.pop(context);
                   try {
@@ -370,8 +371,8 @@ class _ChatPageState extends State<ChatPage> {
                   backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                   child: const Icon(Icons.insert_drive_file, color: Colors.white),
                 ),
-                title: const Text('Documents'),
-                subtitle: const Text('PDF, ZIP, and more'),
+                title: Text('documents'.tr()),
+                subtitle: Text('pdf_zip_and_more'.tr()),
                 onTap: () async {
                   Navigator.pop(context);
                   try {
@@ -474,7 +475,7 @@ class _ChatPageState extends State<ChatPage> {
                 children: [
                   SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).primaryColor)),
                   const SizedBox(width: 8),
-                  const Text('Uploading...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text('Uploading...', style: TextStyle(fontSize: 12, color: Colors.grey)),
                 ],
               ),
             ),
@@ -523,7 +524,7 @@ class _ChatPageState extends State<ChatPage> {
                   children: [
                     const Icon(Icons.edit, size: 14, color: Colors.blue),
                     const SizedBox(width: 4),
-                    const Text(
+                    Text(
                       'Editing message',
                       style: TextStyle(
                         color: Colors.blue,
@@ -661,13 +662,13 @@ class _ChatPageState extends State<ChatPage> {
           children: [
             Icon(Icons.info_outline, color: Theme.of(context).primaryColor, size: 24),
             const SizedBox(width: 8),
-            const Text(
+            Text(
               'Private Messages',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),
-        content: const Text(
+        content: Text(
           'Messages are automatically deleted after 24 hours once they have been read, '
           'unless they are among the 30 most recent messages in the conversation.',
           style: TextStyle(fontSize: 14, height: 1.5),
@@ -676,7 +677,7 @@ class _ChatPageState extends State<ChatPage> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             style: TextButton.styleFrom(foregroundColor: Theme.of(context).primaryColor),
-            child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -690,13 +691,13 @@ class _ChatPageState extends State<ChatPage> {
       builder: (context, snapshot) {
         //errors
         if (snapshot.hasError) {
-          return const Center(child: Text("Error"));
+          return Center(child: Text("Error"));
         }
 
         //loading (Only show if no data yet)
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         }
 
         //return listview
@@ -887,6 +888,11 @@ class _ChatPageState extends State<ChatPage> {
         decryptedReply = data['replyToMessage'];
       }
     }
+    
+    // Fallback if the replied message had no text (e.g. only attachment)
+    if (data['replyToMessageId'] != null && (decryptedReply == null || decryptedReply.trim().isEmpty)) {
+      decryptedReply = 'Replied to an attachment';
+    }
 
     // Parse reactions
     Map<String, String>? reactions;
@@ -916,13 +922,18 @@ class _ChatPageState extends State<ChatPage> {
       isGroup: widget.isGroup,
       isEdited: data['isEdited'] == true,
       isPinned: data['isPinned'] == true,
+      isPending: doc.metadata.hasPendingWrites,
       attachments: data['attachments'] as List<dynamic>?,
       instantAttachment: data['instantAttachment'] as Map<String, dynamic>?,
       onEdit: (messageId, content) {
         setEditMessage(messageId, content);
       },
       onSwipeReply: () {
-        setReplyTo(messageId, decryptedMessage, data['senderID']);
+        String replyText = decryptedMessage;
+        if (replyText.trim().isEmpty) {
+          replyText = 'Replied to an attachment';
+        }
+        setReplyTo(messageId, replyText, data['senderID']);
       },
       onReplyTap: (repliedId) {
         _scrollToMessage(repliedId);
@@ -1099,7 +1110,7 @@ class _ChatPageState extends State<ChatPage> {
     if (uploadResult == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to upload attachment.')),
+          SnackBar(content: Text('failed_to_upload_attachment'.tr())),
         );
       }
       return;
@@ -1144,7 +1155,7 @@ class _ChatPageState extends State<ChatPage> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Microphone permission required')),
+            SnackBar(content: Text('microphone_permission_required'.tr())),
           );
         }
       }
@@ -1187,7 +1198,7 @@ class _ChatPageState extends State<ChatPage> {
     if (uploadResult == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to upload voice message.')),
+          SnackBar(content: Text('failed_to_upload_voice_message'.tr())),
         );
       }
       return;
@@ -1259,7 +1270,7 @@ class _ChatPageState extends State<ChatPage> {
                                   color: Colors.redAccent.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(16),
                                 ),
-                                child: const Text('Cancel', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 13)),
+                                child: Text('Cancel', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 13)),
                               ),
                             ),
                           ],

@@ -4,6 +4,7 @@ import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class FollowListPage extends StatefulWidget {
   final String userId;
@@ -38,10 +39,10 @@ class _FollowListPageState extends State<FollowListPage> {
             : userService.getFollowing(widget.userId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return const Center(child: Text('Error loading list.'));
+            return Center(child: Text('error_loading_list'.tr()));
           }
 
           final users = snapshot.data ?? [];
@@ -94,12 +95,12 @@ class _FollowListPageState extends State<FollowListPage> {
                           showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
-                              title: const Text('Remove Follower'),
+                              title: Text('remove_follower'.tr()),
                               content: Text('Are you sure you want to remove @$username from your followers?'),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cancel'),
+                                  child: Text('cancel'.tr()),
                                 ),
                                 TextButton(
                                   onPressed: () async {
@@ -107,7 +108,7 @@ class _FollowListPageState extends State<FollowListPage> {
                                     await userService.removeFollower(uid);
                                     setState(() {}); // Refresh list
                                   },
-                                  child: const Text('Remove', style: TextStyle(color: Colors.red)),
+                                  child: Text('Remove', style: TextStyle(color: Colors.red)),
                                 ),
                               ],
                             ),

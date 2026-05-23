@@ -13,6 +13,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class PostDetailPage extends StatefulWidget {
   final Post post;
@@ -175,7 +176,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Text(
+              Text(
                 'Add Photos or Videos',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
@@ -185,7 +186,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   backgroundColor: Theme.of(context).primaryColor,
                   child: const Icon(Icons.camera_alt, color: Colors.white),
                 ),
-                title: const Text('Take a Photo'),
+                title: Text('take_a_photo'.tr()),
                 onTap: () => Navigator.pop(context, 'camera_photo'),
               ),
               ListTile(
@@ -193,7 +194,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   backgroundColor: Colors.deepOrange,
                   child: Icon(Icons.videocam, color: Colors.white),
                 ),
-                title: const Text('Record a Video'),
+                title: Text('record_a_video'.tr()),
                 onTap: () => Navigator.pop(context, 'camera_video'),
               ),
               ListTile(
@@ -201,7 +202,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                   child: const Icon(Icons.photo_library, color: Colors.white),
                 ),
-                title: const Text('Choose from Gallery'),
+                title: Text('choose_from_gallery'.tr()),
                 onTap: () => Navigator.pop(context, 'gallery'),
               ),
             ],
@@ -246,7 +247,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
         if (!isVideo && !validImage) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Skipped unsupported file format.'), backgroundColor: Colors.redAccent),
+              SnackBar(content: Text('skipped_unsupported_file_forma'.tr()), backgroundColor: Colors.redAccent),
             );
           }
           continue;
@@ -258,7 +259,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
         if (currentTotalSize + length > FileService.maxFileSizeInBytes) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Total size exceeds the 20MB limit.'), backgroundColor: Colors.redAccent),
+              SnackBar(content: Text('total_size_exceeds_the_20mb_li'.tr()), backgroundColor: Colors.redAccent),
             );
           }
           break;
@@ -279,7 +280,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
             vc.dispose();
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Video duration cannot exceed 10 seconds.'), backgroundColor: Colors.redAccent),
+                SnackBar(content: Text('video_duration_cannot_exceed_1'.tr()), backgroundColor: Colors.redAccent),
               );
             }
             continue;
@@ -361,7 +362,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     if (!isAuthorized) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Access Denied'),
+          title: Text('access_denied'.tr()),
           foregroundColor: Theme.of(context).colorScheme.primary,
         ),
         body: Center(
@@ -402,7 +403,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Post'),
+        title: Text('post'.tr()),
         foregroundColor: Theme.of(context).colorScheme.primary,
         actions: [
           IconButton(
@@ -417,7 +418,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
             child: RefreshIndicator(
               onRefresh: _onRefresh,
               child: _isCommentsLoading && _comments.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(child: CircularProgressIndicator())
                   : ListView.builder(
                       controller: _scrollController,
                       physics: const AlwaysScrollableScrollPhysics(),
@@ -529,7 +530,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                                         )
                                       : Image.file(att.file, fit: BoxFit.cover),
                                   if (att.isVideo)
-                                    const Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 24)),
+                                    Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 24)),
                                   Align(
                                     alignment: Alignment.topRight,
                                     child: Padding(
@@ -567,7 +568,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                           maxLength: 250,
                           textCapitalization: TextCapitalization.sentences,
                           decoration: InputDecoration(
-                            hintText: 'Add a comment...',
+                            hintText: 'add_a_comment'.tr().tr(),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
                               borderSide: BorderSide.none,

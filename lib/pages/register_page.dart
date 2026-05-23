@@ -3,6 +3,7 @@ import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/components/my_button.dart';
 import 'package:asiimov/components/my_textfield.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class RegisterPage extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
@@ -46,24 +47,24 @@ class RegisterPage extends StatelessWidget {
 
     if (password != confirm) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match!')),
+        SnackBar(content: Text('passwords_do_not_match'.tr())),
       );
       return;
     }
 
     if (password.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Password must be at least 6 characters.')),
+        SnackBar(
+            content: Text('password_too_short'.tr())),
       );
       return;
     }
 
     if (!isValidUsername()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
             content: Text(
-                'Username must be 3-20 characters, lowercase letters/numbers/._- only.')),
+                'invalid_username_format'.tr())),
       );
       return;
     }
@@ -107,7 +108,7 @@ class RegisterPage extends StatelessWidget {
               const SizedBox(height: 50),
 
               //text
-              Text("Sign Up",
+              Text("sign_up".tr(),
                   style: TextStyle(
                       fontSize: 24,
                       color: Theme.of(context).colorScheme.primary)),
@@ -116,7 +117,7 @@ class RegisterPage extends StatelessWidget {
 
               //email field
               MyTextField(
-                  hintText: "Email",
+                  hintText: "email".tr(),
                   obscureText: false,
                   controller: emailController),
 
@@ -124,7 +125,7 @@ class RegisterPage extends StatelessWidget {
 
               //password field
               MyTextField(
-                  hintText: "Password",
+                  hintText: "password".tr(),
                   obscureText: true,
                   canToggleVisibility: true,
                   controller: passwordController),
@@ -133,7 +134,7 @@ class RegisterPage extends StatelessWidget {
 
               //confirm password field
               MyTextField(
-                  hintText: "Confirm password",
+                  hintText: "confirm_password".tr(),
                   obscureText: true,
                   canToggleVisibility: true,
                   controller: confirmController),
@@ -141,7 +142,7 @@ class RegisterPage extends StatelessWidget {
               const SizedBox(height: 20),
 
               MyTextField(
-                  hintText: "Username",
+                  hintText: "username".tr(),
                   obscureText: false,
                   controller: usernameController),
 
@@ -149,7 +150,7 @@ class RegisterPage extends StatelessWidget {
 
               //login button
               MyButton(
-                text: "Register",
+                text: "register".tr(),
                 onTap: () => register(context),
               ),
 
@@ -158,13 +159,13 @@ class RegisterPage extends StatelessWidget {
               //register text
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 Text(
-                  "Already have an account? ",
+                  "already_have_account".tr(),
                   style:
                       TextStyle(color: Theme.of(context).colorScheme.primary),
                 ),
                 GestureDetector(
                   onTap: onTap,
-                  child: Text("Login now!",
+                  child: Text("login_now".tr(),
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.primary)),

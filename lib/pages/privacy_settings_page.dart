@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class PrivacySettingsPage extends StatelessWidget {
   const PrivacySettingsPage({super.key});
@@ -14,7 +15,7 @@ class PrivacySettingsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Privacy'),
+        title: Text('privacy'.tr()),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -25,12 +26,12 @@ class PrivacySettingsPage extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
           child: currentUserId == null
-              ? const Center(child: Text('User not logged in'))
+              ? Center(child: Text('user_not_logged_in'.tr()))
               : StreamBuilder<DocumentSnapshot>(
                   stream: UserService().getUserStream(currentUserId),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return Center(child: CircularProgressIndicator());
                     }
 
                     final userData = snapshot.data?.data() as Map<String, dynamic>?;
@@ -100,14 +101,14 @@ class PrivacySettingsPage extends StatelessWidget {
                                 final shouldChange = await showDialog<bool>(
                                   context: context,
                                   builder: (context) => AlertDialog(
-                                    title: const Text('Change Privacy?'),
+                                    title: Text('change_privacy'.tr()),
                                     content: Text(value
                                         ? 'Are you sure you want to make your account public? Anyone will be able to see your posts and follow you without approval.'
                                         : 'Are you sure you want to make your account private? Users will have to request to follow you and only followers can see your posts.'),
                                     actions: [
                                       TextButton(
                                         onPressed: () => Navigator.pop(context, false),
-                                        child: const Text('Cancel'),
+                                        child: Text('cancel'.tr()),
                                       ),
                                       TextButton(
                                         onPressed: () => Navigator.pop(context, true),

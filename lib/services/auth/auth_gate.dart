@@ -33,7 +33,7 @@ class AuthGate extends StatelessWidget {
                       stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
                       builder: (context, userSnapshot) {
                         if (userSnapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                          return Center(child: CircularProgressIndicator());
                         }
                         
                         final userData = userSnapshot.data?.data() as Map<String, dynamic>?;

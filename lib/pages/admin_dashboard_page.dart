@@ -7,6 +7,7 @@ import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class AdminDashboardPage extends StatefulWidget {
   const AdminDashboardPage({super.key});
@@ -370,7 +371,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text('cancel'.tr()),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -403,16 +404,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
         context: context,
         builder: (context) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Unsuspend User'),
+          title: Text('unsuspend_user'.tr()),
           content: Text('Are you sure you want to reinstate @$username\'s account?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text('cancel'.tr()),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Unsuspend', style: TextStyle(fontWeight: FontWeight.w600)),
+              child: Text('Unsuspend', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -444,13 +445,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Provide a clear reason for the suspension. This will be shown to the user.'),
+              Text('provide_a_clear_reason_for_the'.tr()),
               const SizedBox(height: 16),
               TextField(
                 controller: reasonController,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'Enter reason (e.g., Harassment, SPAM...)',
+                  hintText: 'enter_reason_eg_harassment_spa'.tr().tr(),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   filled: true,
                   fillColor: Theme.of(context).colorScheme.secondary,
@@ -461,11 +462,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text('cancel'.tr()),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Suspend', style: TextStyle(fontWeight: FontWeight.w600)),
+              child: Text('Suspend', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -515,7 +516,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                 controller: reasonController,
                 decoration: InputDecoration(
                   labelText: 'Reason for deletion',
-                  hintText: 'e.g. Inappropriate content, Hate speech, Spam...',
+                  hintText: 'eg_inappropriate_content_hate'.tr().tr(),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 validator: (value) {
@@ -531,7 +532,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text('cancel'.tr()),
           ),
           TextButton(
             onPressed: () {
@@ -539,7 +540,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                 Navigator.pop(context, true);
               }
             },
-            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w600)),
+            child: Text('Delete', style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -592,12 +593,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Dismiss Report'),
-        content: const Text('Are you sure you want to dismiss this report? The content will remain in the app, and the report will be resolved.'),
+        title: Text('dismiss_report'.tr()),
+        content: Text('are_you_sure_you_want_to_dismi'.tr()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text('cancel'.tr()),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -632,7 +633,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
     return Scaffold(
       backgroundColor: _surfaceColor(isDarkMode),
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Admin',
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
         ),
@@ -644,11 +645,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
           indicatorWeight: 2,
           labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           unselectedLabelStyle: const TextStyle(fontSize: 12),
-          tabs: const [
-            Tab(text: 'Users'),
-            Tab(text: 'Suspended'),
-            Tab(text: 'Reports'),
-            Tab(text: 'History'),
+          tabs: [
+            Tab(text: 'users'.tr()),
+            Tab(text: 'suspended'.tr()),
+            Tab(text: 'reports'.tr()),
+            Tab(text: 'history'.tr()),
           ],
         ),
       ),
@@ -674,7 +675,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
           child: TextField(
             controller: _userSearchController,
             decoration: InputDecoration(
-              hintText: 'Search user by username...',
+              hintText: 'search_user_by_username'.tr().tr(),
               prefixIcon: const Icon(Icons.search, color: Colors.grey),
               suffixIcon: IconButton(
                 icon: const Icon(Icons.clear, color: Colors.grey),
@@ -709,9 +710,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
 
         Expanded(
           child: _users.isEmpty && _usersLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(child: CircularProgressIndicator())
               : _users.isEmpty
-                  ? const Center(child: Text('No users found.'))
+                  ? Center(child: Text('no_users_found'.tr()))
                   : RefreshIndicator(
                       onRefresh: () => _fetchUsers(refresh: true),
                       child: ListView.builder(
@@ -803,9 +804,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
   // TAB 2: SUSPENDED USERS
   Widget _buildSuspendedTab(bool isDarkMode) {
     return _suspendedUsers.isEmpty && _suspendedLoading
-        ? const Center(child: CircularProgressIndicator())
+        ? Center(child: CircularProgressIndicator())
         : _suspendedUsers.isEmpty
-            ? const Center(child: Text('No suspended users listed.'))
+            ? Center(child: Text('no_suspended_users_listed'.tr()))
             : RefreshIndicator(
                 onRefresh: () => _fetchSuspendedUsers(refresh: true),
                 child: ListView.builder(
@@ -849,7 +850,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                                 OutlinedButton(
                                   onPressed: () => _showSuspensionDialog(userId, username, isSuspended: true),
                                   style: _adminOutlinedStyle(isDarkMode),
-                                  child: const Text('Reinstate'),
+                                  child: Text('reinstate'.tr()),
                                 ),
                               ],
                             ),
@@ -878,56 +879,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
     final reasons = ReportReasonsHelper.parseReportReasons(reportData);
     if (reasons.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 12),
-        Text(
-          'Report reason${reasons.length > 1 ? 's' : ''}',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: isDarkMode ? Colors.white70 : Colors.black54,
-          ),
-        ),
-        const SizedBox(height: 6),
-        ...reasons.map((entry) {
-          return Container(
-            width: double.infinity,
-            margin: const EdgeInsets.only(bottom: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: _fillColor(isDarkMode),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _borderColor(isDarkMode)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (reasons.length > 1)
-                  Text(
-                    '@${entry['username']}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: _mutedColor(isDarkMode),
-                    ),
-                  ),
-                if (reasons.length > 1) const SizedBox(height: 2),
-                Text(
-                  entry['reason']!,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-      ],
-    );
+    return ReportReasonsWidget(reasons: reasons, isDarkMode: isDarkMode);
   }
 
   Widget _buildReportedMediaPreview(Map<String, dynamic> reportData) {
@@ -1126,6 +1078,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
     );
   }
 
+
   // Filter button helper
   Widget _buildFilterButton(String value, String label, bool isDarkMode) {
     final isSelected = _selectedReportFilter == value;
@@ -1172,6 +1125,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
         return type == 'post' || type == 'comment';
       } else if (_selectedReportFilter == 'chats') {
         return type == 'message';
+      } else if (_selectedReportFilter == 'users') {
+        return type == 'user';
       }
       return true;
     }).toList();
@@ -1189,9 +1144,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
             padding: const EdgeInsets.all(4),
             child: Row(
               children: [
-                _buildFilterButton('all', 'All Reports', isDarkMode),
-                _buildFilterButton('posts_comments', 'Posts & Comments', isDarkMode),
-                _buildFilterButton('chats', 'Chats & Media', isDarkMode),
+                _buildFilterButton('all', 'All', isDarkMode),
+                _buildFilterButton('users', 'Users', isDarkMode),
+                _buildFilterButton('posts_comments', 'Posts', isDarkMode),
+                _buildFilterButton('chats', 'Chats', isDarkMode),
               ],
             ),
           ),
@@ -1200,7 +1156,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
         // Main List Content
         Expanded(
           child: _reports.isEmpty && _reportsLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(child: CircularProgressIndicator())
               : filteredReports.isEmpty
                   ? Center(
                       child: Column(
@@ -1257,6 +1213,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                             content = reportData['messageContent'] as String? ?? '';
                             author = reportData['messageAuthorUsername'] as String? ?? 'Anonymous';
                             authorId = reportData['messageOwnerId'] as String? ?? '';
+                          } else if (type == 'user') {
+                            content = 'Reported User Profile';
+                            author = reportData['reportedUserUsername'] as String? ?? 'Anonymous';
+                            authorId = reportData['reportedUserId'] as String? ?? '';
                           }
 
                           return Card(
@@ -1355,18 +1315,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                                 OutlinedButton(
                                   onPressed: () => _showDismissReportDialog(reportId),
                                   style: _adminOutlinedStyle(isDarkMode),
-                                  child: const Text('Dismiss'),
+                                  child: Text('dismiss'.tr()),
                                 ),
                                 OutlinedButton(
-                                  onPressed: () => _showSuspensionDialog(authorId, author),
-                                  style: _adminOutlinedStyle(isDarkMode),
-                                  child: const Text('Suspend author'),
-                                ),
-                                FilledButton(
-                                  onPressed: () => _showDeleteContentDialog(reportDoc),
-                                  style: _adminFilledStyle(isDarkMode),
-                                  child: const Text('Delete content'),
-                                ),
+                                    onPressed: () => _showSuspensionDialog(authorId, author),
+                                    style: _adminOutlinedStyle(isDarkMode),
+                                    child: Text('suspend_author'.tr()),
+                                  ),
+                                  if (type != 'user')
+                                    FilledButton(
+                                      onPressed: () => _showDeleteContentDialog(reportDoc),
+                                      style: _adminFilledStyle(isDarkMode),
+                                      child: Text('delete_content'.tr()),
+                                    ),
                               ],
                             ),
                           ],
@@ -1383,9 +1344,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
 
   Widget _buildResolvedReportsTab(bool isDarkMode) {
     return _resolvedReports.isEmpty && _resolvedReportsLoading
-        ? const Center(child: CircularProgressIndicator())
+        ? Center(child: CircularProgressIndicator())
         : _resolvedReports.isEmpty
-            ? const Center(child: Text('No resolved reports history.'))
+            ? Center(child: Text('no_resolved_reports_history'.tr()))
             : RefreshIndicator(
                 onRefresh: () => _fetchResolvedReports(refresh: true),
                 child: ListView.builder(
@@ -1422,6 +1383,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                     } else if (type == 'message') {
                       content = reportData['messageContent'] as String? ?? '';
                       author = reportData['messageAuthorUsername'] as String? ?? 'Anonymous';
+                    } else if (type == 'user') {
+                      content = 'Reported User Profile';
+                      author = reportData['reportedUserUsername'] as String? ?? 'Anonymous';
                     }
 
                     final resolutionLabel = resolutionAction == 'deleted'
@@ -1546,5 +1510,134 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                   },
                 ),
               );
+  }
+}
+
+class ReportReasonsWidget extends StatefulWidget {
+  final List<Map<String, String>> reasons;
+  final bool isDarkMode;
+
+  const ReportReasonsWidget({
+    super.key,
+    required this.reasons,
+    required this.isDarkMode,
+  });
+
+  @override
+  State<ReportReasonsWidget> createState() => _ReportReasonsWidgetState();
+}
+
+class _ReportReasonsWidgetState extends State<ReportReasonsWidget> {
+  bool _expanded = false;
+
+  Color _borderColor(bool isDark) =>
+      isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade300;
+
+  Color _mutedColor(bool isDark) =>
+      isDark ? Colors.white60 : Colors.black54;
+
+  Color _fillColor(bool isDark) =>
+      isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey.shade100;
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.reasons.isEmpty) return const SizedBox.shrink();
+
+    final firstReason = widget.reasons.first;
+    final hasMultiple = widget.reasons.length > 1;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Report reason${hasMultiple ? 's' : ''}',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: widget.isDarkMode ? Colors.white70 : Colors.black54,
+              ),
+            ),
+            if (hasMultiple)
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _expanded = !_expanded;
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _expanded ? Icons.remove : Icons.add,
+                        size: 14,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _expanded ? 'Hide' : 'See all (${widget.reasons.length})',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        _buildReasonItem(firstReason, hasMultiple && _expanded),
+        if (hasMultiple && _expanded)
+          ...widget.reasons.skip(1).map((entry) => _buildReasonItem(entry, true)),
+      ],
+    );
+  }
+
+  Widget _buildReasonItem(Map<String, String> entry, bool showUsername) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: _fillColor(widget.isDarkMode),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _borderColor(widget.isDarkMode)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showUsername)
+            Text(
+              '@${entry['username']}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _mutedColor(widget.isDarkMode),
+              ),
+            ),
+          if (showUsername) const SizedBox(height: 2),
+          Text(
+            entry['reason']!,
+            style: TextStyle(
+              fontSize: 13,
+              color: widget.isDarkMode ? Colors.white : Colors.black87,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

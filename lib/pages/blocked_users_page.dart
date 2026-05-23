@@ -2,6 +2,7 @@ import 'package:asiimov/components/user_tile.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class BlockedUsersPage extends StatelessWidget {
   BlockedUsersPage({super.key});
@@ -15,23 +16,23 @@ class BlockedUsersPage extends StatelessWidget {
     showDialog(
         context: context,
         builder: (context) => AlertDialog(
-              title: const Text('Unblock user'),
+              title: Text('unblock_user'.tr()),
               content:
-                  const Text('Are you sure you want to unblock this user?'),
+                  Text('are_you_sure_you_want_to_unblo'.tr()),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: Text('cancel'.tr()),
                 ),
                 TextButton(
                   onPressed: () {
                     chatService.unblockUser(userId);
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('User unblocked!'),
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('user_unblocked'.tr()),
                     ));
                   },
-                  child: const Text('Confirm'),
+                  child: Text('confirm'.tr()),
                 )
               ],
             ));
@@ -43,27 +44,27 @@ class BlockedUsersPage extends StatelessWidget {
 
     return Scaffold(
         appBar: AppBar(
-          title: const Text('Blocked users'),
+          title: Text('blocked_users'.tr()),
           foregroundColor: Theme.of(context).colorScheme.primary,
         ),
         body: StreamBuilder<List<Map<String, dynamic>>>(
             stream: chatService.getBlockedUsersStream(userId),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return const Center(
-                  child: Text('Error loading...'),
+                return Center(
+                  child: Text('error_loading'.tr()),
                 );
               }
 
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(child: CircularProgressIndicator());
               }
 
               final blockedUsers = snapshot.data ?? [];
 
               if (blockedUsers.isEmpty) {
-                return const Center(
-                  child: Text('No blocked users'),
+                return Center(
+                  child: Text('no_blocked_users'.tr()),
                 );
               }
 

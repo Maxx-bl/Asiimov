@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class PickedAttachment {
   final File file;
@@ -67,7 +68,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Text(
+              Text(
                 'Add Photos or Videos',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
@@ -77,7 +78,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   backgroundColor: Theme.of(context).primaryColor,
                   child: const Icon(Icons.camera_alt, color: Colors.white),
                 ),
-                title: const Text('Take a Photo'),
+                title: Text('take_a_photo'.tr()),
                 onTap: () => Navigator.pop(context, 'camera_photo'),
               ),
               ListTile(
@@ -85,7 +86,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   backgroundColor: Colors.deepOrange,
                   child: Icon(Icons.videocam, color: Colors.white),
                 ),
-                title: const Text('Record a Video'),
+                title: Text('record_a_video'.tr()),
                 onTap: () => Navigator.pop(context, 'camera_video'),
               ),
               ListTile(
@@ -93,7 +94,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                   child: const Icon(Icons.photo_library, color: Colors.white),
                 ),
-                title: const Text('Choose from Gallery'),
+                title: Text('choose_from_gallery'.tr()),
                 onTap: () => Navigator.pop(context, 'gallery'),
               ),
             ],
@@ -138,7 +139,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         if (!isVideo && !validImage) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Skipped unsupported file format.'), backgroundColor: Colors.redAccent),
+              SnackBar(content: Text('skipped_unsupported_file_forma'.tr()), backgroundColor: Colors.redAccent),
             );
           }
           continue;
@@ -150,7 +151,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         if (currentTotalSize + length > FileService.maxFileSizeInBytes) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Total size exceeds the 20MB limit.'), backgroundColor: Colors.redAccent),
+              SnackBar(content: Text('total_size_exceeds_the_20mb_li'.tr()), backgroundColor: Colors.redAccent),
             );
           }
           break;
@@ -171,7 +172,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
             vc.dispose();
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Video duration cannot exceed 10 seconds.'), backgroundColor: Colors.redAccent),
+                SnackBar(content: Text('video_duration_cannot_exceed_1'.tr()), backgroundColor: Colors.redAccent),
               );
             }
             continue;
@@ -474,7 +475,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text(
+                      : Text(
                           'Post',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
@@ -497,8 +498,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 maxLines: null,
                 expands: true,
                 textAlignVertical: TextAlignVertical.top,
-                decoration: const InputDecoration(
-                  hintText: "What's on your mind?",
+                decoration: InputDecoration(
+                  hintText: 'whats_on_your_mind'.tr().tr(),
                   border: InputBorder.none,
                   counterText: '',
                 ),
@@ -538,7 +539,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                                   )
                                 : Image.file(att.file, fit: BoxFit.cover),
                             if (att.isVideo)
-                              const Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 28)),
+                              Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 28)),
                             Align(
                               alignment: Alignment.topRight,
                               child: Padding(

@@ -1009,7 +1009,7 @@ class ChatService extends ChangeNotifier {
         .collection('messages')
         .orderBy('timestamp', descending: true)
         .limit(limit)
-        .snapshots();
+        .snapshots(includeMetadataChanges: true);
   }
 
   //get older messages as a future (pagination)
@@ -1094,9 +1094,17 @@ class ChatService extends ChangeNotifier {
       await batch.commit();
     }
 
-    await firestore.collection('chats').doc(chatRoomID).update({
-      'lastMessageRead': true,
-    }).catchError((_) {});
+    // Only update lastMessageRead when the last message is from the OTHER person.
+    // If the last message is ours, don't touch the flag — only the recipient should.
+    try {
+      final chatDoc = await firestore.collection('chats').doc(chatRoomID).get();
+      final chatData = chatDoc.data();
+      if (chatData != null && chatData['lastSenderID'] != currentUserId) {
+        await firestore.collection('chats').doc(chatRoomID).update({
+          'lastMessageRead': true,
+        });
+      }
+    } catch (_) {}
   }
 
   //delete old messages with specific conditions

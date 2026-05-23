@@ -11,6 +11,7 @@ import 'package:asiimov/services/post/post_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class PostCard extends StatelessWidget {
   final Post post;
@@ -127,22 +128,12 @@ class PostCard extends StatelessWidget {
                     if (post.isCloseFriendsOnly) ...[
                       GestureDetector(
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Visible to Close Friends',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              width: 220,
-                              duration: const Duration(seconds: 2),
-                              backgroundColor: Colors.greenAccent.shade700,
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => VotersListSheet(
+                              userIds: post.visibleTo,
+                              title: 'Visible to Close Friends',
                             ),
                           );
                         },
@@ -176,16 +167,16 @@ class PostCard extends StatelessWidget {
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: const Text('Delete Post'),
-                          content: const Text('Are you sure you want to delete this post?'),
+                          title: Text('delete_post'.tr()),
+                          content: Text('are_you_sure_you_want_to_delet_2'.tr()),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Cancel'),
+                              child: Text('cancel'.tr()),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(context, true),
-                              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                              child: Text('Delete', style: TextStyle(color: Colors.red)),
                             ),
                           ],
                         ),
@@ -197,7 +188,7 @@ class PostCard extends StatelessWidget {
                     } else if (value == 'report') {
                       final reason = await ReportReasonDialog.show(
                         context,
-                        title: 'Report Post',
+                        title: 'report_post'.tr(),
                       );
 
                       if (reason != null) {
@@ -214,8 +205,8 @@ class PostCard extends StatelessWidget {
                           );
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Post successfully reported.'),
+                              SnackBar(
+                                content: Text('post_successfully_reported'.tr()),
                                 backgroundColor: Colors.green,
                               ),
                             );
@@ -331,12 +322,12 @@ class PostCard extends StatelessWidget {
                             final bool? shouldLeave = await showDialog<bool>(
                               context: context,
                               builder: (context) => AlertDialog(
-                                title: const Text('Leaving App'),
+                                title: Text('leaving_app'.tr()),
                                 content: Text('This link will take you to an external website:\n\n${link.url}\n\nDo you want to continue?'),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context, false),
-                                    child: const Text('Cancel'),
+                                    child: Text('cancel'.tr()),
                                   ),
                                   TextButton(
                                     onPressed: () => Navigator.pop(context, true),
@@ -353,7 +344,7 @@ class PostCard extends StatelessWidget {
                                 debugPrint('Could not launch ${link.url}: $e');
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Could not open the link.')),
+                                    SnackBar(content: Text('could_not_open_the_link'.tr())),
                                   );
                                 }
                               }
@@ -392,12 +383,12 @@ class PostCard extends StatelessWidget {
                         final bool? shouldLeave = await showDialog<bool>(
                           context: context,
                           builder: (context) => AlertDialog(
-                            title: const Text('Leaving App'),
+                            title: Text('leaving_app'.tr()),
                             content: Text('This link will take you to an external website:\n\n${link.url}\n\nDo you want to continue?'),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancel'),
+                                child: Text('cancel'.tr()),
                               ),
                               TextButton(
                                 onPressed: () => Navigator.pop(context, true),
@@ -414,7 +405,7 @@ class PostCard extends StatelessWidget {
                             debugPrint('Could not launch ${link.url}: $e');
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Could not open the link.')),
+                                SnackBar(content: Text('could_not_open_the_link'.tr())),
                               );
                             }
                           }
@@ -458,7 +449,7 @@ class PostCard extends StatelessWidget {
                         backgroundColor: Colors.transparent,
                         builder: (context) => VotersListSheet(
                           userIds: post.upvotes,
-                          title: 'Upvotes',
+                          title: 'upvotes'.tr(),
                         ),
                       );
                     },
@@ -495,7 +486,7 @@ class PostCard extends StatelessWidget {
                         backgroundColor: Colors.transparent,
                         builder: (context) => VotersListSheet(
                           userIds: post.downvotes,
-                          title: 'Downvotes',
+                          title: 'downvotes'.tr(),
                         ),
                       );
                     },
@@ -547,7 +538,7 @@ class PostCard extends StatelessWidget {
                         backgroundColor: Colors.transparent,
                         builder: (context) => VotersListSheet(
                           userIds: post.sharedBy,
-                          title: 'Shares',
+                          title: 'shares'.tr(),
                         ),
                       );
                     },

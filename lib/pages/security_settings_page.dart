@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class SecuritySettingsPage extends StatefulWidget {
   const SecuritySettingsPage({super.key});
@@ -85,8 +86,8 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
       _startCooldown();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password reset email sent! Check your SPAM folder.'),
+          SnackBar(
+            content: Text('password_reset_email_sent_chec'.tr()),
             backgroundColor: Colors.green,
           ),
         );
@@ -110,7 +111,7 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Security'),
+        title: Text('security'.tr()),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -121,12 +122,12 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
           child: user == null || _userStream == null
-              ? const Center(child: Text('User not logged in'))
+              ? Center(child: Text('user_not_logged_in'.tr()))
               : StreamBuilder<DocumentSnapshot>(
                   stream: _userStream,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return Center(child: CircularProgressIndicator());
                     }
 
                     final userData = snapshot.data?.data() as Map<String, dynamic>?;
@@ -201,14 +202,14 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
                                       final shouldChange = await showDialog<bool>(
                                         context: context,
                                         builder: (context) => AlertDialog(
-                                          title: const Text('Two-Factor Auth'),
+                                          title: Text('twofactor_auth'.tr()),
                                           content: Text(value
                                               ? 'Are you sure you want to enable Two-Factor Authentication? You will receive a verification code on your email every time you log in.'
                                               : 'Are you sure you want to disable Two-Factor Authentication? Your account will be less secure.'),
                                           actions: [
                                             TextButton(
                                               onPressed: () => Navigator.pop(context, false),
-                                              child: const Text('Cancel'),
+                                              child: Text('cancel'.tr()),
                                             ),
                                             TextButton(
                                               onPressed: () => Navigator.pop(context, true),

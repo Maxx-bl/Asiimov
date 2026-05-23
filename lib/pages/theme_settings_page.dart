@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:asiimov/themes/theme_provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ThemeSettingsPage extends StatefulWidget {
   const ThemeSettingsPage({super.key});
@@ -87,7 +88,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Theme'),
+        title: Text('theme'.tr()),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -295,7 +296,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                                     RegExp(r'[0-9a-fA-F]')),
                               ],
                               decoration: InputDecoration(
-                                hintText: 'FFFFFF',
+                                hintText: 'ffffff'.tr(),
                                 counterText: '',
                                 errorText: _errorMessage,
                                 contentPadding: const EdgeInsets.symmetric(
@@ -380,7 +381,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                             ),
                             elevation: 2,
                           ),
-                          child: const Text(
+                          child: Text(
                             'Apply Custom Color',
                             style: TextStyle(
                               fontSize: 15,

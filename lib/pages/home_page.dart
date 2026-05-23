@@ -12,6 +12,7 @@ import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -114,7 +115,7 @@ class _HomePageState extends State<HomePage> {
                 controller: _searchController,
                 focusNode: _searchFocusNode,
                 decoration: InputDecoration(
-                  hintText: 'Search user...',
+                  hintText: 'search_user'.tr().tr(),
                   border: InputBorder.none,
                   hintStyle: TextStyle(
                     color: Theme.of(context).colorScheme.primary,
@@ -158,7 +159,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     );
                   })
-                : const Text('Home')),
+                : Text('home'.tr())),
         foregroundColor: Theme.of(context).colorScheme.primary,
         actions: [
           if (!_isSearching)
@@ -198,10 +199,10 @@ class _HomePageState extends State<HomePage> {
             stream:
                 chatService.getUsersStreamExcludingBlocked(limit: _searchLimit),
             builder: (context, snapshot) {
-              if (snapshot.hasError) return const Center(child: Text("Error"));
+              if (snapshot.hasError) return Center(child: Text("error".tr()));
               if (snapshot.connectionState == ConnectionState.waiting &&
                   _searchLimit == 20) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(child: CircularProgressIndicator());
               }
 
               final users = snapshot.data ?? [];
@@ -270,7 +271,7 @@ class _HomePageState extends State<HomePage> {
           );
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         }
 
         final conversations = snapshot.data ?? [];
@@ -302,7 +303,7 @@ class _HomePageState extends State<HomePage> {
           const Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey),
           const SizedBox(height: 8),
           Text(
-            _isSearching ? "No user found" : "No conversations yet",
+            _isSearching ? "no_user_found".tr() : "no_conversations_yet".tr(),
             style: const TextStyle(color: Colors.grey),
           ),
         ],
@@ -326,7 +327,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     // Decrypt preview
-    String messagePreview = "Start chatting...";
+    String messagePreview = "start_chatting".tr();
     if (conv.lastMessage != null) {
       try {
         final lastMsg = conv.lastMessage!;
@@ -338,23 +339,23 @@ class _HomePageState extends State<HomePage> {
           final decrypted = chatService.encryption.decrypt(rawMsg);
           final senderName =
               lastMsg['senderID'] == authService.getCurrentUser()!.uid
-                  ? 'You'
+                  ? 'you'.tr()
                   : lastMsg['senderUsername'];
 
           String displayMsg =
-              decrypted.isEmpty ? 'Sent an attachment 📎' : decrypted;
+              decrypted.isEmpty ? 'sent_attachment'.tr() : decrypted;
 
           if (conv.isGroup) {
             messagePreview = '$senderName: $displayMsg';
           } else {
             messagePreview =
                 lastMsg['senderID'] == authService.getCurrentUser()!.uid
-                    ? 'You: $displayMsg'
+                    ? '${'you'.tr()}: $displayMsg'
                     : displayMsg;
           }
         }
       } catch (e) {
-        messagePreview = "Encrypted message";
+        messagePreview = "encrypted_message".tr();
       }
     }
 
@@ -364,7 +365,7 @@ class _HomePageState extends State<HomePage> {
       final isMyMessage =
           conv.lastMessage!['senderID'] == authService.getCurrentUser()!.uid;
       if (isMyMessage) {
-        status = conv.lastMessage!['isRead'] == true ? 'seen' : 'sent';
+        status = conv.lastMessage!['isRead'] == true ? 'seen'.tr() : 'sent'.tr();
       }
     }
 
@@ -398,11 +399,11 @@ class _HomePageState extends State<HomePage> {
                 status,
                 style: TextStyle(
                   fontSize: 10,
-                  color: status == 'seen'
+                  color: status == 'seen'.tr()
                       ? Theme.of(context).primaryColor
                       : Colors.grey.shade500,
                   fontWeight:
-                      status == 'seen' ? FontWeight.bold : FontWeight.normal,
+                      status == 'seen'.tr() ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
             ),

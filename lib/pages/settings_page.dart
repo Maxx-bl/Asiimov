@@ -5,6 +5,8 @@ import 'close_friends_page.dart';
 import 'security_settings_page.dart';
 import 'notification_settings_page.dart';
 import 'blocked_users_page.dart';
+import 'language_settings_page.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -14,7 +16,7 @@ class SettingsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text('settings'.tr()),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -29,38 +31,44 @@ class SettingsPage extends StatelessWidget {
               const SizedBox(height: 10),
               
               SettingCategoryTile(
+                icon: Icons.language_outlined,
+                title: 'language'.tr().tr(),
+                destination: const LanguageSettingsPage(),
+              ),
+
+              SettingCategoryTile(
                 icon: Icons.palette_outlined,
-                title: 'Theme',
+                title: 'theme'.tr().tr(),
                 destination: const ThemeSettingsPage(),
               ),
               
               SettingCategoryTile(
                 icon: Icons.lock_person_outlined,
-                title: 'Privacy',
+                title: 'privacy'.tr().tr(),
                 destination: const PrivacySettingsPage(),
               ),
 
               SettingCategoryTile(
                 icon: Icons.people_alt_rounded,
-                title: 'Close Friends',
+                title: 'close_friends'.tr().tr(),
                 destination: const CloseFriendsPage(),
               ),
               
               SettingCategoryTile(
                 icon: Icons.security_outlined,
-                title: 'Security',
+                title: 'security'.tr().tr(),
                 destination: const SecuritySettingsPage(),
               ),
               
               SettingCategoryTile(
                 icon: Icons.notifications_none_rounded,
-                title: 'Notifications',
+                title: 'notifications'.tr().tr(),
                 destination: const NotificationSettingsPage(),
               ),
               
               SettingCategoryTile(
                 icon: Icons.block_flipped,
-                title: 'Blocked Users',
+                title: 'blocked_users'.tr().tr(),
                 destination: BlockedUsersPage(),
               ),
             ],

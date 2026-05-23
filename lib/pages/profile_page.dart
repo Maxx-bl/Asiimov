@@ -11,14 +11,17 @@ import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/pages/settings_page.dart';
 import 'package:asiimov/pages/admin_dashboard_page.dart';
 import 'package:asiimov/components/logout_confirmation_dialog.dart';
+import 'package:asiimov/components/report_reason_dialog.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/image/image_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ProfilePage extends StatefulWidget {
   final String userId;
@@ -188,13 +191,13 @@ class _ProfilePageState extends State<ProfilePage> {
         await _refreshData();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile picture deleted.')),
+            SnackBar(content: Text('profile_picture_deleted'.tr())),
           );
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to delete profile picture.')),
+            SnackBar(content: Text('failed_to_delete_profile_pictu'.tr())),
           );
         }
       }
@@ -208,24 +211,29 @@ class _ProfilePageState extends State<ProfilePage> {
       return;
     }
 
-    final url = await imageService.uploadProfilePicture(File(pickedFile.path));
+    try {
+      final url = await imageService.uploadProfilePicture(File(pickedFile.path));
 
-    // Pop loading dialog
-    if (mounted) Navigator.pop(context);
+      // Pop loading dialog
+      if (mounted) Navigator.pop(context);
 
-    if (url != null) {
-      // Invalidate cache and refresh
-      imageService.invalidateCache(currentUserId);
-      await _refreshData();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile picture updated!')),
-        );
+      if (url != null) {
+        // Invalidate cache and refresh
+        imageService.invalidateCache(currentUserId);
+        await _refreshData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('profile_picture_updated'.tr())),
+          );
+        }
       }
-    } else {
+    } catch (e) {
+      // Pop loading dialog
+      if (mounted) Navigator.pop(context);
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update profile picture.')),
+          SnackBar(content: Text('Failed to update profile picture: $e')),
         );
       }
     }
@@ -285,34 +293,34 @@ class _ProfilePageState extends State<ProfilePage> {
               itemBuilder: (BuildContext context) {
                 final isAdmin = userData?['isAdmin'] == true;
                 return [
-                  const PopupMenuItem<String>(
+                  PopupMenuItem<String>(
                     value: 'settings',
                     child: Row(
                       children: [
-                        Icon(Icons.settings, size: 20),
-                        SizedBox(width: 8),
-                        Text('Settings'),
+                        const Icon(Icons.settings, size: 20),
+                        const SizedBox(width: 8),
+                        Text('settings'.tr()),
                       ],
                     ),
                   ),
                   if (isAdmin)
-                    const PopupMenuItem<String>(
+                    PopupMenuItem<String>(
                       value: 'admin',
                       child: Row(
                         children: [
-                          Icon(Icons.admin_panel_settings, color: Colors.redAccent, size: 20),
-                          SizedBox(width: 8),
-                          Text('Admin Panel', style: TextStyle(color: Colors.redAccent)),
+                          const Icon(Icons.admin_panel_settings, color: Colors.redAccent, size: 20),
+                          const SizedBox(width: 8),
+                          Text('drawer_admin'.tr(), style: const TextStyle(color: Colors.redAccent)),
                         ],
                       ),
                     ),
-                  const PopupMenuItem<String>(
+                  PopupMenuItem<String>(
                     value: 'logout',
                     child: Row(
                       children: [
-                        Icon(Icons.logout, color: Colors.red, size: 20),
-                        SizedBox(width: 8),
-                        Text('Logout', style: TextStyle(color: Colors.red)),
+                        const Icon(Icons.logout, color: Colors.red, size: 20),
+                        const SizedBox(width: 8),
+                        Text('drawer_logout'.tr(), style: const TextStyle(color: Colors.red)),
                       ],
                     ),
                   ),
@@ -327,12 +335,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('Block User'),
+                      title: Text('block_user'.tr()),
                       content: Text('Are you sure you want to block @${widget.username}?'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
+                          child: Text('cancel'.tr()),
                         ),
                         TextButton(
                           onPressed: () async {
@@ -341,12 +349,12 @@ class _ProfilePageState extends State<ProfilePage> {
                             if (context.mounted) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('User blocked!')),
+                                SnackBar(content: Text('user_blocked'.tr())),
                               );
                               _refreshData();
                             }
                           },
-                          child: const Text('Block', style: TextStyle(color: Colors.red)),
+                          child: Text('Block', style: TextStyle(color: Colors.red)),
                         ),
                       ],
                     ),
@@ -356,35 +364,65 @@ class _ProfilePageState extends State<ProfilePage> {
                   await chatService.unblockUser(widget.userId);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('User unblocked.')),
+                      SnackBar(content: Text('user_unblocked_1'.tr())),
                     );
                     _refreshData();
+                  }
+                } else if (value == 'report') {
+                  final reason = await ReportReasonDialog.show(
+                    context,
+                    title: 'report_user'.tr(),
+                  );
+                  if (reason != null && reason.isNotEmpty && context.mounted) {
+                    final currentUsername =
+                        AuthService().getCurrentUser()?.displayName ?? 'Anonymous';
+                    await userService.reportUserProfile(
+                      reportedUserId: widget.userId,
+                      reportedUsername: widget.username,
+                      reason: reason,
+                      reporterUsername: currentUsername,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('user_reported'.tr())),
+                      );
+                    }
                   }
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                 if (isBlockedByMe)
-                  const PopupMenuItem<String>(
+                  PopupMenuItem<String>(
                     value: 'unblock',
                     child: Row(
                       children: [
-                        Icon(Icons.check_circle_outline, color: Colors.green, size: 20),
-                        SizedBox(width: 8),
-                        Text('Unblock User', style: TextStyle(color: Colors.green)),
+                        const Icon(Icons.check_circle_outline, color: Colors.green, size: 20),
+                        const SizedBox(width: 8),
+                        Text('unblock_user'.tr(), style: const TextStyle(color: Colors.green)),
                       ],
                     ),
                   )
                 else
-                  const PopupMenuItem<String>(
+                  PopupMenuItem<String>(
                     value: 'block',
                     child: Row(
                       children: [
-                        Icon(Icons.block, color: Colors.red, size: 20),
-                        SizedBox(width: 8),
-                        Text('Block User', style: TextStyle(color: Colors.red)),
+                        const Icon(Icons.block, color: Colors.red, size: 20),
+                        const SizedBox(width: 8),
+                        Text('block_user'.tr(), style: const TextStyle(color: Colors.red)),
                       ],
                     ),
                   ),
+                PopupMenuItem<String>(
+                  value: 'report',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.report_problem_outlined, color: Colors.orange, size: 20),
+                      const SizedBox(width: 8),
+                      Text('report_user'.tr(), style: const TextStyle(color: Colors.orange)),
+                    ],
+                  ),
+                ),
               ],
             ),
         ],
@@ -392,7 +430,7 @@ class _ProfilePageState extends State<ProfilePage> {
       body: RefreshIndicator(
         onRefresh: _refreshData,
         child: isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? Center(child: CircularProgressIndicator())
             : hasBlockedMe
                 ? Center(
                     child: Padding(
@@ -406,18 +444,18 @@ class _ProfilePageState extends State<ProfilePage> {
                             color: Colors.redAccent.withValues(alpha: 0.5),
                           ),
                           const SizedBox(height: 16),
-                          const Text(
-                            'This user blocked you',
-                            style: TextStyle(
+                          Text(
+                            'user_blocked_you'.tr(),
+                            style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'You cannot view this profile or follow this account.',
+                          Text(
+                            'cannot_view_profile'.tr(),
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                            style: const TextStyle(color: Colors.grey, fontSize: 14),
                           ),
                         ],
                       ),
@@ -436,18 +474,18 @@ class _ProfilePageState extends State<ProfilePage> {
                                 color: Theme.of(context).primaryColor.withValues(alpha: 0.5),
                               ),
                               const SizedBox(height: 16),
-                              const Text(
-                                'You blocked this user',
-                                style: TextStyle(
+                              Text(
+                                'you_blocked_user'.tr(),
+                                style: const TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              const Text(
-                                'You cannot view their posts or interact with them.',
+                              Text(
+                                'cannot_view_posts'.tr(),
                                 textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.grey, fontSize: 14),
+                                style: const TextStyle(color: Colors.grey, fontSize: 14),
                               ),
                               const SizedBox(height: 24),
                               ElevatedButton.icon(
@@ -456,13 +494,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                   await chatService.unblockUser(widget.userId);
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('User unblocked.')),
+                                      SnackBar(content: Text('unblock_user'.tr())),
                                     );
                                     _refreshData();
                                   }
                                 },
                                 icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-                                label: const Text('Unblock', style: TextStyle(fontWeight: FontWeight.bold)),
+                                label: Text('unblock'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Theme.of(context).primaryColor,
                                   foregroundColor: Colors.white,
@@ -475,7 +513,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       )
                     : userData == null
-                        ? const Center(child: Text('User not found.'))
+                        ? Center(child: Text('user_not_found'.tr()))
                         : SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     child: Column(
@@ -488,7 +526,60 @@ class _ProfilePageState extends State<ProfilePage> {
                           username: widget.username,
                           radius: 45,
                           showEditIcon: isOwnProfile,
-                          onTap: isOwnProfile ? () => _changeProfilePicture() : null,
+                          onTap: isOwnProfile
+                              ? () => _changeProfilePicture()
+                              : () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => Dialog(
+                                      backgroundColor: Colors.transparent,
+                                      elevation: 0,
+                                      child: GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: () => Navigator.pop(context),
+                                        child: FutureBuilder<String?>(
+                                          future: ImageService().getProfilePictureUrl(widget.userId),
+                                          builder: (context, snapshot) {
+                                            final url = snapshot.data;
+                                            final size = MediaQuery.of(context).size.width * 0.65;
+                                            if (url != null && url.isNotEmpty) {
+                                              return Center(
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(20),
+                                                  child: SizedBox(
+                                                    width: size,
+                                                    height: size,
+                                                    child: CachedNetworkImage(
+                                                      imageUrl: url,
+                                                      fit: BoxFit.cover,
+                                                      placeholder: (context, url) => Center(child: CircularProgressIndicator()),
+                                                      errorWidget: (context, url, error) => const Icon(Icons.error),
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            } else {
+                                              return Center(
+                                                child: CircleAvatar(
+                                                  radius: size / 2,
+                                                  backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                                                  child: Text(
+                                                    widget.username.isNotEmpty ? widget.username[0].toUpperCase() : '?',
+                                                    style: TextStyle(
+                                                      fontSize: size * 0.4,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Theme.of(context).primaryColor,
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
                         ),
 
                         const SizedBox(height: 12),
@@ -515,7 +606,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: Colors.redAccent, width: 1),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'Suspended',
                                   style: TextStyle(
                                     color: Colors.redAccent,
@@ -541,7 +632,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   MaterialPageRoute(
                                     builder: (context) => FollowListPage(
                                       userId: widget.userId,
-                                      title: 'Followers',
+                                      title: 'followers'.tr(),
                                       isFollowers: true,
                                     ),
                                   ),
@@ -557,7 +648,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                     ),
                                   ),
                                   Text(
-                                    'followers',
+                                    'followers'.tr(),
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Theme.of(context).colorScheme.primary,
@@ -579,7 +670,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   MaterialPageRoute(
                                     builder: (context) => FollowListPage(
                                       userId: widget.userId,
-                                      title: 'Following',
+                                      title: 'following'.tr(),
                                       isFollowers: false,
                                     ),
                                   ),
@@ -595,7 +686,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                     ),
                                   ),
                                   Text(
-                                    'following',
+                                    'following'.tr(),
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Theme.of(context).colorScheme.primary,
@@ -615,16 +706,16 @@ class _ProfilePageState extends State<ProfilePage> {
                             builder: (context) {
                               final isPublic = userData!['public_account'] ?? false;
 
-                              String buttonText = 'Follow';
+                              String buttonText = 'follow'.tr();
                               Color buttonColor = Theme.of(context).primaryColor;
                               Color textColor = Colors.white;
 
                               if (isFollowing) {
-                                buttonText = 'Unfollow';
+                                buttonText = 'unfollow'.tr();
                                 buttonColor = Theme.of(context).colorScheme.secondary;
                                 textColor = Theme.of(context).colorScheme.inversePrimary;
                               } else if (hasRequested) {
-                                buttonText = 'Requested';
+                                buttonText = 'requested'.tr();
                                 buttonColor = Theme.of(context).colorScheme.secondary;
                                 textColor = Theme.of(context).colorScheme.inversePrimary;
                               }
@@ -637,6 +728,26 @@ class _ProfilePageState extends State<ProfilePage> {
                                       child: ElevatedButton(
                                         onPressed: () async {
                                           if (isFollowing) {
+                                            if (!isPublic) {
+                                              final confirm = await showDialog<bool>(
+                                                context: context,
+                                                builder: (context) => AlertDialog(
+                                                  title: Text('unfollow_private_account'.tr()),
+                                                  content: Text('Are you sure you want to unfollow @${widget.username}? They will have to accept your request again if you want to follow them later.'),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () => Navigator.pop(context, false),
+                                                      child: Text('cancel'.tr()),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed: () => Navigator.pop(context, true),
+                                                      child: Text('Unfollow', style: TextStyle(color: Colors.red)),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                              if (confirm != true) return;
+                                            }
                                             await userService.unfollowUser(widget.userId);
                                           } else if (hasRequested) {
                                             await userService.cancelFollowRequest(widget.userId);
@@ -676,7 +787,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                         onPressed: () {
                                           if (!isPublic && !isFollowing) {
                                             ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('This account is private. Follow them to send messages.')),
+                                              SnackBar(content: Text('this_account_is_private_follow'.tr())),
                                             );
                                             return;
                                           }
@@ -721,7 +832,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   color: Colors.redAccent.withValues(alpha: 0.8),
                                 ),
                                 const SizedBox(height: 16),
-                                const Text(
+                                Text(
                                   'Account Suspended',
                                   style: TextStyle(
                                     fontSize: 20,
@@ -752,7 +863,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
                                 ),
                                 const SizedBox(height: 16),
-                                const Text(
+                                Text(
                                   'Private Account',
                                   style: TextStyle(
                                     fontSize: 20,

@@ -4,6 +4,7 @@ import 'package:asiimov/pages/main_scaffold.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class VerifyEmailPage extends StatefulWidget {
   const VerifyEmailPage({super.key});
@@ -101,7 +102,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
         startCooldown();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Verification email resent!')),
+            SnackBar(content: Text('verification_email_resent'.tr())),
           );
         }
       }
@@ -125,7 +126,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Verify Email'),
+        title: Text('verify_email'.tr()),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -140,7 +141,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
             children: [
               const AsiimovMonoLogo(),
               const SizedBox(height: 32),
-              const Text(
+              Text(
                 'Check your inbox',
                 style: TextStyle(
                   fontSize: 24,
@@ -158,12 +159,12 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                     color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
                   ),
                   children: [
-                    const TextSpan(text: 'We\'ve sent a verification link to\n'),
+                    TextSpan(text: 'We\'ve sent a verification link to\n'),
                     TextSpan(
                       text: email,
                       style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor),
                     ),
-                    const TextSpan(text: '\n\nPlease click the link to activate your account.'),
+                    TextSpan(text: 'nnplease_click_the_link_to_act'.tr().tr()),
                   ],
                 ),
               ),
@@ -238,7 +239,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                 style: TextButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
                 ),
-                child: const Text(
+                child: Text(
                   'Cancel & Sign Out',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),

@@ -5,6 +5,7 @@ import 'package:asiimov/pages/admin_dashboard_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class MyDrawer extends StatelessWidget {
   const MyDrawer({super.key});
@@ -30,7 +31,7 @@ class MyDrawer extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 25),
             child: ListTile(
-              title: const Text('P R O F I L E'),
+              title: Text('drawer_profile'.tr()),
               leading: const Icon(Icons.person),
               onTap: () {
                 Navigator.pop(context);
@@ -53,7 +54,7 @@ class MyDrawer extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 25),
             child: ListTile(
-              title: const Text('S E T T I N G S'),
+              title: Text('drawer_settings'.tr()),
               leading: const Icon(Icons.settings),
               onTap: () {
                 Navigator.pop(context);
@@ -84,7 +85,7 @@ class MyDrawer extends StatelessWidget {
                     return Padding(
                       padding: const EdgeInsets.only(left: 25),
                       child: ListTile(
-                        title: const Text('A D M I N   P A N E L'),
+                        title: Text('drawer_admin'.tr()),
                         leading: const Icon(Icons.admin_panel_settings, color: Colors.redAccent),
                         onTap: () {
                           Navigator.pop(context);
@@ -108,7 +109,7 @@ class MyDrawer extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 25, bottom: 25),
           child: ListTile(
-            title: const Text('L O G O U T'),
+            title: Text('drawer_logout'.tr()),
             leading: const Icon(Icons.logout),
             onTap: () {
               Navigator.pop(context);

@@ -45,12 +45,12 @@ class PostAttachmentViewer extends StatelessWidget {
                       placeholder: (context, url) => Center(
                         child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).primaryColor),
                       ),
-                      errorWidget: (context, url, error) => const Center(
+                      errorWidget: (context, url, error) => Center(
                         child: Icon(Icons.video_file, size: 40, color: Colors.grey),
                       ),
                     ),
                     Container(color: Colors.black26),
-                    const Center(
+                    Center(
                       child: CircleAvatar(
                         backgroundColor: Colors.black54,
                         radius: 24,
@@ -66,7 +66,7 @@ class PostAttachmentViewer extends StatelessWidget {
                           color: Colors.black54,
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text(
+                        child: Text(
                           'VIDEO',
                           style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                         ),
@@ -80,7 +80,7 @@ class PostAttachmentViewer extends StatelessWidget {
                   placeholder: (context, url) => Center(
                     child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).primaryColor),
                   ),
-                  errorWidget: (context, url, error) => const Center(
+                  errorWidget: (context, url, error) => Center(
                     child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
                   ),
                 ),
@@ -106,10 +106,10 @@ class PostAttachmentViewer extends StatelessWidget {
             imageUrl: url,
             fit: BoxFit.cover,
             placeholder: (context, url) => Container(color: Colors.black12),
-            errorWidget: (context, url, error) => const Center(child: Icon(Icons.video_file, color: Colors.grey)),
+            errorWidget: (context, url, error) => Center(child: Icon(Icons.video_file, color: Colors.grey)),
           ),
           Container(color: Colors.black26),
-          const Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 36)),
+          Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 36)),
         ],
       );
     } else {
@@ -117,7 +117,7 @@ class PostAttachmentViewer extends StatelessWidget {
         imageUrl: url,
         fit: BoxFit.cover,
         placeholder: (context, url) => Container(color: Colors.black12),
-        errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+        errorWidget: (context, url, error) => Center(child: Icon(Icons.broken_image, color: Colors.grey)),
       );
     }
 

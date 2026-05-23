@@ -4,6 +4,7 @@ import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/components/my_button.dart';
 import 'package:asiimov/components/my_textfield.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -49,7 +50,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     final String email = emailController.text.trim();
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your email address.')),
+        SnackBar(content: Text('please_enter_your_email_addres'.tr())),
       );
       return;
     }
@@ -59,8 +60,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       startCooldown();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password reset link sent! Check your inbox (and spam).'),
+          SnackBar(
+            content: Text('password_reset_link_sent_check'.tr()),
             backgroundColor: Colors.green,
           ),
         );
@@ -88,7 +89,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Reset Password'),
+        title: Text('reset_password'.tr()),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -104,7 +105,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               children: [
                 const AsiimovMonoLogo(),
                 const SizedBox(height: 32),
-                const Text(
+                Text(
                   'Forgot Password?',
                   style: TextStyle(
                     fontSize: 24,
@@ -163,7 +164,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 
                 // Email Field
                 MyTextField(
-                  hintText: 'Email',
+                  hintText: 'email'.tr(),
                   obscureText: false,
                   controller: emailController,
                 ),

@@ -12,6 +12,7 @@ import 'package:asiimov/services/post/post_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class CommentTile extends StatelessWidget {
   final Comment comment;
@@ -172,16 +173,16 @@ class CommentTile extends StatelessWidget {
                             final confirm = await showDialog<bool>(
                               context: context,
                               builder: (context) => AlertDialog(
-                                title: const Text('Delete Comment'),
-                                content: const Text('Are you sure you want to delete this comment?'),
+                                title: Text('delete_comment'.tr()),
+                                content: Text('are_you_sure_you_want_to_delet'.tr()),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context, false),
-                                    child: const Text('Cancel'),
+                                    child: Text('cancel'.tr()),
                                   ),
                                   TextButton(
                                     onPressed: () => Navigator.pop(context, true),
-                                    child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                    child: Text('Delete', style: TextStyle(color: Colors.red)),
                                   ),
                                 ],
                               ),
@@ -195,7 +196,7 @@ class CommentTile extends StatelessWidget {
                           } else if (value == 'report') {
                             final reason = await ReportReasonDialog.show(
                               context,
-                              title: 'Report Comment',
+                              title: 'report_comment'.tr(),
                             );
 
                             if (reason != null) {
@@ -213,8 +214,8 @@ class CommentTile extends StatelessWidget {
                                  );
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Comment successfully reported.'),
+                                    SnackBar(
+                                      content: Text('comment_successfully_reported'.tr()),
                                       backgroundColor: Colors.green,
                                     ),
                                   );
@@ -266,12 +267,12 @@ class CommentTile extends StatelessWidget {
                         final bool? shouldLeave = await showDialog<bool>(
                           context: context,
                           builder: (context) => AlertDialog(
-                            title: const Text('Leaving App'),
+                            title: Text('leaving_app'.tr()),
                             content: Text('This link will take you to an external website:\n\n${link.url}\n\nDo you want to continue?'),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancel'),
+                                child: Text('cancel'.tr()),
                               ),
                               TextButton(
                                 onPressed: () => Navigator.pop(context, true),
@@ -288,7 +289,7 @@ class CommentTile extends StatelessWidget {
                             debugPrint('Could not launch ${link.url}: $e');
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Could not open the link.')),
+                                SnackBar(content: Text('could_not_open_the_link'.tr())),
                               );
                             }
                           }
@@ -324,7 +325,7 @@ class CommentTile extends StatelessWidget {
                             backgroundColor: Colors.transparent,
                             builder: (context) => VotersListSheet(
                               userIds: comment.upvotes,
-                              title: 'Upvotes',
+                              title: 'upvotes'.tr(),
                             ),
                           );
                         },
@@ -357,7 +358,7 @@ class CommentTile extends StatelessWidget {
                             backgroundColor: Colors.transparent,
                             builder: (context) => VotersListSheet(
                               userIds: comment.downvotes,
-                              title: 'Downvotes',
+                              title: 'downvotes'.tr(),
                             ),
                           );
                         },
@@ -442,7 +443,7 @@ class CommentTile extends StatelessWidget {
                             backgroundColor: Colors.transparent,
                             builder: (context) => VotersListSheet(
                               userIds: comment.sharedBy,
-                              title: 'Shares',
+                              title: 'shares'.tr(),
                             ),
                           );
                         },

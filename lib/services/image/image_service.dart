@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ImageService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -87,7 +88,7 @@ class ImageService {
       final idToken = await user.getIdToken();
 
       // 3. Upload to Cloudflare Worker securely
-      final objectKey = 'profile_pictures/${user.uid}.jpg';
+      final objectKey = 'pfp/${user.uid}.jpg';
       final cleanWorkerUrl = _workerUrl.endsWith('/') 
           ? _workerUrl.substring(0, _workerUrl.length - 1) 
           : _workerUrl;
@@ -102,8 +103,9 @@ class ImageService {
       );
 
       if (response.statusCode != 200) {
-        debugPrint("Failed to upload to Worker: ${response.statusCode} - ${response.body}");
-        return null;
+        final errorMsg = "Failed to upload to Worker: ${response.statusCode} - ${response.body}";
+        debugPrint(errorMsg);
+        throw Exception(errorMsg);
       }
 
       // 4. Construct the public URL for downloading (via R2 CDN directly)
@@ -129,7 +131,7 @@ class ImageService {
       return downloadUrl;
     } catch (e) {
       debugPrint("Error uploading profile picture to R2: $e");
-      return null;
+      rethrow;
     }
   }
 
@@ -287,7 +289,7 @@ class ImageService {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Text(
+              Text(
                 'Change Profile Picture',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
@@ -297,7 +299,7 @@ class ImageService {
                   backgroundColor: Theme.of(context).primaryColor,
                   child: const Icon(Icons.camera_alt, color: Colors.white),
                 ),
-                title: const Text('Take a Photo'),
+                title: Text('take_a_photo'.tr()),
                 onTap: () => Navigator.pop(context, 'camera'),
               ),
               ListTile(
@@ -305,7 +307,7 @@ class ImageService {
                   backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                   child: const Icon(Icons.photo_library, color: Colors.white),
                 ),
-                title: const Text('Choose from Gallery'),
+                title: Text('choose_from_gallery'.tr()),
                 onTap: () => Navigator.pop(context, 'gallery'),
               ),
               if (showDeleteOption)
@@ -314,7 +316,7 @@ class ImageService {
                     backgroundColor: Colors.redAccent,
                     child: Icon(Icons.delete_outline, color: Colors.white),
                   ),
-                  title: const Text('Delete Current Photo', style: TextStyle(color: Colors.redAccent)),
+                  title: Text('Delete Current Photo', style: TextStyle(color: Colors.redAccent)),
                   onTap: () => Navigator.pop(context, 'delete'),
                 ),
             ],

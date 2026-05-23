@@ -1,0 +1,317 @@
+{
+  "Documents": {
+    "key": "documents",
+    "en": "Documents",
+    "fr": "Documents"
+  },
+  "theme": {
+    "key": "theme",
+    "en": "theme",
+    "fr": "theme"
+  },
+  "Cancel": {
+    "key": "cancel",
+    "en": "Cancel",
+    "fr": "Annuler"
+  },
+  "Cancel\")),\n            TextButton(\n              onPressed: _isNameValid(controller.text) \n                ? () async {\n                    final nav = Navigator.of(dialogContext);\n                    await _chatService.renameGroup(widget.groupId, controller.text.trim());\n                    if (mounted) nav.pop();\n                    setState(() {}); // Refresh\n                  }\n                : null,\n              child: const Text(\"Save": {
+    "key": "cancel_textbutton_onpressed_is",
+    "en": "Cancel\")),\n            TextButton(\n              onPressed: _isNameValid(controller.text) \n                ? () async {\n                    final nav = Navigator.of(dialogContext);\n                    await _chatService.renameGroup(widget.groupId, controller.text.trim());\n                    if (mounted) nav.pop();\n                    setState(() {}); // Refresh\n                  }\n                : null,\n              child: const Text(\"Save",
+    "fr": "Cancel\")),\n            TextButton(\n              onPressed: _isNameValid(controller.text) \n                ? () async {\n                    final nav = Navigator.of(dialogContext);\n                    await _chatService.renameGroup(widget.groupId, controller.text.trim());\n                    if (mounted) nav.pop();\n                    setState(() {}); // Refresh\n                  }\n                : null,\n              child: const Text(\"Save"
+  },
+  "security": {
+    "key": "security",
+    "en": "security",
+    "fr": "security"
+  },
+  "Shares": {
+    "key": "shares",
+    "en": "Shares",
+    "fr": "Partages"
+  },
+  "Suspended": {
+    "key": "suspended",
+    "en": "Suspended",
+    "fr": "Suspendus"
+  },
+  "privacy": {
+    "key": "privacy",
+    "en": "privacy",
+    "fr": "privacy"
+  },
+  "group_name": {
+    "key": "group_name",
+    "en": "group_name",
+    "fr": "group_name"
+  },
+  "Cancel\")),\n          TextButton(\n            onPressed: () async {\n              final nav = Navigator.of(dialogContext);\n              final doc = await FirebaseFirestore.instance.collection('chats').doc(widget.groupId).get();\n              final members = List<String>.from(doc.data()?['members'] ?? []);\n              final newMembers = members.where((m) => m != uid).toList();\n              \n              await _chatService.updateGroupMembers(widget.groupId, newMembers.where((m) => m != _currentUserId).toList());\n              if (mounted) nav.pop();\n            },\n            child: const Text(\"Remove\", style: TextStyle(color: Colors.red)),\n          ),\n        ],\n      ),\n    );\n  }\n\n  void _toggleMute(bool value) async {\n    setState(() => _isMuted = value);\n    await _chatService.toggleMuteGroup(widget.groupId, value);\n  }\n\n  void _leaveGroup() {\n    showDialog(\n      context: context,\n      builder: (dialogContext) => AlertDialog(\n        title: Text('leave_group'.tr()),\n        content: Text('are_you_sure_you_want_to_leave'.tr()),\n        actions: [\n          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text(\"Cancel": {
+    "key": "cancel_textbutton_onpressed_as",
+    "en": "Cancel\")),\n          TextButton(\n            onPressed: () async {\n              final nav = Navigator.of(dialogContext);\n              final doc = await FirebaseFirestore.instance.collection('chats').doc(widget.groupId).get();\n              final members = List<String>.from(doc.data()?['members'] ?? []);\n              final newMembers = members.where((m) => m != uid).toList();\n              \n              await _chatService.updateGroupMembers(widget.groupId, newMembers.where((m) => m != _currentUserId).toList());\n              if (mounted) nav.pop();\n            },\n            child: const Text(\"Remove\", style: TextStyle(color: Colors.red)),\n          ),\n        ],\n      ),\n    );\n  }\n\n  void _toggleMute(bool value) async {\n    setState(() => _isMuted = value);\n    await _chatService.toggleMuteGroup(widget.groupId, value);\n  }\n\n  void _leaveGroup() {\n    showDialog(\n      context: context,\n      builder: (dialogContext) => AlertDialog(\n        title: Text('leave_group'.tr()),\n        content: Text('are_you_sure_you_want_to_leave'.tr()),\n        actions: [\n          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text(\"Cancel",
+    "fr": "Cancel\")),\n          TextButton(\n            onPressed: () async {\n              final nav = Navigator.of(dialogContext);\n              final doc = await FirebaseFirestore.instance.collection('chats').doc(widget.groupId).get();\n              final members = List<String>.from(doc.data()?['members'] ?? []);\n              final newMembers = members.where((m) => m != uid).toList();\n              \n              await _chatService.updateGroupMembers(widget.groupId, newMembers.where((m) => m != _currentUserId).toList());\n              if (mounted) nav.pop();\n            },\n            child: const Text(\"Remove\", style: TextStyle(color: Colors.red)),\n          ),\n        ],\n      ),\n    );\n  }\n\n  void _toggleMute(bool value) async {\n    setState(() => _isMuted = value);\n    await _chatService.toggleMuteGroup(widget.groupId, value);\n  }\n\n  void _leaveGroup() {\n    showDialog(\n      context: context,\n      builder: (dialogContext) => AlertDialog(\n        title: Text('leave_group'.tr()),\n        content: Text('are_you_sure_you_want_to_leave'.tr()),\n        actions: [\n          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text(\"Cancel"
+  },
+  "Loading...": {
+    "key": "loading",
+    "en": "Loading...",
+    "fr": "Chargement..."
+  },
+  "Following": {
+    "key": "following",
+    "en": "Following",
+    "fr": "Abonnements"
+  },
+  "please_enter_the_6digit_verifi": {
+    "key": "please_enter_the_6digit_verifi",
+    "en": "please_enter_the_6digit_verifi",
+    "fr": "please_enter_the_6digit_verifi"
+  },
+  "nnplease_click_the_link_to_act": {
+    "key": "nnplease_click_the_link_to_act",
+    "en": "nnplease_click_the_link_to_act",
+    "fr": "nnplease_click_the_link_to_act"
+  },
+  "Feed": {
+    "key": "feed",
+    "en": "Feed",
+    "fr": "Fil d'actualité"
+  },
+  "Verify": {
+    "key": "verify",
+    "en": "Verify",
+    "fr": "Vérifier"
+  },
+  "Private messages and group chats": {
+    "key": "private_messages_and_group_cha",
+    "en": "Private messages and group chats",
+    "fr": "Messages privés et de groupe"
+  },
+  "History": {
+    "key": "history",
+    "en": "History",
+    "fr": "Historique"
+  },
+  "notifications": {
+    "key": "notifications",
+    "en": "notifications",
+    "fr": "notifications"
+  },
+  "search_user": {
+    "key": "search_user",
+    "en": "search_user",
+    "fr": "search_user"
+  },
+  "Dismiss": {
+    "key": "dismiss",
+    "en": "Dismiss",
+    "fr": "Ignorer"
+  },
+  "FFFFFF": {
+    "key": "ffffff",
+    "en": "FFFFFF",
+    "fr": "FFFFFF"
+  },
+  "Confirm": {
+    "key": "confirm",
+    "en": "Confirm",
+    "fr": "Confirmer"
+  },
+  "Reinstate": {
+    "key": "reinstate",
+    "en": "Reinstate",
+    "fr": "Rétablir"
+  },
+  "Report Post": {
+    "key": "report_post",
+    "en": "Report Post",
+    "fr": "Signaler le post"
+  },
+  "6digit_code": {
+    "key": "6digit_code",
+    "en": "6digit_code",
+    "fr": "6digit_code"
+  },
+  "Users": {
+    "key": "users",
+    "en": "Users",
+    "fr": "Utilisateurs"
+  },
+  "Followers": {
+    "key": "followers",
+    "en": "Followers",
+    "fr": "Abonnés"
+  },
+  "describe_the_issue": {
+    "key": "describe_the_issue",
+    "en": "describe_the_issue",
+    "fr": "describe_the_issue"
+  },
+  "Upvotes": {
+    "key": "upvotes",
+    "en": "Upvotes",
+    "fr": "Votes positifs"
+  },
+  "Post": {
+    "key": "post",
+    "en": "Post",
+    "fr": "Publier"
+  },
+  "Theme": {
+    "key": "theme",
+    "en": "Theme",
+    "fr": "Thème"
+  },
+  "Refresh": {
+    "key": "refresh",
+    "en": "Refresh",
+    "fr": "Actualiser"
+  },
+  "Français": {
+    "key": "fran_ais",
+    "en": "Français",
+    "fr": "Français"
+  },
+  "English": {
+    "key": "english",
+    "en": "English",
+    "fr": "Anglais"
+  },
+  "Leave Group\",\n          ),\n        ],\n      ),\n      body: StreamBuilder<DocumentSnapshot>(\n        stream: FirebaseFirestore.instance.collection('chats').doc(widget.groupId).snapshots(),\n        builder: (context, snapshot) {\n          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());\n          \n          final data = snapshot.data!.data() as Map<String, dynamic>?;\n          if (data == null) return Center(child: Text('group_not_found'.tr()));\n\n          final name = data['groupName'] ?? widget.groupName;\n          final creatorId = data['creatorId'] ?? widget.creatorId;\n          final members = List<String>.from(data['members'] ?? []);\n          final groupIconUrl = data['groupIconUrl'] as String?;\n          final isAdmin = _currentUserId == creatorId;\n\n          return ListView(\n            padding: const EdgeInsets.all(16),\n            children: [\n              // Group Header\n              Center(\n                child: Column(\n                  children: [\n                    GestureDetector(\n                      onTap: isAdmin ? () => _changeGroupPicture(groupIconUrl) : null,\n                      child: Stack(\n                        alignment: Alignment.bottomRight,\n                        children: [\n                          GroupIcon(size: 80, imageUrl: groupIconUrl),\n                          if (isAdmin)\n                            Container(\n                              padding: const EdgeInsets.all(4),\n                              decoration: BoxDecoration(\n                                color: Theme.of(context).primaryColor,\n                                shape: BoxShape.circle,\n                              ),\n                              child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),\n                            ),\n                        ],\n                      ),\n                    ),\n                    const SizedBox(height: 16),\n                    Row(\n                      mainAxisAlignment: MainAxisAlignment.center,\n                      children: [\n                        Expanded(\n                          child: Text(\n                            name,\n                            textAlign: TextAlign.center,\n                            overflow: TextOverflow.ellipsis,\n                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),\n                          ),\n                        ),\n                        if (isAdmin)\n                          IconButton(\n                            onPressed: _renameGroup,\n                            icon: const Icon(Icons.edit, size: 20),\n                          ),\n                      ],\n                    ),\n                    Text(\n                      ": {
+    "key": "leave_group_body_streambuilder",
+    "en": "Leave Group\",\n          ),\n        ],\n      ),\n      body: StreamBuilder<DocumentSnapshot>(\n        stream: FirebaseFirestore.instance.collection('chats').doc(widget.groupId).snapshots(),\n        builder: (context, snapshot) {\n          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());\n          \n          final data = snapshot.data!.data() as Map<String, dynamic>?;\n          if (data == null) return Center(child: Text('group_not_found'.tr()));\n\n          final name = data['groupName'] ?? widget.groupName;\n          final creatorId = data['creatorId'] ?? widget.creatorId;\n          final members = List<String>.from(data['members'] ?? []);\n          final groupIconUrl = data['groupIconUrl'] as String?;\n          final isAdmin = _currentUserId == creatorId;\n\n          return ListView(\n            padding: const EdgeInsets.all(16),\n            children: [\n              // Group Header\n              Center(\n                child: Column(\n                  children: [\n                    GestureDetector(\n                      onTap: isAdmin ? () => _changeGroupPicture(groupIconUrl) : null,\n                      child: Stack(\n                        alignment: Alignment.bottomRight,\n                        children: [\n                          GroupIcon(size: 80, imageUrl: groupIconUrl),\n                          if (isAdmin)\n                            Container(\n                              padding: const EdgeInsets.all(4),\n                              decoration: BoxDecoration(\n                                color: Theme.of(context).primaryColor,\n                                shape: BoxShape.circle,\n                              ),\n                              child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),\n                            ),\n                        ],\n                      ),\n                    ),\n                    const SizedBox(height: 16),\n                    Row(\n                      mainAxisAlignment: MainAxisAlignment.center,\n                      children: [\n                        Expanded(\n                          child: Text(\n                            name,\n                            textAlign: TextAlign.center,\n                            overflow: TextOverflow.ellipsis,\n                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),\n                          ),\n                        ),\n                        if (isAdmin)\n                          IconButton(\n                            onPressed: _renameGroup,\n                            icon: const Icon(Icons.edit, size: 20),\n                          ),\n                      ],\n                    ),\n                    Text(\n                      ",
+    "fr": "Leave Group\",\n          ),\n        ],\n      ),\n      body: StreamBuilder<DocumentSnapshot>(\n        stream: FirebaseFirestore.instance.collection('chats').doc(widget.groupId).snapshots(),\n        builder: (context, snapshot) {\n          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());\n          \n          final data = snapshot.data!.data() as Map<String, dynamic>?;\n          if (data == null) return Center(child: Text('group_not_found'.tr()));\n\n          final name = data['groupName'] ?? widget.groupName;\n          final creatorId = data['creatorId'] ?? widget.creatorId;\n          final members = List<String>.from(data['members'] ?? []);\n          final groupIconUrl = data['groupIconUrl'] as String?;\n          final isAdmin = _currentUserId == creatorId;\n\n          return ListView(\n            padding: const EdgeInsets.all(16),\n            children: [\n              // Group Header\n              Center(\n                child: Column(\n                  children: [\n                    GestureDetector(\n                      onTap: isAdmin ? () => _changeGroupPicture(groupIconUrl) : null,\n                      child: Stack(\n                        alignment: Alignment.bottomRight,\n                        children: [\n                          GroupIcon(size: 80, imageUrl: groupIconUrl),\n                          if (isAdmin)\n                            Container(\n                              padding: const EdgeInsets.all(4),\n                              decoration: BoxDecoration(\n                                color: Theme.of(context).primaryColor,\n                                shape: BoxShape.circle,\n                              ),\n                              child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),\n                            ),\n                        ],\n                      ),\n                    ),\n                    const SizedBox(height: 16),\n                    Row(\n                      mainAxisAlignment: MainAxisAlignment.center,\n                      children: [\n                        Expanded(\n                          child: Text(\n                            name,\n                            textAlign: TextAlign.center,\n                            overflow: TextOverflow.ellipsis,\n                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),\n                          ),\n                        ),\n                        if (isAdmin)\n                          IconButton(\n                            onPressed: _renameGroup,\n                            icon: const Icon(Icons.edit, size: 20),\n                          ),\n                      ],\n                    ),\n                    Text(\n                      "
+  },
+  "New followers and follow requests": {
+    "key": "new_followers_and_follow_reque",
+    "en": "New followers and follow requests",
+    "fr": "Nouveaux abonnés et requêtes"
+  },
+  "Downvotes": {
+    "key": "downvotes",
+    "en": "Downvotes",
+    "fr": "Votes négatifs"
+  },
+  "add_a_comment": {
+    "key": "add_a_comment",
+    "en": "add_a_comment",
+    "fr": "add_a_comment"
+  },
+  "language": {
+    "key": "language",
+    "en": "language",
+    "fr": "language"
+  },
+  "new_name": {
+    "key": "new_name",
+    "en": "new_name",
+    "fr": "new_name"
+  },
+  "Report User": {
+    "key": "report_user",
+    "en": "Report User",
+    "fr": "Signaler l'utilisateur"
+  },
+  "Email": {
+    "key": "email",
+    "en": "Email",
+    "fr": "Email"
+  },
+  "Settings\", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),\n              const SizedBox(height: 8),\n              SwitchListTile(\n                title: Text('mute_notifications'.tr()),\n                value: _isMuted,\n                onChanged: _toggleMute,\n                activeThumbColor: Theme.of(context).primaryColor,\n              ),\n              \n              const SizedBox(height: 32),\n\n              // Members Section\n              Row(\n                mainAxisAlignment: MainAxisAlignment.spaceBetween,\n                children: [\n                  const Text(\"Members\", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),\n                  if (isAdmin)\n                    TextButton.icon(\n                      onPressed: () {\n                        showModalBottomSheet(\n                          context: context,\n                          isScrollControlled: true,\n                          backgroundColor: Colors.transparent,\n                          builder: (context) => AddMembersSheet(\n                            groupId: widget.groupId,\n                            existingMemberIds: members,\n                          ),\n                        );\n                      },\n                      icon: const Icon(Icons.person_add, size: 18),\n                      label: const Text(\"Add": {
+    "key": "settings_style_textstyle_fontw",
+    "en": "Settings\", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),\n              const SizedBox(height: 8),\n              SwitchListTile(\n                title: Text('mute_notifications'.tr()),\n                value: _isMuted,\n                onChanged: _toggleMute,\n                activeThumbColor: Theme.of(context).primaryColor,\n              ),\n              \n              const SizedBox(height: 32),\n\n              // Members Section\n              Row(\n                mainAxisAlignment: MainAxisAlignment.spaceBetween,\n                children: [\n                  const Text(\"Members\", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),\n                  if (isAdmin)\n                    TextButton.icon(\n                      onPressed: () {\n                        showModalBottomSheet(\n                          context: context,\n                          isScrollControlled: true,\n                          backgroundColor: Colors.transparent,\n                          builder: (context) => AddMembersSheet(\n                            groupId: widget.groupId,\n                            existingMemberIds: members,\n                          ),\n                        );\n                      },\n                      icon: const Icon(Icons.person_add, size: 18),\n                      label: const Text(\"Add",
+    "fr": "Settings\", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),\n              const SizedBox(height: 8),\n              SwitchListTile(\n                title: Text('mute_notifications'.tr()),\n                value: _isMuted,\n                onChanged: _toggleMute,\n                activeThumbColor: Theme.of(context).primaryColor,\n              ),\n              \n              const SizedBox(height: 32),\n\n              // Members Section\n              Row(\n                mainAxisAlignment: MainAxisAlignment.spaceBetween,\n                children: [\n                  const Text(\"Members\", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),\n                  if (isAdmin)\n                    TextButton.icon(\n                      onPressed: () {\n                        showModalBottomSheet(\n                          context: context,\n                          isScrollControlled: true,\n                          backgroundColor: Colors.transparent,\n                          builder: (context) => AddMembersSheet(\n                            groupId: widget.groupId,\n                            existingMemberIds: members,\n                          ),\n                        );\n                      },\n                      icon: const Icon(Icons.person_add, size: 18),\n                      label: const Text(\"Add"
+  },
+  "enter_reason_eg_harassment_spa": {
+    "key": "enter_reason_eg_harassment_spa",
+    "en": "enter_reason_eg_harassment_spa",
+    "fr": "enter_reason_eg_harassment_spa"
+  },
+  "Report Message": {
+    "key": "report_message",
+    "en": "Report Message",
+    "fr": "Signaler le message"
+  },
+  "Report Comment": {
+    "key": "report_comment",
+    "en": "Report Comment",
+    "fr": "Signaler le commentaire"
+  },
+  "Security": {
+    "key": "security",
+    "en": "Security",
+    "fr": "Sécurité"
+  },
+  "close_friends": {
+    "key": "close_friends",
+    "en": "close_friends",
+    "fr": "close_friends"
+  },
+  "Comments": {
+    "key": "comments",
+    "en": "Comments",
+    "fr": "Commentaires"
+  },
+  "search_user_by_username": {
+    "key": "search_user_by_username",
+    "en": "search_user_by_username",
+    "fr": "search_user_by_username"
+  },
+  "Profile": {
+    "key": "profile",
+    "en": "Profile",
+    "fr": "Profil"
+  },
+  "Reports": {
+    "key": "reports",
+    "en": "Reports",
+    "fr": "Signalements"
+  },
+  "Messages": {
+    "key": "messages",
+    "en": "Messages",
+    "fr": "Messages"
+  },
+  "Privacy": {
+    "key": "privacy",
+    "en": "Privacy",
+    "fr": "Confidentialité"
+  },
+  "whats_on_your_mind": {
+    "key": "whats_on_your_mind",
+    "en": "whats_on_your_mind",
+    "fr": "whats_on_your_mind"
+  },
+  "blocked_users": {
+    "key": "blocked_users",
+    "en": "blocked_users",
+    "fr": "blocked_users"
+  },
+  "Groups\", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),\n                ),\n                ...groups.map((g) => _buildUserTile(g, _selectedGroupIds.contains(g['uid']), isGroup: true)),\n                const Divider(),\n              ],\n            );\n          },\n        ),\n        // Users section\n        Expanded(\n          child: StreamBuilder<List<Map<String, dynamic>>>(\n            stream: _recentChatsStream,\n            builder: (context, snapshot) {\n              if (snapshot.connectionState == ConnectionState.waiting) {\n                return Center(child: CircularProgressIndicator());\n              }\n\n              final users = snapshot.data ?? [];\n              if (users.isEmpty && _selectedGroupIds.isEmpty) {\n                return Center(child: Text('no_recent_chats'.tr()));\n              }\n\n              return ListView.builder(\n                itemCount: users.length,\n                itemBuilder: (context, index) {\n                  final user = users[index];\n                  final userId = user['uid'];\n                  final isSelected = _selectedUserIds.contains(userId);\n\n                  return _buildUserTile(user, isSelected);\n                },\n              );\n            },\n          ),\n        ),\n      ],\n    );\n  }\n\n  Widget _buildSearchList() {\n    return StreamBuilder<List<Map<String, dynamic>>>(\n      stream: _allUsersStream,\n      builder: (context, snapshot) {\n        if (snapshot.connectionState == ConnectionState.waiting) {\n          return Center(child: CircularProgressIndicator());\n        }\n\n        final users = (snapshot.data ?? []).where((user) {\n          final username = user['username']?.toString().toLowerCase() ?? \"\";\n          return username.contains(_searchQuery);\n        }).toList();\n\n        if (users.isEmpty) {\n          return Center(child: Text('no_user_found'.tr()));\n        }\n\n        return ListView.builder(\n          itemCount: users.length,\n          itemBuilder: (context, index) {\n            final user = users[index];\n            final userId = user['uid'];\n            final isSelected = _selectedUserIds.contains(userId);\n\n            return _buildUserTile(user, isSelected);\n          },\n        );\n      },\n    );\n  }\n\n  Widget _buildUserTile(Map<String, dynamic> user, bool isSelected, {bool isGroup = false}) {\n    final id = user['uid'];\n    final name = user['username'] ?? (isGroup ? \"Group\" : \"Anonymous": {
+    "key": "groups_style_textstyle_fontwei",
+    "en": "Groups\", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),\n                ),\n                ...groups.map((g) => _buildUserTile(g, _selectedGroupIds.contains(g['uid']), isGroup: true)),\n                const Divider(),\n              ],\n            );\n          },\n        ),\n        // Users section\n        Expanded(\n          child: StreamBuilder<List<Map<String, dynamic>>>(\n            stream: _recentChatsStream,\n            builder: (context, snapshot) {\n              if (snapshot.connectionState == ConnectionState.waiting) {\n                return Center(child: CircularProgressIndicator());\n              }\n\n              final users = snapshot.data ?? [];\n              if (users.isEmpty && _selectedGroupIds.isEmpty) {\n                return Center(child: Text('no_recent_chats'.tr()));\n              }\n\n              return ListView.builder(\n                itemCount: users.length,\n                itemBuilder: (context, index) {\n                  final user = users[index];\n                  final userId = user['uid'];\n                  final isSelected = _selectedUserIds.contains(userId);\n\n                  return _buildUserTile(user, isSelected);\n                },\n              );\n            },\n          ),\n        ),\n      ],\n    );\n  }\n\n  Widget _buildSearchList() {\n    return StreamBuilder<List<Map<String, dynamic>>>(\n      stream: _allUsersStream,\n      builder: (context, snapshot) {\n        if (snapshot.connectionState == ConnectionState.waiting) {\n          return Center(child: CircularProgressIndicator());\n        }\n\n        final users = (snapshot.data ?? []).where((user) {\n          final username = user['username']?.toString().toLowerCase() ?? \"\";\n          return username.contains(_searchQuery);\n        }).toList();\n\n        if (users.isEmpty) {\n          return Center(child: Text('no_user_found'.tr()));\n        }\n\n        return ListView.builder(\n          itemCount: users.length,\n          itemBuilder: (context, index) {\n            final user = users[index];\n            final userId = user['uid'];\n            final isSelected = _selectedUserIds.contains(userId);\n\n            return _buildUserTile(user, isSelected);\n          },\n        );\n      },\n    );\n  }\n\n  Widget _buildUserTile(Map<String, dynamic> user, bool isSelected, {bool isGroup = false}) {\n    final id = user['uid'];\n    final name = user['username'] ?? (isGroup ? \"Group\" : \"Anonymous",
+    "fr": "Groups\", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),\n                ),\n                ...groups.map((g) => _buildUserTile(g, _selectedGroupIds.contains(g['uid']), isGroup: true)),\n                const Divider(),\n              ],\n            );\n          },\n        ),\n        // Users section\n        Expanded(\n          child: StreamBuilder<List<Map<String, dynamic>>>(\n            stream: _recentChatsStream,\n            builder: (context, snapshot) {\n              if (snapshot.connectionState == ConnectionState.waiting) {\n                return Center(child: CircularProgressIndicator());\n              }\n\n              final users = snapshot.data ?? [];\n              if (users.isEmpty && _selectedGroupIds.isEmpty) {\n                return Center(child: Text('no_recent_chats'.tr()));\n              }\n\n              return ListView.builder(\n                itemCount: users.length,\n                itemBuilder: (context, index) {\n                  final user = users[index];\n                  final userId = user['uid'];\n                  final isSelected = _selectedUserIds.contains(userId);\n\n                  return _buildUserTile(user, isSelected);\n                },\n              );\n            },\n          ),\n        ),\n      ],\n    );\n  }\n\n  Widget _buildSearchList() {\n    return StreamBuilder<List<Map<String, dynamic>>>(\n      stream: _allUsersStream,\n      builder: (context, snapshot) {\n        if (snapshot.connectionState == ConnectionState.waiting) {\n          return Center(child: CircularProgressIndicator());\n        }\n\n        final users = (snapshot.data ?? []).where((user) {\n          final username = user['username']?.toString().toLowerCase() ?? \"\";\n          return username.contains(_searchQuery);\n        }).toList();\n\n        if (users.isEmpty) {\n          return Center(child: Text('no_user_found'.tr()));\n        }\n\n        return ListView.builder(\n          itemCount: users.length,\n          itemBuilder: (context, index) {\n            final user = users[index];\n            final userId = user['uid'];\n            final isSelected = _selectedUserIds.contains(userId);\n\n            return _buildUserTile(user, isSelected);\n          },\n        );\n      },\n    );\n  }\n\n  Widget _buildUserTile(Map<String, dynamic> user, bool isSelected, {bool isGroup = false}) {\n    final id = user['uid'];\n    final name = user['username'] ?? (isGroup ? \"Group\" : \"Anonymous"
+  },
+  "search_following": {
+    "key": "search_following",
+    "en": "search_following",
+    "fr": "search_following"
+  },
+  "eg_inappropriate_content_hate_": {
+    "key": "eg_inappropriate_content_hate",
+    "en": "eg_inappropriate_content_hate_",
+    "fr": "eg_inappropriate_content_hate_"
+  },
+  "Error": {
+    "key": "error",
+    "en": "Error",
+    "fr": "Erreur"
+  },
+  "Comments on your posts": {
+    "key": "comments_on_your_posts",
+    "en": "Comments on your posts",
+    "fr": "Commentaires sur vos posts"
+  },
+  "Notifications": {
+    "key": "notifications",
+    "en": "Notifications",
+    "fr": "Notifications"
+  }
+}

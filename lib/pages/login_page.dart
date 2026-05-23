@@ -4,6 +4,7 @@ import 'package:asiimov/components/my_button.dart';
 import 'package:asiimov/components/my_textfield.dart';
 import 'package:asiimov/pages/forgot_password_page.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class LoginPage extends StatelessWidget {
   //text controllers
@@ -24,7 +25,7 @@ class LoginPage extends StatelessWidget {
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Login successful!")),
+        SnackBar(content: Text("login_success".tr())),
       );
     } catch (e) {
       final error = e.toString().replaceFirst('Exception: ', '');
@@ -66,7 +67,7 @@ class LoginPage extends StatelessWidget {
               const SizedBox(height: 50),
 
               //text
-              Text("Login",
+              Text("login".tr(),
                   style: TextStyle(
                       fontSize: 24,
                       color: Theme.of(context).colorScheme.primary)),
@@ -75,7 +76,7 @@ class LoginPage extends StatelessWidget {
 
               //email field
               MyTextField(
-                  hintText: "Email",
+                  hintText: "email".tr(),
                   obscureText: false,
                   controller: emailController),
 
@@ -83,7 +84,7 @@ class LoginPage extends StatelessWidget {
 
               //password field
               MyTextField(
-                  hintText: "Password",
+                  hintText: "password".tr(),
                   obscureText: true,
                   canToggleVisibility: true,
                   controller: passwordController),
@@ -92,7 +93,7 @@ class LoginPage extends StatelessWidget {
 
               //login button
               MyButton(
-                text: "Go!",
+                text: "go".tr(),
                 onTap: () => login(context),
               ),
 
@@ -101,13 +102,13 @@ class LoginPage extends StatelessWidget {
               //register text
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 Text(
-                  "Don't have an account? ",
+                  "no_account".tr(),
                   style:
                       TextStyle(color: Theme.of(context).colorScheme.primary),
                 ),
                 GestureDetector(
                   onTap: onTap,
-                  child: Text("Register now!",
+                  child: Text("register_now".tr(),
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.primary)),
@@ -127,7 +128,7 @@ class LoginPage extends StatelessWidget {
                   );
                 },
                 child: Text(
-                  "Forgot Password?",
+                  "forgot_password".tr(),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),

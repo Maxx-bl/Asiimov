@@ -7,6 +7,7 @@ import 'package:asiimov/components/my_textfield.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class TwoFactorVerificationPage extends StatefulWidget {
   const TwoFactorVerificationPage({super.key});
@@ -101,7 +102,7 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
     final inputCode = codeController.text.trim();
     if (inputCode.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the 6-digit code.')),
+        SnackBar(content: Text('please_enter_the_6digit_code'.tr())),
       );
       return;
     }
@@ -167,7 +168,7 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('2FA Verification'),
+        title: Text('2fa_verification'.tr()),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -183,7 +184,7 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
               children: [
                 const AsiimovMonoLogo(),
                 const SizedBox(height: 32),
-                const Text(
+                Text(
                   'Two-Factor Auth',
                   style: TextStyle(
                     fontSize: 24,
@@ -201,7 +202,7 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
                       color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
                     ),
                     children: [
-                      const TextSpan(text: 'Please enter the 6-digit verification code sent to\n'),
+                      TextSpan(text: 'please_enter_the_6digit_verifi'.tr().tr()),
                       TextSpan(
                         text: email,
                         style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor),
@@ -250,7 +251,7 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
                 
                 // Code Input
                 MyTextField(
-                  hintText: '6-digit Code',
+                  hintText: '6digit_code'.tr().tr(),
                   obscureText: false,
                   controller: codeController,
                 ),
@@ -261,9 +262,9 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
                 SizedBox(
                   width: double.infinity,
                   child: isLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? Center(child: CircularProgressIndicator())
                       : MyButton(
-                          text: 'Verify',
+                          text: 'verify'.tr(),
                           onTap: verifyCode,
                         ),
                 ),
@@ -292,7 +293,7 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
                   style: TextButton.styleFrom(
                     foregroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Cancel & Sign Out',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),

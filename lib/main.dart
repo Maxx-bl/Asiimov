@@ -13,12 +13,13 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
-
+import 'package:easy_localization/easy_localization.dart';
 /// Global navigator key for navigating from notification taps
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
 
   try {
     await dotenv.load(fileName: "assets/env");
@@ -115,10 +116,18 @@ Future<void> main() async {
       }
     };
 
-    runApp(ChangeNotifierProvider(
-      create: (context) => ThemeProvider(),
-      child: const MyApp(),
-    ));
+    runApp(
+      ChangeNotifierProvider(
+        create: (context) => ThemeProvider(),
+        child: EasyLocalization(
+          supportedLocales: const [Locale('en'), Locale('fr')],
+          path: 'assets/translations',
+          fallbackLocale: const Locale('en'),
+          startLocale: const Locale('en'),
+          child: const MyApp(),
+        ),
+      ),
+    );
   } catch (e, stackTrace) {
     runApp(MaterialApp(
       home: Scaffold(
@@ -145,6 +154,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      localizationsDelegates: context.localizationDelegates,
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       home: const AuthGate(),

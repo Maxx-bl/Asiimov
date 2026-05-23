@@ -4,6 +4,7 @@ import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class AddMembersSheet extends StatefulWidget {
   final String groupId;
@@ -104,7 +105,7 @@ class _AddMembersSheetState extends State<AddMembersSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 "Add Members",
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
@@ -120,7 +121,7 @@ class _AddMembersSheetState extends State<AddMembersSheet> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: "Search following...",
+              hintText: 'search_following'.tr().tr(),
               prefixIcon: const Icon(Icons.search),
               filled: true,
               fillColor: Theme.of(context).colorScheme.secondary,
@@ -136,9 +137,9 @@ class _AddMembersSheetState extends State<AddMembersSheet> {
           // User List
           Expanded(
             child: _isLoading 
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator())
                 : availableUsers.isEmpty
-                    ? const Center(child: Text("No more followers to add."))
+                    ? Center(child: Text('no_more_followers_to_add'.tr()))
                     : ListView.builder(
                         itemCount: availableUsers.length,
                         itemBuilder: (context, index) {

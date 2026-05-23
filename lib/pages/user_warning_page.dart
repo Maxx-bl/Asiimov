@@ -56,7 +56,7 @@ class UserWarningPage extends StatelessWidget {
                       const SizedBox(height: 24),
 
                       // Warning Title
-                      const Text(
+                      Text(
                         'Content Moderation Notice',
                         style: TextStyle(
                           fontSize: 22,
@@ -93,7 +93,7 @@ class UserWarningPage extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'MODERATED ITEM',
                               style: TextStyle(
                                 fontSize: 10,
@@ -111,7 +111,7 @@ class UserWarningPage extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            const Text(
+                            Text(
                               'REASON FOR REMOVAL',
                               style: TextStyle(
                                 fontSize: 10,
@@ -149,7 +149,7 @@ class UserWarningPage extends StatelessWidget {
                             ),
                             elevation: 2,
                           ),
-                          child: const Text(
+                          child: Text(
                             'I Understand & Accept',
                             style: TextStyle(
                               fontSize: 16,

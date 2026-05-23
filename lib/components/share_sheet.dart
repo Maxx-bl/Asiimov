@@ -6,6 +6,7 @@ import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ShareSheet extends StatefulWidget {
   final Post post;
@@ -128,7 +129,7 @@ class _ShareSheetState extends State<ShareSheet> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: "Search user...",
+              hintText: 'search_user'.tr().tr(),
               prefixIcon: const Icon(Icons.search),
               filled: true,
               fillColor: Theme.of(context).colorScheme.secondary,
@@ -204,12 +205,12 @@ class _ShareSheetState extends State<ShareSheet> {
             stream: _recentChatsStream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(child: CircularProgressIndicator());
               }
 
               final users = snapshot.data ?? [];
               if (users.isEmpty && _selectedGroupIds.isEmpty) {
-                return const Center(child: Text("No recent chats"));
+                return Center(child: Text('no_recent_chats'.tr()));
               }
 
               return ListView.builder(
@@ -234,7 +235,7 @@ class _ShareSheetState extends State<ShareSheet> {
       stream: _allUsersStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         }
 
         final users = (snapshot.data ?? []).where((user) {
@@ -243,7 +244,7 @@ class _ShareSheetState extends State<ShareSheet> {
         }).toList();
 
         if (users.isEmpty) {
-          return const Center(child: Text("No user found"));
+          return Center(child: Text('no_user_found'.tr()));
         }
 
         return ListView.builder(

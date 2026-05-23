@@ -23,6 +23,10 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
   VideoPlayerController? _videoController;
 
   late AnimationController _animationController;
+  Future<void>? _startRecordingFuture;
+  
+  Timer? _longPressTimer;
+  bool _isPressed = false;
 
   @override
   void initState() {
@@ -72,6 +76,7 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
 
     try {
       await newController.initialize();
+      await newController.prepareForVideoRecording();
       if (mounted) {
         setState(() {
           _controller = newController;
@@ -90,6 +95,38 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
     await _setupCameraController(_cameras[_selectedCameraIndex]);
   }
 
+  void _handleTapDown(TapDownDetails details) {
+    if (_isRecording || _capturedFile != null) return;
+    setState(() => _isPressed = true);
+    
+    // Start video recording after a shorter delay than standard long-press (e.g. 250ms)
+    _longPressTimer = Timer(const Duration(milliseconds: 250), () {
+      if (_isPressed) {
+        _startVideoRecording();
+      }
+    });
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    setState(() => _isPressed = false);
+    if (_longPressTimer != null && _longPressTimer!.isActive) {
+      // Timer didn't finish, so it was a quick tap for a photo
+      _longPressTimer!.cancel();
+      _takePicture();
+    } else if (_isRecording) {
+      // It was a long press, stop recording
+      _stopVideoRecording();
+    }
+  }
+
+  void _handleTapCancel() {
+    setState(() => _isPressed = false);
+    _longPressTimer?.cancel();
+    if (_isRecording) {
+      _stopVideoRecording();
+    }
+  }
+
   Future<void> _takePicture() async {
     if (_controller == null || !_controller!.value.isInitialized || _isRecording) return;
     try {
@@ -106,19 +143,40 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
   Future<void> _startVideoRecording() async {
     if (_controller == null || !_controller!.value.isInitialized || _isRecording) return;
     try {
-      await _controller!.startVideoRecording();
       setState(() => _isRecording = true);
       _animationController.reset();
       _animationController.forward();
+      
+      // Allow UI to render the 'recording' state before calling the blocking native method
+      await Future.delayed(const Duration(milliseconds: 50));
+      
+      if (!_isRecording) return; // Cancel if user already released
+
+      _startRecordingFuture = _controller!.startVideoRecording();
+      await _startRecordingFuture;
     } catch (e) {
       debugPrint("Error starting video recording: $e");
+      setState(() => _isRecording = false);
+      _animationController.stop();
     }
   }
 
   Future<void> _stopVideoRecording() async {
-    if (_controller == null || !_controller!.value.isRecordingVideo || !_isRecording) return;
+    if (!_isRecording) return;
+
+    setState(() => _isRecording = false);
+    _animationController.stop();
+
+    if (_controller == null) return;
+
     try {
-      _animationController.stop();
+      if (_startRecordingFuture != null) {
+        await _startRecordingFuture;
+        _startRecordingFuture = null;
+      }
+
+      if (!_controller!.value.isRecordingVideo) return;
+
       final XFile file = await _controller!.stopVideoRecording();
       final videoFile = File(file.path);
       
@@ -129,12 +187,10 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
           setState(() {
             _capturedFile = videoFile;
             _isVideo = true;
-            _isRecording = false;
           });
         });
     } catch (e) {
       debugPrint("Error stopping video recording: $e");
-      setState(() => _isRecording = false);
     }
   }
 
@@ -157,6 +213,7 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
 
   @override
   void dispose() {
+    _longPressTimer?.cancel();
     _animationController.dispose();
     _controller?.dispose();
     _videoController?.dispose();
@@ -221,36 +278,40 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 32.0),
                 child: GestureDetector(
-                  onTap: _takePicture,
-                  onLongPressStart: (_) => _startVideoRecording(),
-                  onLongPressEnd: (_) => _stopVideoRecording(),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Progress ring for video
-                      SizedBox(
-                        width: 90,
-                        height: 90,
-                        child: AnimatedBuilder(
-                          animation: _animationController,
-                          builder: (context, child) => CircularProgressIndicator(
-                            value: _isRecording ? _animationController.value : 0.0,
-                            strokeWidth: 6,
-                            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
-                            backgroundColor: Colors.white.withValues(alpha: 0.3),
+                  onTapDown: _handleTapDown,
+                  onTapUp: _handleTapUp,
+                  onTapCancel: _handleTapCancel,
+                  child: AnimatedScale(
+                    scale: _isPressed ? 0.9 : 1.0,
+                    duration: const Duration(milliseconds: 100),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Progress ring for video
+                        SizedBox(
+                          width: 90,
+                          height: 90,
+                          child: AnimatedBuilder(
+                            animation: _animationController,
+                            builder: (context, child) => CircularProgressIndicator(
+                              value: _isRecording ? _animationController.value : 0.0,
+                              strokeWidth: 6,
+                              valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                              backgroundColor: Colors.white.withValues(alpha: 0.3),
+                            ),
                           ),
                         ),
-                      ),
-                      // Shutter button inside
-                      Container(
-                        width: 74,
-                        height: 74,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _isRecording ? Colors.red : Colors.white,
+                        // Shutter button inside
+                        Container(
+                          width: 74,
+                          height: 74,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _isRecording ? Colors.red : Colors.white,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -270,7 +331,7 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
                       color: Colors.black54,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Text(
+                    child: Text(
                       "Tap for photo, hold for video",
                       style: TextStyle(color: Colors.white, fontSize: 12),
                     ),
@@ -332,7 +393,7 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                       ),
                       icon: const Icon(Icons.refresh, size: 22),
-                      label: const Text("Retake", style: TextStyle(fontSize: 16)),
+                      label: Text("Retake", style: TextStyle(fontSize: 16)),
                       onPressed: _retake,
                     ),
                     ElevatedButton.icon(
@@ -343,7 +404,7 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                       ),
                       icon: const Icon(Icons.send, size: 22),
-                      label: const Text("Send", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      label: Text("Send", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       onPressed: _confirm,
                     ),
                   ],

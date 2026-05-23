@@ -26,7 +26,7 @@ class SafeNetworkImage extends StatelessWidget {
         width: width,
         height: height,
         color: Colors.grey.shade200,
-        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       ),
       errorWidget: (context, url, error) => Container(
         width: width,

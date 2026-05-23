@@ -3,6 +3,7 @@ import 'package:asiimov/pages/home_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});
@@ -74,9 +75,9 @@ class _MainScaffoldState extends State<MainScaffold> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildNavItem(0, Icons.home_outlined, Icons.home, 'Feed'),
-                _buildNavItem(1, Icons.chat_bubble_outline, Icons.chat_bubble, 'Messages'),
-                _buildNavItem(2, Icons.person_outline, Icons.person, 'Profile'),
+                _buildNavItem(0, Icons.home_outlined, Icons.home, 'feed'.tr()),
+                _buildNavItem(1, Icons.chat_bubble_outline, Icons.chat_bubble, 'messages'.tr()),
+                _buildNavItem(2, Icons.person_outline, Icons.person, 'profile'.tr()),
               ],
             ),
           ),
@@ -135,7 +136,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     fontSize: isSelected ? 13 : 0,
                   ),
-                  child: isSelected ? Text(label) : const Text(''),
+                  child: isSelected ? Text(label) : Text(''),
                 ),
               ],
             ),

@@ -4,13 +4,11 @@ class ReportReasonsHelper {
     Map<String, dynamic> reportData,
   ) {
     final results = <Map<String, String>>[];
-    final seenUserIds = <String>{};
+
 
     void addEntry(String username, String reason, {String? userId}) {
       final trimmed = reason.trim();
       if (trimmed.isEmpty) return;
-      if (userId != null && seenUserIds.contains(userId)) return;
-      if (userId != null) seenUserIds.add(userId);
       results.add({'username': username, 'reason': trimmed});
     }
 

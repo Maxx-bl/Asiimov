@@ -118,7 +118,7 @@ class SuspendedAccountPage extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: () => confirmAndSignOut(context),
                   icon: const Icon(Icons.logout, color: Colors.white),
-                  label: const Text(
+                  label: Text(
                     'Logout / Sign Out',
                     style: TextStyle(
                       fontSize: 16,

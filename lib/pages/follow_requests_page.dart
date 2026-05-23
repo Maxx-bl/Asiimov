@@ -5,6 +5,7 @@ import 'package:asiimov/components/username_display.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class FollowRequestsPage extends StatefulWidget {
   const FollowRequestsPage({super.key});
@@ -21,17 +22,17 @@ class _FollowRequestsPageState extends State<FollowRequestsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Follow Requests'),
+        title: Text('follow_requests'.tr()),
         foregroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: StreamBuilder<List<String>>(
         stream: userService.getFollowRequestsStream(currentUserId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return const Center(child: Text('Error loading requests.'));
+            return Center(child: Text('error_loading_requests'.tr()));
           }
 
           final requesterIds = snapshot.data ?? [];
@@ -57,7 +58,7 @@ class _FollowRequestsPageState extends State<FollowRequestsPage> {
                 future: userService.getUserFuture(uid),
                 builder: (context, userSnapshot) {
                   if (!userSnapshot.hasData) {
-                    return const ListTile(title: Text('Loading...'));
+                    return ListTile(title: Text('loading'.tr()));
                   }
 
                   final userData = userSnapshot.data?.data() as Map<String, dynamic>?;

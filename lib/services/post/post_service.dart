@@ -3,10 +3,14 @@ import 'package:asiimov/services/file/file_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:asiimov/services/encryption/encryption_service.dart';
 
 class PostService extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final EncryptionService _encryption =
+      EncryptionService(dotenv.env['ENCRYPTION_KEY'] ?? '');
 
   //create a new post
   Future<void> createPost(
@@ -39,7 +43,7 @@ class PostService extends ChangeNotifier {
     await _firestore.collection('posts').add({
       'authorID': user.uid,
       'authorUsername': user.displayName ?? 'Anonymous',
-      'content': content,
+      'content': _encryption.encrypt(content),
       'timestamp': FieldValue.serverTimestamp(),
       'upvotes': [],
       'downvotes': [],
@@ -195,7 +199,7 @@ class PostService extends ChangeNotifier {
     await parentRef.collection('comments').add({
       'authorID': user.uid,
       'authorUsername': user.displayName ?? 'Anonymous',
-      'content': content,
+      'content': _encryption.encrypt(content),
       'timestamp': FieldValue.serverTimestamp(),
       'upvotes': [],
       'downvotes': [],

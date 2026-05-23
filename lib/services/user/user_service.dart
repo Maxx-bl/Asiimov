@@ -323,4 +323,59 @@ class UserService {
           : FieldValue.arrayRemove([targetUid]),
     });
   }
+
+  // Report a user profile
+  Future<void> reportUserProfile({
+    required String reportedUserId,
+    required String reportedUsername,
+    required String reason,
+    required String reporterUsername,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final reasonEntry = {
+      'userId': user.uid,
+      'username': reporterUsername,
+      'reason': reason.trim(),
+    };
+
+    // Check for an existing pending report for this user profile
+    final existing = await _firestore.collection('reports')
+        .where('reportedUserId', isEqualTo: reportedUserId)
+        .where('type', isEqualTo: 'user')
+        .where('status', isEqualTo: 'pending')
+        .limit(1)
+        .get();
+
+    if (existing.docs.isNotEmpty) {
+      final reportDoc = existing.docs.first;
+      await reportDoc.reference.update({
+        'reportCount': FieldValue.increment(1),
+        'reportedByIds': FieldValue.arrayUnion([user.uid]),
+        'reporterReasons': FieldValue.arrayUnion([reasonEntry]),
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } else {
+      await _firestore.collection('reports').add({
+        'reportedById': user.uid,
+        'reportedByIds': [user.uid],
+        'reportedByUsername': reporterUsername,
+        'reportReason': reasonEntry['reason'],
+        'reporterReasons': [reasonEntry],
+        'reportedUserId': reportedUserId,
+        'reportedUserUsername': reportedUsername,
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'pending',
+        'type': 'user',
+        'reportCount': 1,
+      });
+    }
+
+    // Increment reportsCount for the reported user
+    await _firestore.collection('users').doc(reportedUserId).update({
+      'reportsCount': FieldValue.increment(1),
+    });
+  }
 }
+
