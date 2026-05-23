@@ -183,7 +183,7 @@ class ChatBubbleState extends State<ChatBubble>
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
               title:
-                  Text('Delete', style: TextStyle(color: Colors.red)),
+                  Text('delete'.tr(), style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(context);
                 confirmDeleteMessage(context, messageId, userId);
@@ -308,7 +308,7 @@ class ChatBubbleState extends State<ChatBubble>
                     _buildActionTile(
                       context,
                       Icons.copy_rounded,
-                      "Copy",
+                      'copy'.tr(),
                       () {
                         Navigator.pop(context);
                         Clipboard.setData(ClipboardData(text: widget.message));
@@ -327,7 +327,7 @@ class ChatBubbleState extends State<ChatBubble>
                     _buildActionTile(
                       context,
                       widget.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                      widget.isPinned ? "Unpin" : "Pin",
+                      widget.isPinned ? 'unpin'.tr() : 'pin'.tr(),
                       () {
                         Navigator.pop(context);
                         ChatService().togglePinMessage(widget.otherUserId, widget.messageId, widget.isPinned, isGroup: widget.isGroup);
@@ -340,7 +340,7 @@ class ChatBubbleState extends State<ChatBubble>
                       _buildActionTile(
                         context,
                         Icons.flag_rounded,
-                        "Report",
+                        'report'.tr(),
                         () {
                           Navigator.pop(context);
                           reportMessage(context, widget.messageId, widget.userId);
@@ -351,7 +351,7 @@ class ChatBubbleState extends State<ChatBubble>
                       _buildActionTile(
                         context,
                         Icons.edit_rounded,
-                        "Edit",
+                        'edit'.tr(),
                         () {
                           Navigator.pop(context);
                           widget.onEdit?.call(widget.messageId, widget.message);
@@ -623,7 +623,7 @@ class ChatBubbleState extends State<ChatBubble>
                                   ),
                                   TextButton(
                                     onPressed: () => Navigator.pop(context, true),
-                                    child: Text('Continue', style: TextStyle(color: Theme.of(context).primaryColor)),
+                                    child: Text('continue_action'.tr(), style: TextStyle(color: Theme.of(context).primaryColor)),
                                   ),
                                 ],
                               ),
@@ -665,7 +665,7 @@ class ChatBubbleState extends State<ChatBubble>
                         Icon(Icons.push_pin, size: 10, color: Theme.of(context).primaryColor),
                         const SizedBox(width: 2),
                         Text(
-                          'pinned • ',
+                          'pinned_prefix'.tr(),
                           style: TextStyle(
                             fontSize: 10,
                             color: widget.isCurrentUser ? Colors.white70 : Theme.of(context).primaryColor,
@@ -674,12 +674,12 @@ class ChatBubbleState extends State<ChatBubble>
                         ),
                       ],
                       Text(
-                        (widget.isEdited ? 'edited • ' : '') +
+                        (widget.isEdited ? 'edited_prefix'.tr() : '') +
                         _formatTimestamp(widget.timestamp!) +
                             (widget.showStatus
                                 ? (widget.isPending
                                     ? ' • sending...'
-                                    : (widget.isSeen ? ' • seen' : ' • sent'))
+                                    : (widget.isSeen ? 'status_seen'.tr() : 'status_sent'.tr()))
                                 : ''),
                         style: TextStyle(
                           fontSize: 10,
@@ -905,7 +905,7 @@ class ChatBubbleState extends State<ChatBubble>
       future: FirebaseFirestore.instance.doc(docPath).get(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || !snapshot.data!.exists) {
-          return Text("Post unavailable", style: TextStyle(fontStyle: FontStyle.italic));
+          return Text('post_unavailable'.tr(), style: TextStyle(fontStyle: FontStyle.italic));
         }
 
         final post = Post.fromFirestore(snapshot.data!);
@@ -953,7 +953,7 @@ class ChatBubbleState extends State<ChatBubble>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("View post", style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold)),
+                    Text('view_post'.tr(), style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold)),
                     Icon(Icons.arrow_forward_ios, size: 10, color: Colors.blue),
                   ],
                 ),

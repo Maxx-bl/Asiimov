@@ -106,7 +106,7 @@ class _AddMembersSheetState extends State<AddMembersSheet> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "Add Members",
+                'add_members'.tr(),
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               IconButton(
@@ -121,7 +121,7 @@ class _AddMembersSheetState extends State<AddMembersSheet> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'search_following'.tr().tr(),
+              hintText: 'search_following'.tr(),
               prefixIcon: const Icon(Icons.search),
               filled: true,
               fillColor: Theme.of(context).colorScheme.secondary,

@@ -82,13 +82,13 @@ class _ShareSheetState extends State<ShareSheet> {
 
     // Share post to users
     for (String id in userIds) {
-      await _chatService.sendMessage(id, "Shared a post", 
+      await _chatService.sendMessage(id, 'shared_a_post'.tr(), 
         messageType: 'post_share', sharedPostId: pathToSend);
     }
 
     // Share post to groups
     for (String id in groupIds) {
-      await _chatService.sendMessage(id, "Shared a post", 
+      await _chatService.sendMessage(id, 'shared_a_post'.tr(), 
         isGroup: true, messageType: 'post_share', sharedPostId: pathToSend);
     }
 
@@ -129,7 +129,7 @@ class _ShareSheetState extends State<ShareSheet> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'search_user'.tr().tr(),
+              hintText: 'search_user'.tr(),
               prefixIcon: const Icon(Icons.search),
               filled: true,
               fillColor: Theme.of(context).colorScheme.secondary,
@@ -189,9 +189,9 @@ class _ShareSheetState extends State<ShareSheet> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                  child: Text("Groups", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  child: Text('groups'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
                 ...groups.map((g) => _buildUserTile(g, _selectedGroupIds.contains(g['uid']), isGroup: true)),
                 const Divider(),

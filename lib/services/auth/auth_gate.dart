@@ -8,6 +8,7 @@ import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -38,7 +39,7 @@ class AuthGate extends StatelessWidget {
                         
                         final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
                         final isSuspended = userData?['isSuspended'] == true;
-                        final suspensionReason = userData?['suspensionReason'] as String? ?? "No reason provided.";
+                        final suspensionReason = userData?['suspensionReason'] as String? ?? 'no_reason_provided'.tr();
                         
                         if (isSuspended) {
                           return SuspendedAccountPage(reason: suspensionReason);

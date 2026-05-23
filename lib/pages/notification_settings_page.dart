@@ -72,7 +72,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
                       child: Text(
-                        'Choose which notifications you want to receive',
+                        'choose_notifications'.tr(),
                         style: TextStyle(
                           fontSize: 13,
                           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),

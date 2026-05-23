@@ -366,7 +366,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(currentVal ? 'Remove Official Badge' : 'Grant Official Badge'),
+        title: Text(currentVal ? 'remove_official_badge'.tr() : 'grant_official_badge'.tr()),
         content: Text('Are you sure you want to ${currentVal ? "remove" : "grant"} the verified badge ${currentVal ? "from" : "to"} @$username?'),
         actions: [
           TextButton(
@@ -413,7 +413,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text('Unsuspend', style: TextStyle(fontWeight: FontWeight.w600)),
+              child: Text('unsuspend'.tr(), style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -466,7 +466,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text('Suspend', style: TextStyle(fontWeight: FontWeight.w600)),
+              child: Text('suspend'.tr(), style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -515,7 +515,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
               TextFormField(
                 controller: reasonController,
                 decoration: InputDecoration(
-                  labelText: 'Reason for deletion',
+                  labelText: 'reason_for_deletion'.tr(),
                   hintText: 'eg_inappropriate_content_hate'.tr().tr(),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 ),
@@ -540,7 +540,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                 Navigator.pop(context, true);
               }
             },
-            child: Text('Delete', style: TextStyle(fontWeight: FontWeight.w600)),
+            child: Text('delete'.tr(), style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -774,7 +774,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    tooltip: official ? 'Remove badge' : 'Grant badge',
+                                    tooltip: official ? 'remove_badge'.tr() : 'grant_badge'.tr(),
                                     icon: Icon(
                                       official ? Icons.verified : Icons.verified_outlined,
                                       color: _mutedColor(isDarkMode),
@@ -950,7 +950,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                       Icon(Icons.mic, color: _mutedColor(isDark), size: 18),
                       const SizedBox(width: 8),
                       Text(
-                        'Voice message',
+                        'voice_message'.tr(),
                         style: TextStyle(color: _mutedColor(isDark), fontSize: 13),
                       ),
                     ],
@@ -999,7 +999,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                       Icon(Icons.share_outlined, color: _mutedColor(isDark), size: 18),
                       const SizedBox(width: 8),
                       Text(
-                        'Shared post',
+                        'shared_post'.tr(),
                         style: TextStyle(fontSize: 12, color: _mutedColor(isDark)),
                       ),
                     ],
@@ -1391,8 +1391,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                     final resolutionLabel = resolutionAction == 'deleted'
                         ? 'Content deleted'
                         : resolutionAction == 'dismissed'
-                            ? 'Dismissed'
-                            : 'Resolved';
+                            ? 'status_dismissed'.tr()
+                            : 'status_resolved'.tr();
 
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

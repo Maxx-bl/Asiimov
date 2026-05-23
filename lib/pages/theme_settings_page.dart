@@ -62,7 +62,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
       }
     } else {
       setState(() {
-        _errorMessage = 'Hex code must be 6 characters';
+        _errorMessage = 'hex_code_error'.tr();
       });
     }
   }
@@ -129,7 +129,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           ),
                           const SizedBox(width: 16),
                           Text(
-                            'Dark Mode',
+                            'dark_mode'.tr(),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -151,7 +151,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
 
                 // Section 2: Dominant Color Header
                 Text(
-                  'DOMINANT COLOR',
+                  'dominant_color'.tr(),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
@@ -192,7 +192,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Vibrant Palette',
+                        'vibrant_palette'.tr(),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -261,7 +261,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                       ),
 
                       Text(
-                        'Custom Hex Code',
+                        'custom_hex_code'.tr(),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -382,7 +382,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                             elevation: 2,
                           ),
                           child: Text(
-                            'Apply Custom Color',
+                            'apply_custom_color'.tr(),
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,

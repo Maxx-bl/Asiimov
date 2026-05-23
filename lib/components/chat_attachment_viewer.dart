@@ -145,7 +145,7 @@ class ChatAttachmentViewer extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(4)),
-                  child: Text('VIDEO', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  child: Text('video_label'.tr(), style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -199,7 +199,7 @@ class ChatAttachmentViewer extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Tap to download", style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold)),
+                  Text('tap_to_download'.tr(), style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold)),
                   const Icon(Icons.download_rounded, size: 14, color: Colors.blue),
                 ],
               ),

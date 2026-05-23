@@ -316,7 +316,7 @@ class ImageService {
                     backgroundColor: Colors.redAccent,
                     child: Icon(Icons.delete_outline, color: Colors.white),
                   ),
-                  title: Text('Delete Current Photo', style: TextStyle(color: Colors.redAccent)),
+                  title: Text('delete_current_photo'.tr(), style: TextStyle(color: Colors.redAccent)),
                   onTap: () => Navigator.pop(context, 'delete'),
                 ),
             ],

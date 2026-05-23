@@ -354,7 +354,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               _refreshData();
                             }
                           },
-                          child: Text('Block', style: TextStyle(color: Colors.red)),
+                          child: Text('block_action'.tr(), style: TextStyle(color: Colors.red)),
                         ),
                       ],
                     ),
@@ -607,7 +607,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   border: Border.all(color: Colors.redAccent, width: 1),
                                 ),
                                 child: Text(
-                                  'Suspended',
+                                  'suspended_account_label'.tr(),
                                   style: TextStyle(
                                     color: Colors.redAccent,
                                     fontSize: 10,
@@ -833,7 +833,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'Account Suspended',
+                                  'account_suspended'.tr(),
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
@@ -864,7 +864,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'Private Account',
+                                  'private_account'.tr(),
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,

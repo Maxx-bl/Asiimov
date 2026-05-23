@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class UserWarningPage extends StatelessWidget {
   final Map<String, dynamic> warningData;
@@ -57,7 +58,7 @@ class UserWarningPage extends StatelessWidget {
 
                       // Warning Title
                       Text(
-                        'Content Moderation Notice',
+                        'content_moderation_notice'.tr(),
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -94,7 +95,7 @@ class UserWarningPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'MODERATED ITEM',
+                              'moderated_item'.tr(),
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -112,7 +113,7 @@ class UserWarningPage extends StatelessWidget {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'REASON FOR REMOVAL',
+                              'reason_for_removal'.tr(),
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -150,7 +151,7 @@ class UserWarningPage extends StatelessWidget {
                             elevation: 2,
                           ),
                           child: Text(
-                            'I Understand & Accept',
+                            'understand_accept'.tr(),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

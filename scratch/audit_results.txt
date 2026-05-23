@@ -1,0 +1,1271 @@
+﻿lib\components\add_members_sheet.dart:109: [Add Members]
+    "Add Members",
+
+lib\components\add_members_sheet.dart:148: [Unknown]
+    final username = user['username'] ?? 'Unknown';
+
+lib\components\chat_attachment_viewer.dart:51: [mp4]
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi', 'mkv'].contains(ext)) {
+
+lib\components\chat_attachment_viewer.dart:148: [VIDEO]
+    child: Text('VIDEO', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+
+lib\components\chat_attachment_viewer.dart:202: [Tap to download]
+    Text("Tap to download", style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold)),
+
+lib\components\chat_attachment_viewer.dart:247: [mp4]
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi', 'mkv'].contains(ext)) {
+
+lib\components\chat_attachment_viewer.dart:471: [+$extraCount]
+    child: Text('+$extraCount', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+
+lib\components\chat_attachment_viewer.dart:572: [mp4]
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi', 'mkv'].contains(ext)) {
+
+lib\components\chat_bubble.dart:186: [Delete]
+    Text('Delete', style: TextStyle(color: Colors.red)),
+
+lib\components\chat_bubble.dart:218: [Delete]
+    child: Text('Delete',
+
+lib\components\chat_bubble.dart:311: [Copy]
+    "Copy",
+
+lib\components\chat_bubble.dart:330: [Pin]
+    widget.isPinned ? "Unpin" : "Pin",
+
+lib\components\chat_bubble.dart:330: [Unpin]
+    widget.isPinned ? "Unpin" : "Pin",
+
+lib\components\chat_bubble.dart:343: [Report]
+    "Report",
+
+lib\components\chat_bubble.dart:354: [Edit]
+    "Edit",
+
+lib\components\chat_bubble.dart:364: [Delete]
+    "Delete",
+
+lib\components\chat_bubble.dart:453: [Anonymous]
+    final senderUsername = senderDoc.data()?['username'] as String? ?? 'Anonymous';
+
+lib\components\chat_bubble.dart:454: [Anonymous]
+    final reporterUsername = reporterDoc.data()?['username'] as String? ?? 'Anonymous';
+
+lib\components\chat_bubble.dart:626: [Continue]
+    child: Text('Continue', style: TextStyle(color: Theme.of(context).primaryColor)),
+
+lib\components\chat_bubble.dart:668: [pinned ÔÇó ]
+    'pinned ÔÇó ',
+
+lib\components\chat_bubble.dart:677: [edited ÔÇó ]
+    (widget.isEdited ? 'edited ÔÇó ' : '') +
+
+lib\components\chat_bubble.dart:682: [ ÔÇó seen]
+    : (widget.isSeen ? ' ÔÇó seen' : ' ÔÇó sent'))
+
+lib\components\chat_bubble.dart:682: [ ÔÇó sent]
+    : (widget.isSeen ? ' ÔÇó seen' : ' ÔÇó sent'))
+
+lib\components\chat_bubble.dart:908: [Post unavailable]
+    return Text("Post unavailable", style: TextStyle(fontStyle: FontStyle.italic));
+
+lib\components\chat_bubble.dart:956: [View post]
+    Text("View post", style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold)),
+
+lib\components\comment_tile.dart:185: [Delete]
+    child: Text('Delete', style: TextStyle(color: Colors.red)),
+
+lib\components\comment_tile.dart:244: [Delete]
+    Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+
+lib\components\comment_tile.dart:254: [Report]
+    Text('Report', style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 13)),
+
+lib\components\comment_tile.dart:279: [Continue]
+    child: Text('Continue', style: TextStyle(color: Theme.of(context).primaryColor)),
+
+lib\components\group_creation_sheet.dart:85: [Error creating group: $e]
+    SnackBar(content: Text('Error creating group: $e')),
+
+lib\components\group_creation_sheet.dart:119: [New Group]
+    "New Group",
+
+lib\components\group_creation_sheet.dart:135: [3-30 chars: a-z, 0-9, . , - , _]
+    helperText: "3-30 chars: a-z, 0-9, . , - , _",
+
+lib\components\group_creation_sheet.dart:187: [Anonymous]
+    final username = user['username'] ?? "Anonymous";
+
+lib\components\group_creation_sheet.dart:242: [Creating...]
+    child: Text(_isLoading ? "Creating..." : "Create Group (${_selectedUserIds.length})"),
+
+lib\components\instant_camera_screen.dart:396: [Retake]
+    label: Text("Retake", style: TextStyle(fontSize: 16)),
+
+lib\components\instant_camera_screen.dart:407: [Send]
+    label: Text("Send", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+
+lib\components\logout_confirmation_dialog.dart:20: [Log out]
+    'Log out',
+
+lib\components\my_drawer.dart:44: [User]
+    username: currentUser.displayName ?? 'User',
+
+lib\components\my_drawer.dart:82: [isAdmin]
+    final isAdmin = data?['isAdmin'] == true;
+
+lib\components\post_attachment_viewer.dart:70: [VIDEO]
+    'VIDEO',
+
+lib\components\post_attachment_viewer.dart:147: [+$extraCount]
+    '+$extraCount',
+
+lib\components\post_card.dart:136: [Visible to Close Friends]
+    title: 'Visible to Close Friends',
+
+lib\components\post_card.dart:179: [Delete]
+    child: Text('Delete', style: TextStyle(color: Colors.red)),
+
+lib\components\post_card.dart:235: [Delete]
+    Text('Delete', style: TextStyle(color: Colors.redAccent)),
+
+lib\components\post_card.dart:245: [Report]
+    Text('Report', style: TextStyle(color: Theme.of(context).primaryColor)),
+
+lib\components\post_card.dart:334: [Continue]
+    child: Text('Continue', style: TextStyle(color: Theme.of(context).primaryColor)),
+
+lib\components\post_card.dart:395: [Continue]
+    child: Text('Continue', style: TextStyle(color: Theme.of(context).primaryColor)),
+
+lib\components\profile_post_card.dart:60: [Delete]
+    child: Text('Delete',
+
+lib\components\profile_post_card.dart:139: [Total: ]
+    'Total: ',
+
+lib\components\report_reason_dialog.dart:31: [Why are you reporting this?]
+    'Why are you reporting this?',
+
+lib\components\report_reason_dialog.dart:65: [Report]
+    'Report',
+
+lib\components\share_sheet.dart:85: [Shared a post]
+    await _chatService.sendMessage(id, "Shared a post",
+
+lib\components\share_sheet.dart:91: [Shared a post]
+    await _chatService.sendMessage(id, "Shared a post",
+
+lib\components\share_sheet.dart:194: [Groups]
+    child: Text("Groups", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+
+lib\components\share_sheet.dart:266: [Anonymous]
+    final name = user['username'] ?? (isGroup ? "Group" : "Anonymous");
+
+lib\components\share_sheet.dart:266: [Group]
+    final name = user['username'] ?? (isGroup ? "Group" : "Anonymous");
+
+lib\components\username_display.dart:69: [Unknown]
+    final String fetchedUsername = data['username'] ?? "Unknown";
+
+lib\components\voters_list_sheet.dart:82: [Unknown]
+    final username = userData?['username'] ?? 'Unknown';
+
+lib\main.dart:55: [Group]
+    final groupName = data['groupName'] ?? 'Group';
+
+lib\models\comment.dart:50: [authorID]
+    authorID: data['authorID'] ?? '',
+
+lib\models\comment.dart:57: [shareCount]
+    shareCount: data['shareCount'] ?? 0,
+
+lib\models\comment.dart:58: [sharedBy]
+    sharedBy: List<String>.from(data['sharedBy'] ?? []),
+
+lib\models\comment.dart:66: [authorID]
+    'authorID': authorID,
+
+lib\models\comment.dart:73: [shareCount]
+    'shareCount': shareCount,
+
+lib\models\comment.dart:74: [sharedBy]
+    'sharedBy': sharedBy,
+
+lib\models\conversation.dart:31: [Group]
+    String get otherUsername => isGroup ? (groupName ?? 'Group') : (userData['username'] ?? 'Unknown');
+
+lib\models\conversation.dart:31: [Unknown]
+    String get otherUsername => isGroup ? (groupName ?? 'Group') : (userData['username'] ?? 'Unknown');
+
+lib\models\message.dart:48: [senderEmail]
+    'senderEmail': senderEmail,
+
+lib\models\message.dart:57: [sharedPostId]
+    map['sharedPostId'] = sharedPostId;
+
+lib\models\message.dart:75: [instantAttachment]
+    map['instantAttachment'] = instantAttachment;
+
+lib\models\post.dart:54: [authorID]
+    authorID: data['authorID'] ?? '',
+
+lib\models\post.dart:61: [shareCount]
+    shareCount: data['shareCount'] ?? 0,
+
+lib\models\post.dart:62: [sharedBy]
+    sharedBy: List<String>.from(data['sharedBy'] ?? []),
+
+lib\models\post.dart:65: [isCloseFriendsOnly]
+    isCloseFriendsOnly: data['isCloseFriendsOnly'] ?? false,
+
+lib\models\post.dart:66: [visibleTo]
+    visibleTo: List<String>.from(data['visibleTo'] ?? []),
+
+lib\models\post.dart:72: [authorID]
+    'authorID': authorID,
+
+lib\models\post.dart:79: [shareCount]
+    'shareCount': shareCount,
+
+lib\models\post.dart:80: [sharedBy]
+    'sharedBy': sharedBy,
+
+lib\models\post.dart:82: [isCloseFriendsOnly]
+    'isCloseFriendsOnly': isCloseFriendsOnly,
+
+lib\models\post.dart:83: [visibleTo]
+    'visibleTo': visibleTo,
+
+lib\pages\admin_dashboard_page.dart:151: [Post]
+    return 'Post';
+
+lib\pages\admin_dashboard_page.dart:153: [Comment]
+    return 'Comment';
+
+lib\pages\admin_dashboard_page.dart:155: [Message]
+    return 'Message';
+
+lib\pages\admin_dashboard_page.dart:369: [Grant Official Badge]
+    title: Text(currentVal ? 'Remove Official Badge' : 'Grant Official Badge'),
+
+lib\pages\admin_dashboard_page.dart:369: [Remove Official Badge]
+    title: Text(currentVal ? 'Remove Official Badge' : 'Grant Official Badge'),
+
+lib\pages\admin_dashboard_page.dart:378: [Confirm]
+    child: Text('Confirm', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+
+lib\pages\admin_dashboard_page.dart:408: [s account?]
+    content: Text('Are you sure you want to reinstate @$username\'s account?'),
+
+lib\pages\admin_dashboard_page.dart:416: [Unsuspend]
+    child: Text('Unsuspend', style: TextStyle(fontWeight: FontWeight.w600)),
+
+lib\pages\admin_dashboard_page.dart:469: [Suspend]
+    child: Text('Suspend', style: TextStyle(fontWeight: FontWeight.w600)),
+
+lib\pages\admin_dashboard_page.dart:518: [Reason for deletion]
+    labelText: 'Reason for deletion',
+
+lib\pages\admin_dashboard_page.dart:543: [Delete]
+    child: Text('Delete', style: TextStyle(fontWeight: FontWeight.w600)),
+
+lib\pages\admin_dashboard_page.dart:605: [Dismiss]
+    child: Text('Dismiss', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+
+lib\pages\admin_dashboard_page.dart:637: [Admin]
+    'Admin',
+
+lib\pages\admin_dashboard_page.dart:733: [User]
+    final username = userData['username'] as String? ?? 'User';
+
+lib\pages\admin_dashboard_page.dart:761: [Suspended]
+    _chip('Suspended', isDarkMode, emphasized: true),
+
+lib\pages\admin_dashboard_page.dart:766: [ : ]
+    '$reportsCount report${reportsCount == 1 ? '' : 's'} filed',
+
+lib\pages\admin_dashboard_page.dart:777: [Grant badge]
+    tooltip: official ? 'Remove badge' : 'Grant badge',
+
+lib\pages\admin_dashboard_page.dart:777: [Remove badge]
+    tooltip: official ? 'Remove badge' : 'Grant badge',
+
+lib\pages\admin_dashboard_page.dart:785: [Reinstate]
+    tooltip: isSuspended ? 'Reinstate' : 'Suspend',
+
+lib\pages\admin_dashboard_page.dart:785: [Suspend]
+    tooltip: isSuspended ? 'Reinstate' : 'Suspend',
+
+lib\pages\admin_dashboard_page.dart:827: [User]
+    final username = userData['username'] as String? ?? 'User';
+
+lib\pages\admin_dashboard_page.dart:974: [instantAttachment]
+    final instant = data['instantAttachment'] as Map<String, dynamic>?;
+
+lib\pages\admin_dashboard_page.dart:1057: [Media removed ┬À $displayType]
+    'Media removed ┬À $displayType',
+
+lib\pages\admin_dashboard_page.dart:1069: [Media removed ┬À $displayTypes]
+    'Media removed ┬À $displayTypes',
+
+lib\pages\admin_dashboard_page.dart:1147: [All]
+    _buildFilterButton('all', 'All', isDarkMode),
+
+lib\pages\admin_dashboard_page.dart:1148: [Users]
+    _buildFilterButton('users', 'Users', isDarkMode),
+
+lib\pages\admin_dashboard_page.dart:1149: [Posts]
+    _buildFilterButton('posts_comments', 'Posts', isDarkMode),
+
+lib\pages\admin_dashboard_page.dart:1150: [Chats]
+    _buildFilterButton('chats', 'Chats', isDarkMode),
+
+lib\pages\admin_dashboard_page.dart:1196: [Anonymous]
+    final reporter = reportData['reportedByUsername'] as String? ?? 'Anonymous';
+
+lib\pages\admin_dashboard_page.dart:1198: [reportCount]
+    final reportCount = reportData['reportCount'] as int? ?? 1;
+
+lib\pages\admin_dashboard_page.dart:1201: [Anonymous]
+    String author = 'Anonymous';
+
+lib\pages\admin_dashboard_page.dart:1206: [Anonymous]
+    author = reportData['postAuthorUsername'] as String? ?? 'Anonymous';
+
+lib\pages\admin_dashboard_page.dart:1210: [Anonymous]
+    author = reportData['commentAuthorUsername'] as String? ?? 'Anonymous';
+
+lib\pages\admin_dashboard_page.dart:1214: [Anonymous]
+    author = reportData['messageAuthorUsername'] as String? ?? 'Anonymous';
+
+lib\pages\admin_dashboard_page.dart:1218: [Anonymous]
+    author = reportData['reportedUserUsername'] as String? ?? 'Anonymous';
+
+lib\pages\admin_dashboard_page.dart:1219: [reportedUserId]
+    authorId = reportData['reportedUserId'] as String? ?? '';
+
+lib\pages\admin_dashboard_page.dart:1283: [@$author]
+    '@$author',
+
+lib\pages\admin_dashboard_page.dart:1302: [Reported by @$reporter]
+    'Reported by @$reporter',
+
+lib\pages\admin_dashboard_page.dart:1368: [Anonymous]
+    final reporter = reportData['reportedByUsername'] as String? ?? 'Anonymous';
+
+lib\pages\admin_dashboard_page.dart:1371: [resolutionAction]
+    final resolutionAction = reportData['resolutionAction'] as String? ?? 'resolved';
+
+lib\pages\admin_dashboard_page.dart:1372: [reportCount]
+    final reportCount = reportData['reportCount'] as int? ?? 1;
+
+lib\pages\admin_dashboard_page.dart:1375: [Anonymous]
+    String author = 'Anonymous';
+
+lib\pages\admin_dashboard_page.dart:1379: [Anonymous]
+    author = reportData['postAuthorUsername'] as String? ?? 'Anonymous';
+
+lib\pages\admin_dashboard_page.dart:1382: [Anonymous]
+    author = reportData['commentAuthorUsername'] as String? ?? 'Anonymous';
+
+lib\pages\admin_dashboard_page.dart:1385: [Anonymous]
+    author = reportData['messageAuthorUsername'] as String? ?? 'Anonymous';
+
+lib\pages\admin_dashboard_page.dart:1388: [Anonymous]
+    author = reportData['reportedUserUsername'] as String? ?? 'Anonymous';
+
+lib\pages\admin_dashboard_page.dart:1394: [Dismissed]
+    ? 'Dismissed'
+
+lib\pages\admin_dashboard_page.dart:1395: [Resolved]
+    : 'Resolved';
+
+lib\pages\admin_dashboard_page.dart:1455: [@$author]
+    '@$author',
+
+lib\pages\admin_dashboard_page.dart:1459: [Reported by @$reporter]
+    'Reported by @$reporter',
+
+lib\pages\admin_dashboard_page.dart:1486: [resolutionReason]
+    if (reportData['resolutionReason'] != null && (reportData['resolutionReason'] as String).isNotEmpty) ...[
+
+lib\pages\admin_dashboard_page.dart:1497: [resolutionReason]
+    reportData['resolutionReason'] as String,
+
+lib\pages\admin_dashboard_page.dart:1557: [ : ]
+    'Report reason${hasMultiple ? 's' : ''}',
+
+lib\pages\chat_page.dart:342: [Send Attachment]
+    'Send Attachment',
+
+lib\pages\chat_page.dart:363: [Exception: ]
+    SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
+
+lib\pages\chat_page.dart:386: [Exception: ]
+    SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
+
+lib\pages\chat_page.dart:605: [You]
+    ? 'You'
+
+lib\pages\chat_page.dart:666: [Private Messages]
+    'Private Messages',
+
+lib\pages\chat_page.dart:694: [Error]
+    return Center(child: Text("Error"));
+
+lib\pages\chat_page.dart:821: [isSystemMessage]
+    if (prevData['senderID'] == data['senderID'] && prevData['isSystemMessage'] != true) {
+
+lib\pages\chat_page.dart:829: [isSystemMessage]
+    if (prevData['senderID'] == data['senderID'] && prevData['isSystemMessage'] != true) {
+
+lib\pages\chat_page.dart:849: [isSystemMessage]
+    if (data['isSystemMessage'] == true) {
+
+lib\pages\chat_page.dart:914: [sharedPostId]
+    sharedPostId: data['sharedPostId'],
+
+lib\pages\chat_page.dart:923: [isEdited]
+    isEdited: data['isEdited'] == true,
+
+lib\pages\chat_page.dart:924: [isPinned]
+    isPinned: data['isPinned'] == true,
+
+lib\pages\chat_page.dart:927: [instantAttachment]
+    instantAttachment: data['instantAttachment'] as Map<String, dynamic>?,
+
+lib\pages\chat_page.dart:960: [] ?? ]
+    '@${data['senderUsername'] ?? 'unknown'}',
+
+lib\pages\chat_page.dart:1016: [mp4]
+    final isVideo = ['mp4', 'mov', 'avi', 'mkv'].contains(ext);
+
+lib\pages\chat_page.dart:1124: [objectKey]
+    'objectKey': uploadResult['objectKey'],
+
+lib\pages\chat_page.dart:1129: [­ƒô© Instant Photo]
+    isVideo ? '­ƒô© Instant Video' : '­ƒô© Instant Photo',
+
+lib\pages\chat_page.dart:1213: [objectKey]
+    'objectKey': uploadResult['objectKey'],
+
+lib\pages\chat_page.dart:1218: [­ƒÄñ Voice Message]
+    '­ƒÄñ Voice Message',
+
+lib\pages\chat_page.dart:1273: [Cancel]
+    child: Text('Cancel', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 13)),
+
+lib\pages\close_friends_page.dart:64: [closeFriends]
+    final closeFriends = List<String>.from(userData['closeFriends'] ?? []);
+
+lib\pages\close_friends_page.dart:184: [closeFriendsEnabled]
+    final bool isEnabled = userData['closeFriendsEnabled'] ?? false;
+
+lib\pages\close_friends_page.dart:185: [closeFriends]
+    final List<String> closeFriendsList = List<String>.from(userData['closeFriends'] ?? []);
+
+lib\pages\close_friends_page.dart:223: [Close Friends Feature]
+    'Close Friends Feature',
+
+lib\pages\close_friends_page.dart:261: [Mutual Followers]
+    'Mutual Followers',
+
+lib\pages\close_friends_page.dart:329: [Unknown]
+    final username = user['username'] ?? 'Unknown';
+
+lib\pages\create_post_page.dart:234: [Choose Audience]
+    'Choose Audience',
+
+lib\pages\create_post_page.dart:283: [Everyone]
+    isPublic ? 'Everyone' : 'Followers',
+
+lib\pages\create_post_page.dart:283: [Followers]
+    isPublic ? 'Everyone' : 'Followers',
+
+lib\pages\create_post_page.dart:346: [Close Friends]
+    'Close Friends',
+
+lib\pages\create_post_page.dart:385: [), ]
+    final cleanContent = _controller.text.trim().replaceAll(RegExp(r'(\r?\n){2,}'), '\n');
+
+lib\pages\create_post_page.dart:389: [User not authenticated.]
+    if (currentUserId == null) throw Exception("User not authenticated.");
+
+lib\pages\create_post_page.dart:395: [closeFriendsEnabled]
+    final bool isCFEnabled = userData['closeFriendsEnabled'] ?? false;
+
+lib\pages\create_post_page.dart:396: [closeFriends]
+    final List<String> cfList = List<String>.from(userData['closeFriends'] ?? []);
+
+lib\pages\create_post_page.dart:436: [Exception: ]
+    content: Text(e.toString().replaceAll('Exception: ', '')),
+
+lib\pages\create_post_page.dart:479: [Post]
+    'Post',
+
+lib\pages\feed_page.dart:212: [Error]
+    if (snapshot.hasError) return Center(child: Text("Error"));
+
+lib\pages\feed_page.dart:236: [No user found]
+    "No user found",
+
+lib\pages\feed_page.dart:308: [A S I I M O V]
+    'A S I I M O V',
+
+lib\pages\feed_page.dart:447: [Refresh]
+    child: Text("Refresh"),
+
+lib\pages\follow_list_page.dart:66: [Unknown]
+    final username = user['username'] ?? 'Unknown';
+
+lib\pages\follow_list_page.dart:111: [Remove]
+    child: Text('Remove', style: TextStyle(color: Colors.red)),
+
+lib\pages\follow_requests_page.dart:67: [Unknown]
+    final username = userData['username'] ?? 'Unknown';
+
+lib\pages\forgot_password_page.dart:70: [Exception: ]
+    final error = e.toString().replaceFirst('Exception: ', '');
+
+lib\pages\forgot_password_page.dart:109: [Forgot Password?]
+    'Forgot Password?',
+
+lib\pages\forgot_password_page.dart:178: [Send Link]
+    text: canSendReset ? 'Send Link' : 'Resend in ${countdown}s',
+
+lib\pages\group_settings_page.dart:44: [mutedBy]
+    final mutedBy = List<String>.from(doc.data()?['mutedBy'] ?? []);
+
+lib\pages\group_settings_page.dart:72: [3-30 chars: a-z, 0-9, . , - , _]
+    helperText: "3-30 chars: a-z, 0-9, . , - , _",
+
+lib\pages\group_settings_page.dart:73: [Invalid name]
+    errorText: _isNameValid(controller.text) ? null : "Invalid name",
+
+lib\pages\group_settings_page.dart:79: [Cancel]
+    TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text("Cancel")),
+
+lib\pages\group_settings_page.dart:89: [Save]
+    child: Text("Save"),
+
+lib\pages\group_settings_page.dart:104: [Cancel]
+    TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text("Cancel")),
+
+lib\pages\group_settings_page.dart:115: [Remove]
+    child: Text("Remove", style: TextStyle(color: Colors.red)),
+
+lib\pages\group_settings_page.dart:134: [Cancel]
+    TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text("Cancel")),
+
+lib\pages\group_settings_page.dart:158: [Error leaving group: $e]
+    SnackBar(content: Text("Error leaving group: $e")),
+
+lib\pages\group_settings_page.dart:163: [Leave]
+    child: Text("Leave", style: TextStyle(color: Colors.red)),
+
+lib\pages\group_settings_page.dart:263: [Leave Group]
+    tooltip: "Leave Group",
+
+lib\pages\group_settings_page.dart:335: [Settings]
+    Text("Settings", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+
+lib\pages\group_settings_page.dart:350: [Members]
+    Text("Members", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+
+lib\pages\group_settings_page.dart:365: [Add]
+    label: Text("Add"),
+
+lib\pages\group_settings_page.dart:382: [Unknown]
+    final username = userData['username'] ?? 'Unknown';
+
+lib\pages\group_settings_page.dart:403: [Admin]
+    subtitle: isMemberAdmin ? Text("Admin", style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 12)) : null,
+
+lib\pages\home_page.dart:336: [isSystemMessage]
+    if (lastMsg['isSystemMessage'] == true) {
+
+lib\pages\login_page.dart:31: [Exception: ]
+    final error = e.toString().replaceFirst('Exception: ', '');
+
+lib\pages\main_scaffold.dart:32: [User]
+    username: currentUser?.displayName ?? 'User',
+
+lib\pages\notification_settings_page.dart:34: [notificationPrefs]
+    final prefs = data?['notificationPrefs'] as Map<String, dynamic>? ?? {};
+
+lib\pages\notification_settings_page.dart:51: [notificationPrefs]
+    'notificationPrefs': {key: value},
+
+lib\pages\notification_settings_page.dart:75: [Choose which notifications you want to receive]
+    'Choose which notifications you want to receive',
+
+lib\pages\pinned_messages_page.dart:48: [isPinned]
+    .where('isPinned', isEqualTo: true)
+
+lib\pages\pinned_messages_page.dart:107: [isEdited]
+    isEdited: data['isEdited'] == true,
+
+lib\pages\post_detail_page.dart:348: [Exception: ]
+    SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent),
+
+lib\pages\post_detail_page.dart:381: [Restricted Access]
+    'Restricted Access',
+
+lib\pages\post_detail_page.dart:390: [This post is reserved for the author's close friends.]
+    "This post is reserved for the author's close friends.",
+
+lib\pages\privacy_settings_page.dart:68: [Public Account]
+    'Public Account',
+
+lib\pages\privacy_settings_page.dart:77: [(Private)]
+    isPublic ? '(Public)' : '(Private)',
+
+lib\pages\privacy_settings_page.dart:77: [(Public)]
+    isPublic ? '(Public)' : '(Private)',
+
+lib\pages\privacy_settings_page.dart:115: [Confirm]
+    child: Text('Confirm', style: TextStyle(color: Theme.of(context).primaryColor)),
+
+lib\pages\profile_page.dart:91: [User not found]
+    userData = {}; // Empty map to bypass the "User not found" check
+
+lib\pages\profile_page.dart:294: [isAdmin]
+    final isAdmin = userData?['isAdmin'] == true;
+
+lib\pages\profile_page.dart:357: [Block]
+    child: Text('Block', style: TextStyle(color: Colors.red)),
+
+lib\pages\profile_page.dart:378: [Anonymous]
+    AuthService().getCurrentUser()?.displayName ?? 'Anonymous';
+
+lib\pages\profile_page.dart:610: [Suspended]
+    'Suspended',
+
+lib\pages\profile_page.dart:836: [Account Suspended]
+    'Account Suspended',
+
+lib\pages\profile_page.dart:867: [Private Account]
+    'Private Account',
+
+lib\pages\register_page.dart:75: [Exception: ]
+    final error = e.toString().replaceFirst('Exception: ', '');
+
+lib\pages\security_settings_page.dart:178: [(Disabled)]
+    is2faEnabled ? '(Enabled)' : '(Disabled)',
+
+lib\pages\security_settings_page.dart:178: [(Enabled)]
+    is2faEnabled ? '(Enabled)' : '(Disabled)',
+
+lib\pages\security_settings_page.dart:216: [Confirm]
+    child: Text('Confirm', style: TextStyle(color: Theme.of(context).primaryColor)),
+
+lib\pages\security_settings_page.dart:256: [Change Password]
+    'Change Password',
+
+lib\pages\security_settings_page.dart:294: [Send Password Reset Link]
+    : 'Send Password Reset Link',
+
+lib\pages\suspended_account_page.dart:44: [ACCOUNT SUSPENDED]
+    'ACCOUNT SUSPENDED',
+
+lib\pages\suspended_account_page.dart:90: [SUSPENSION REASON:]
+    'SUSPENSION REASON:',
+
+lib\pages\theme_settings_page.dart:21: [FF9800]
+    'FF9800', // Orange
+
+lib\pages\theme_settings_page.dart:22: [2196F3]
+    '2196F3', // Neon Blue
+
+lib\pages\theme_settings_page.dart:23: [00E5FF]
+    '00E5FF', // Aqua Cyan
+
+lib\pages\theme_settings_page.dart:24: [00E676]
+    '00E676', // Spring Green
+
+lib\pages\theme_settings_page.dart:25: [9C27B0]
+    '9C27B0', // Purple
+
+lib\pages\theme_settings_page.dart:26: [E91E63]
+    'E91E63', // Hot Pink
+
+lib\pages\theme_settings_page.dart:27: [FFEB3B]
+    'FFEB3B', // Cyberpunk Yellow
+
+lib\pages\theme_settings_page.dart:28: [FF5252]
+    'FF5252', // Coral Red
+
+lib\pages\theme_settings_page.dart:65: [Hex code must be 6 characters]
+    _errorMessage = 'Hex code must be 6 characters';
+
+lib\pages\theme_settings_page.dart:132: [Dark Mode]
+    'Dark Mode',
+
+lib\pages\theme_settings_page.dart:154: [DOMINANT COLOR]
+    'DOMINANT COLOR',
+
+lib\pages\theme_settings_page.dart:195: [Vibrant Palette]
+    'Vibrant Palette',
+
+lib\pages\theme_settings_page.dart:264: [Custom Hex Code]
+    'Custom Hex Code',
+
+lib\pages\theme_settings_page.dart:385: [Apply Custom Color]
+    'Apply Custom Color',
+
+lib\pages\two_factor_verification_page.dart:78: [createdAt]
+    'createdAt': FieldValue.serverTimestamp(),
+
+lib\pages\two_factor_verification_page.dart:84: [Asiimov]
+    'from': 'Asiimov <max13.bl@gmail.com>', // Force the sender name to "Asiimov"
+
+lib\pages\two_factor_verification_page.dart:86: [Your Asiimov 2FA Code]
+    'subject': 'Your Asiimov 2FA Code',
+
+lib\pages\two_factor_verification_page.dart:88: [>$code</span></div><p style=]
+    'html': '<div style="font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif; background-color: #0c0f14; padding: 40px 20px; color: #ffffff; text-align: center;"><div style="max-width: 500px; margin: 0 auto; background-color: #171d26; border-radius: 16px; padding: 32px; border: 1.5px solid #ff9800; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"><h2 style="color: #ff9800; margin: 0 0 8px 0; font-size: 28px; letter-spacing: 2px; font-weight: 800;">ASIIMOV</h2><p style="color: #a0aec0; font-size: 13px; margin: 0 0 32px 0; letter-spacing: 1px; text-transform: uppercase;">Double Authentication (2FA)</p><div style="background-color: #0c0f14; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px dashed rgba(255, 152, 0, 0.3);"><p style="color: #a0aec0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 12px 0;">Your Verification Code</p><span style="font-size: 40px; font-weight: bold; color: #ff9800; letter-spacing: 8px; font-family: monospace;">$code</span></div><p style="color: #a0aec0; font-size: 13px; line-height: 1.6; margin: 0 0 24px 0;">This code will expire in <strong>5 minutes</strong>.<br>If you did not request this verification, you can safely ignore this email.</p><div style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; font-size: 11px; color: #718096;">This is an automated security message. Please do not reply directly to this email.</div></div></div>',
+
+lib\pages\two_factor_verification_page.dart:88: [><div style=]
+    'html': '<div style="font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif; background-color: #0c0f14; padding: 40px 20px; color: #ffffff; text-align: center;"><div style="max-width: 500px; margin: 0 auto; background-color: #171d26; border-radius: 16px; padding: 32px; border: 1.5px solid #ff9800; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"><h2 style="color: #ff9800; margin: 0 0 8px 0; font-size: 28px; letter-spacing: 2px; font-weight: 800;">ASIIMOV</h2><p style="color: #a0aec0; font-size: 13px; margin: 0 0 32px 0; letter-spacing: 1px; text-transform: uppercase;">Double Authentication (2FA)</p><div style="background-color: #0c0f14; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px dashed rgba(255, 152, 0, 0.3);"><p style="color: #a0aec0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 12px 0;">Your Verification Code</p><span style="font-size: 40px; font-weight: bold; color: #ff9800; letter-spacing: 8px; font-family: monospace;">$code</span></div><p style="color: #a0aec0; font-size: 13px; line-height: 1.6; margin: 0 0 24px 0;">This code will expire in <strong>5 minutes</strong>.<br>If you did not request this verification, you can safely ignore this email.</p><div style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; font-size: 11px; color: #718096;">This is an automated security message. Please do not reply directly to this email.</div></div></div>',
+
+lib\pages\two_factor_verification_page.dart:88: [><h2 style=]
+    'html': '<div style="font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif; background-color: #0c0f14; padding: 40px 20px; color: #ffffff; text-align: center;"><div style="max-width: 500px; margin: 0 auto; background-color: #171d26; border-radius: 16px; padding: 32px; border: 1.5px solid #ff9800; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"><h2 style="color: #ff9800; margin: 0 0 8px 0; font-size: 28px; letter-spacing: 2px; font-weight: 800;">ASIIMOV</h2><p style="color: #a0aec0; font-size: 13px; margin: 0 0 32px 0; letter-spacing: 1px; text-transform: uppercase;">Double Authentication (2FA)</p><div style="background-color: #0c0f14; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px dashed rgba(255, 152, 0, 0.3);"><p style="color: #a0aec0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 12px 0;">Your Verification Code</p><span style="font-size: 40px; font-weight: bold; color: #ff9800; letter-spacing: 8px; font-family: monospace;">$code</span></div><p style="color: #a0aec0; font-size: 13px; line-height: 1.6; margin: 0 0 24px 0;">This code will expire in <strong>5 minutes</strong>.<br>If you did not request this verification, you can safely ignore this email.</p><div style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; font-size: 11px; color: #718096;">This is an automated security message. Please do not reply directly to this email.</div></div></div>',
+
+lib\pages\two_factor_verification_page.dart:88: [><p style=]
+    'html': '<div style="font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif; background-color: #0c0f14; padding: 40px 20px; color: #ffffff; text-align: center;"><div style="max-width: 500px; margin: 0 auto; background-color: #171d26; border-radius: 16px; padding: 32px; border: 1.5px solid #ff9800; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"><h2 style="color: #ff9800; margin: 0 0 8px 0; font-size: 28px; letter-spacing: 2px; font-weight: 800;">ASIIMOV</h2><p style="color: #a0aec0; font-size: 13px; margin: 0 0 32px 0; letter-spacing: 1px; text-transform: uppercase;">Double Authentication (2FA)</p><div style="background-color: #0c0f14; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px dashed rgba(255, 152, 0, 0.3);"><p style="color: #a0aec0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 12px 0;">Your Verification Code</p><span style="font-size: 40px; font-weight: bold; color: #ff9800; letter-spacing: 8px; font-family: monospace;">$code</span></div><p style="color: #a0aec0; font-size: 13px; line-height: 1.6; margin: 0 0 24px 0;">This code will expire in <strong>5 minutes</strong>.<br>If you did not request this verification, you can safely ignore this email.</p><div style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; font-size: 11px; color: #718096;">This is an automated security message. Please do not reply directly to this email.</div></div></div>',
+
+lib\pages\two_factor_verification_page.dart:88: [>ASIIMOV</h2><p style=]
+    'html': '<div style="font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif; background-color: #0c0f14; padding: 40px 20px; color: #ffffff; text-align: center;"><div style="max-width: 500px; margin: 0 auto; background-color: #171d26; border-radius: 16px; padding: 32px; border: 1.5px solid #ff9800; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"><h2 style="color: #ff9800; margin: 0 0 8px 0; font-size: 28px; letter-spacing: 2px; font-weight: 800;">ASIIMOV</h2><p style="color: #a0aec0; font-size: 13px; margin: 0 0 32px 0; letter-spacing: 1px; text-transform: uppercase;">Double Authentication (2FA)</p><div style="background-color: #0c0f14; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px dashed rgba(255, 152, 0, 0.3);"><p style="color: #a0aec0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 12px 0;">Your Verification Code</p><span style="font-size: 40px; font-weight: bold; color: #ff9800; letter-spacing: 8px; font-family: monospace;">$code</span></div><p style="color: #a0aec0; font-size: 13px; line-height: 1.6; margin: 0 0 24px 0;">This code will expire in <strong>5 minutes</strong>.<br>If you did not request this verification, you can safely ignore this email.</p><div style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; font-size: 11px; color: #718096;">This is an automated security message. Please do not reply directly to this email.</div></div></div>',
+
+lib\pages\two_factor_verification_page.dart:88: [>Double Authentication (2FA)</p><div style=]
+    'html': '<div style="font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif; background-color: #0c0f14; padding: 40px 20px; color: #ffffff; text-align: center;"><div style="max-width: 500px; margin: 0 auto; background-color: #171d26; border-radius: 16px; padding: 32px; border: 1.5px solid #ff9800; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"><h2 style="color: #ff9800; margin: 0 0 8px 0; font-size: 28px; letter-spacing: 2px; font-weight: 800;">ASIIMOV</h2><p style="color: #a0aec0; font-size: 13px; margin: 0 0 32px 0; letter-spacing: 1px; text-transform: uppercase;">Double Authentication (2FA)</p><div style="background-color: #0c0f14; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px dashed rgba(255, 152, 0, 0.3);"><p style="color: #a0aec0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 12px 0;">Your Verification Code</p><span style="font-size: 40px; font-weight: bold; color: #ff9800; letter-spacing: 8px; font-family: monospace;">$code</span></div><p style="color: #a0aec0; font-size: 13px; line-height: 1.6; margin: 0 0 24px 0;">This code will expire in <strong>5 minutes</strong>.<br>If you did not request this verification, you can safely ignore this email.</p><div style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; font-size: 11px; color: #718096;">This is an automated security message. Please do not reply directly to this email.</div></div></div>',
+
+lib\pages\two_factor_verification_page.dart:88: [>Your Verification Code</p><span style=]
+    'html': '<div style="font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif; background-color: #0c0f14; padding: 40px 20px; color: #ffffff; text-align: center;"><div style="max-width: 500px; margin: 0 auto; background-color: #171d26; border-radius: 16px; padding: 32px; border: 1.5px solid #ff9800; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"><h2 style="color: #ff9800; margin: 0 0 8px 0; font-size: 28px; letter-spacing: 2px; font-weight: 800;">ASIIMOV</h2><p style="color: #a0aec0; font-size: 13px; margin: 0 0 32px 0; letter-spacing: 1px; text-transform: uppercase;">Double Authentication (2FA)</p><div style="background-color: #0c0f14; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px dashed rgba(255, 152, 0, 0.3);"><p style="color: #a0aec0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 12px 0;">Your Verification Code</p><span style="font-size: 40px; font-weight: bold; color: #ff9800; letter-spacing: 8px; font-family: monospace;">$code</span></div><p style="color: #a0aec0; font-size: 13px; line-height: 1.6; margin: 0 0 24px 0;">This code will expire in <strong>5 minutes</strong>.<br>If you did not request this verification, you can safely ignore this email.</p><div style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; font-size: 11px; color: #718096;">This is an automated security message. Please do not reply directly to this email.</div></div></div>',
+
+lib\pages\two_factor_verification_page.dart:122: [createdAt]
+    final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+
+lib\pages\two_factor_verification_page.dart:146: [Exception: ]
+    final errorMsg = e.toString().replaceFirst('Exception: ', '');
+
+lib\pages\two_factor_verification_page.dart:281: [Resend Code]
+    canResend ? 'Resend Code' : 'Resend Code in ${countdown}s',
+
+lib\pages\two_factor_verification_page.dart:297: [Cancel & Sign Out]
+    'Cancel & Sign Out',
+
+lib\pages\user_warning_page.dart:60: [Content Moderation Notice]
+    'Content Moderation Notice',
+
+lib\pages\user_warning_page.dart:97: [MODERATED ITEM]
+    'MODERATED ITEM',
+
+lib\pages\user_warning_page.dart:115: [REASON FOR REMOVAL]
+    'REASON FOR REMOVAL',
+
+lib\pages\user_warning_page.dart:153: [I Understand & Accept]
+    'I Understand & Accept',
+
+lib\pages\verify_email_page.dart:145: [Check your inbox]
+    'Check your inbox',
+
+lib\pages\verify_email_page.dart:226: [Resend Email]
+    canResendEmail ? 'Resend Email' : 'Resend Email in ${countdown}s',
+
+lib\pages\verify_email_page.dart:243: [Cancel & Sign Out]
+    'Cancel & Sign Out',
+
+lib\services\admin\admin_service.dart:34: [resolutionAction]
+    if (action != null) 'resolutionAction': action,
+
+lib\services\admin\admin_service.dart:35: [resolutionReason]
+    if (reason != null) 'resolutionReason': reason,
+
+lib\services\auth\auth_gate.dart:41: [No reason provided.]
+    final suspensionReason = userData?['suspensionReason'] as String? ?? "No reason provided.";
+
+lib\services\chat\chat_service.dart:84: [updatedAt]
+    final aTime = aData['updatedAt'] as Timestamp? ??
+
+lib\services\chat\chat_service.dart:85: [createdAt]
+    aData['createdAt'] as Timestamp? ??
+
+lib\services\chat\chat_service.dart:87: [updatedAt]
+    final bTime = bData['updatedAt'] as Timestamp? ??
+
+lib\services\chat\chat_service.dart:88: [createdAt]
+    bData['createdAt'] as Timestamp? ??
+
+lib\services\chat\chat_service.dart:287: [lastTimestamp]
+    final lastTimestamp = chatData['lastTimestamp'] as Timestamp? ??
+
+lib\services\chat\chat_service.dart:288: [updatedAt]
+    chatData['updatedAt'] as Timestamp? ??
+
+lib\services\chat\chat_service.dart:303: [lastSenderID]
+    'senderID': chatData['lastSenderID'],
+
+lib\services\chat\chat_service.dart:305: [lastTimestamp]
+    'timestamp': chatData['lastTimestamp'],
+
+lib\services\chat\chat_service.dart:307: [isSystemMessage]
+    'isSystemMessage': chatData['lastIsSystem'] ?? false,
+
+lib\services\chat\chat_service.dart:307: [lastIsSystem]
+    'isSystemMessage': chatData['lastIsSystem'] ?? false,
+
+lib\services\chat\chat_service.dart:320: [Someone]
+    final currentUsername = auth.currentUser?.displayName ?? 'Someone';
+
+lib\services\chat\chat_service.dart:338: [memberDetails]
+    'memberDetails': memberDetails,
+
+lib\services\chat\chat_service.dart:339: [mutedBy]
+    'mutedBy': [],
+
+lib\services\chat\chat_service.dart:341: [lastSenderID]
+    'lastSenderID': '',
+
+lib\services\chat\chat_service.dart:343: [lastTimestamp]
+    'lastTimestamp': FieldValue.serverTimestamp(),
+
+lib\services\chat\chat_service.dart:344: [updatedAt]
+    'updatedAt': FieldValue.serverTimestamp(),
+
+lib\services\chat\chat_service.dart:356: [Unknown]
+    final usernames = usersSnap.docs.map((doc) => doc.data()['username'] ?? 'Unknown').toList();
+
+lib\services\chat\chat_service.dart:374: [isSystemMessage]
+    'isSystemMessage': true,
+
+lib\services\chat\chat_service.dart:386: [lastSenderID]
+    'lastSenderID': 'system',
+
+lib\services\chat\chat_service.dart:387: [System]
+    'lastSenderUsername': 'System',
+
+lib\services\chat\chat_service.dart:388: [lastTimestamp]
+    'lastTimestamp': timestamp,
+
+lib\services\chat\chat_service.dart:389: [lastIsSystem]
+    'lastIsSystem': true,
+
+lib\services\chat\chat_service.dart:390: [updatedAt]
+    'updatedAt': FieldValue.serverTimestamp(),
+
+lib\services\chat\chat_service.dart:396: [Someone]
+    final currentUsername = auth.currentUser?.displayName ?? 'Someone';
+
+lib\services\chat\chat_service.dart:399: [updatedAt]
+    'updatedAt': FieldValue.serverTimestamp(),
+
+lib\services\chat\chat_service.dart:406: [Someone]
+    final currentUsername = auth.currentUser?.displayName ?? 'Someone';
+
+lib\services\chat\chat_service.dart:416: [mutedBy]
+    'mutedBy': FieldValue.arrayUnion([currentUserId]),
+
+lib\services\chat\chat_service.dart:420: [mutedBy]
+    'mutedBy': FieldValue.arrayRemove([currentUserId]),
+
+lib\services\chat\chat_service.dart:428: [Someone]
+    final currentUsername = auth.currentUser?.displayName ?? 'Someone';
+
+lib\services\chat\chat_service.dart:451: [updatedAt]
+    'updatedAt': FieldValue.serverTimestamp(),
+
+lib\services\chat\chat_service.dart:457: [Unknown]
+    final usernames = usersSnap.docs.map((doc) => doc.data()['username'] ?? 'Unknown').toList();
+
+lib\services\chat\chat_service.dart:462: [Unknown]
+    final usernames = usersSnap.docs.map((doc) => doc.data()['username'] ?? 'Unknown').toList();
+
+lib\services\chat\chat_service.dart:471: [Someone]
+    final currentUsername = auth.currentUser?.displayName ?? 'Someone';
+
+lib\services\chat\chat_service.dart:479: [memberDetails]
+    Map<String, dynamic> memberDetails = Map<String, dynamic>.from(data['memberDetails'] ?? {});
+
+lib\services\chat\chat_service.dart:495: [updatedAt]
+    'updatedAt': FieldValue.serverTimestamp(),
+
+lib\services\chat\chat_service.dart:499: [Someone]
+    String adminUsername = 'Someone';
+
+lib\services\chat\chat_service.dart:537: [Someone]
+    adminUsername = adminDoc.data()?['username'] ?? 'Someone';
+
+lib\services\chat\chat_service.dart:578: [Someone]
+    final String senderName = auth.currentUser?.displayName ?? 'Someone';
+
+lib\services\chat\chat_service.dart:637: [lastSenderID]
+    'lastSenderID': currentUserId,
+
+lib\services\chat\chat_service.dart:639: [lastTimestamp]
+    'lastTimestamp': timestamp,
+
+lib\services\chat\chat_service.dart:641: [lastIsSystem]
+    'lastIsSystem': false,
+
+lib\services\chat\chat_service.dart:642: [updatedAt]
+    'updatedAt': FieldValue.serverTimestamp(),
+
+lib\services\chat\chat_service.dart:660: [­ƒô£ sent a post]
+    notificationBody = "­ƒô£ sent a post";
+
+lib\services\chat\chat_service.dart:664: [­ƒÄñ sent a voice message]
+    notificationBody = "­ƒÄñ sent a voice message";
+
+lib\services\chat\chat_service.dart:681: [­ƒôü sent an attachment]
+    notificationBody = "­ƒôü sent an attachment";
+
+lib\services\chat\chat_service.dart:690: [­ƒôÀ Photo: $message]
+    notificationBody = "­ƒôÀ Photo: $message";
+
+lib\services\chat\chat_service.dart:692: [­ƒÄÑ Video: $message]
+    notificationBody = "­ƒÄÑ Video: $message";
+
+lib\services\chat\chat_service.dart:694: [­ƒÄÁ Audio: $message]
+    notificationBody = "­ƒÄÁ Audio: $message";
+
+lib\services\chat\chat_service.dart:696: [­ƒôü Attachment: $message]
+    notificationBody = "­ƒôü Attachment: $message";
+
+lib\services\chat\chat_service.dart:707: [Group]
+    final String groupName = groupData['groupName'] ?? 'Group';
+
+lib\services\chat\chat_service.dart:708: [mutedBy]
+    final List<String> mutedBy = List<String>.from(groupData['mutedBy'] ?? []);
+
+lib\services\chat\chat_service.dart:743: [Shared a post]
+    "Shared a post",
+
+lib\services\chat\chat_service.dart:795: [Someone]
+    final senderUsername = auth.currentUser?.displayName ?? 'Someone';
+
+lib\services\chat\chat_service.dart:802: [Group]
+    title = groupDoc.data()?['groupName'] ?? 'Group';
+
+lib\services\chat\chat_service.dart:850: [notificationPrefs]
+    final prefs = receiverData['notificationPrefs'] as Map<String, dynamic>? ?? {};
+
+lib\services\chat\chat_service.dart:869: [Someone]
+    final senderUsername = auth.currentUser?.displayName ?? 'Someone';
+
+lib\services\chat\chat_service.dart:929: [Authorization]
+    'Authorization': 'Bearer $accessToken',
+
+lib\services\chat\chat_service.dart:929: [Bearer $accessToken]
+    'Authorization': 'Bearer $accessToken',
+
+lib\services\chat\chat_service.dart:1102: [lastSenderID]
+    if (chatData != null && chatData['lastSenderID'] != currentUserId) {
+
+lib\services\chat\chat_service.dart:1168: [isPinned]
+    final bool isPinned = data['isPinned'] == true;
+
+lib\services\chat\chat_service.dart:1176: [objectKey]
+    final objectKey = attachment['objectKey'] as String?;
+
+lib\services\chat\chat_service.dart:1183: [instantAttachment]
+    final instantAttachment = data['instantAttachment'] as Map<String, dynamic>?;
+
+lib\services\chat\chat_service.dart:1185: [objectKey]
+    final objectKey = instantAttachment['objectKey'] as String?;
+
+lib\services\chat\chat_service.dart:1236: [reportCount]
+    'reportCount': FieldValue.increment(1),
+
+lib\services\chat\chat_service.dart:1237: [reportedByIds]
+    'reportedByIds': FieldValue.arrayUnion([currentUser.uid]),
+
+lib\services\chat\chat_service.dart:1238: [reporterReasons]
+    'reporterReasons': FieldValue.arrayUnion([reasonEntry]),
+
+lib\services\chat\chat_service.dart:1243: [reportedById]
+    'reportedById': currentUser.uid,
+
+lib\services\chat\chat_service.dart:1244: [reportedByIds]
+    'reportedByIds': [currentUser.uid],
+
+lib\services\chat\chat_service.dart:1246: [reportReason]
+    'reportReason': reasonEntry['reason'],
+
+lib\services\chat\chat_service.dart:1247: [reporterReasons]
+    'reporterReasons': [reasonEntry],
+
+lib\services\chat\chat_service.dart:1257: [sharedPostId]
+    'sharedPostId': sharedPostId,
+
+lib\services\chat\chat_service.dart:1259: [reportCount]
+    'reportCount': 1,
+
+lib\services\chat\chat_service.dart:1287: [objectKey]
+    final objectKey = attachment['objectKey'] as String?;
+
+lib\services\chat\chat_service.dart:1294: [instantAttachment]
+    final instantAttachment = data['instantAttachment'] as Map<String, dynamic>?;
+
+lib\services\chat\chat_service.dart:1296: [objectKey]
+    final objectKey = instantAttachment['objectKey'] as String?;
+
+lib\services\chat\chat_service.dart:1390: [objectKey]
+    final objectKey = attachment['objectKey'] as String?;
+
+lib\services\chat\chat_service.dart:1397: [instantAttachment]
+    final instantAttachment = data['instantAttachment'] as Map<String, dynamic>?;
+
+lib\services\chat\chat_service.dart:1399: [objectKey]
+    final objectKey = instantAttachment['objectKey'] as String?;
+
+lib\services\chat\chat_service.dart:1432: [isEdited]
+    'isEdited': true,
+
+lib\services\chat\chat_service.dart:1455: [isPinned]
+    'isPinned': !currentPinState,
+
+lib\services\file\file_service.dart:104: [Authorization]
+    'Authorization': 'Bearer $idToken',
+
+lib\services\file\file_service.dart:132: [objectKey]
+    'objectKey': objectKey,
+
+lib\services\file\file_service.dart:154: [Authorization]
+    'Authorization': 'Bearer $idToken',
+
+lib\services\image\image_service.dart:71: [TODO]
+    if (_workerUrl.contains("TODO")) {
+
+lib\services\image\image_service.dart:99: [Authorization]
+    'Authorization': 'Bearer $idToken',
+
+lib\services\image\image_service.dart:168: [TODO]
+    if (_workerUrl.contains("TODO")) {
+
+lib\services\image\image_service.dart:196: [Authorization]
+    'Authorization': 'Bearer $idToken',
+
+lib\services\image\image_service.dart:319: [Delete Current Photo]
+    title: Text('Delete Current Photo', style: TextStyle(color: Colors.redAccent)),
+
+lib\services\notifications\notification_service.dart:49: [Chat Messages]
+    'Chat Messages',
+
+lib\services\notifications\notification_service.dart:125: [dominantColor]
+    final hexColor = prefs.getString('dominantColor');
+
+lib\services\notifications\notification_service.dart:138: [Someone]
+    final senderUsername = message.data['senderUsername'] ?? 'Someone';
+
+lib\services\post\post_service.dart:27: [authorID]
+    .where('authorID', isEqualTo: user.uid)
+
+lib\services\post\post_service.dart:44: [authorID]
+    'authorID': user.uid,
+
+lib\services\post\post_service.dart:45: [Anonymous]
+    'authorUsername': user.displayName ?? 'Anonymous',
+
+lib\services\post\post_service.dart:51: [shareCount]
+    'shareCount': 0,
+
+lib\services\post\post_service.dart:52: [sharedBy]
+    'sharedBy': [],
+
+lib\services\post\post_service.dart:54: [isCloseFriendsOnly]
+    'isCloseFriendsOnly': isCloseFriendsOnly,
+
+lib\services\post\post_service.dart:55: [visibleTo]
+    'visibleTo': visibleTo ?? [],
+
+lib\services\post\post_service.dart:62: [shareCount]
+    'shareCount': FieldValue.increment(1),
+
+lib\services\post\post_service.dart:63: [sharedBy]
+    'sharedBy': FieldValue.arrayUnion([userId]),
+
+lib\services\post\post_service.dart:95: [authorID]
+    .where('authorID', isEqualTo: userId)
+
+lib\services\post\post_service.dart:103: [authorID]
+    .where('authorID', isEqualTo: userId)
+
+lib\services\post\post_service.dart:168: [authorID]
+    bool isAllowed = doc['authorID'] == userId;
+
+lib\services\post\post_service.dart:171: [isAdmin]
+    if (currentUserDoc.exists && currentUserDoc.data()?['isAdmin'] == true) {
+
+lib\services\post\post_service.dart:181: [objectKey]
+    final objectKey = att['objectKey'] as String?;
+
+lib\services\post\post_service.dart:200: [authorID]
+    'authorID': user.uid,
+
+lib\services\post\post_service.dart:201: [Anonymous]
+    'authorUsername': user.displayName ?? 'Anonymous',
+
+lib\services\post\post_service.dart:207: [shareCount]
+    'shareCount': 0,
+
+lib\services\post\post_service.dart:208: [sharedBy]
+    'sharedBy': [],
+
+lib\services\post\post_service.dart:220: [authorID]
+    final ownerID = parentDoc.data()?['authorID'] as String?;
+
+lib\services\post\post_service.dart:222: [Someone]
+    final senderUsername = user.displayName ?? 'Someone';
+
+lib\services\post\post_service.dart:292: [authorID]
+    bool isAllowed = doc['authorID'] == userId;
+
+lib\services\post\post_service.dart:295: [isAdmin]
+    if (currentUserDoc.exists && currentUserDoc.data()?['isAdmin'] == true) {
+
+lib\services\post\post_service.dart:305: [objectKey]
+    final objectKey = att['objectKey'] as String?;
+
+lib\services\post\post_service.dart:340: [objectKey]
+    final objectKey = att['objectKey'] as String?;
+
+lib\services\post\post_service.dart:358: [shareCount]
+    'shareCount': FieldValue.increment(1),
+
+lib\services\post\post_service.dart:359: [sharedBy]
+    'sharedBy': FieldValue.arrayUnion([userId]),
+
+lib\services\post\post_service.dart:367: [Anonymous]
+    userDoc.data()?['username'] as String? ?? user.displayName ?? 'Anonymous';
+
+lib\services\post\post_service.dart:397: [reportCount]
+    'reportCount': FieldValue.increment(1),
+
+lib\services\post\post_service.dart:398: [reportedByIds]
+    'reportedByIds': FieldValue.arrayUnion([user.uid]),
+
+lib\services\post\post_service.dart:399: [reporterReasons]
+    'reporterReasons': FieldValue.arrayUnion([reasonEntry]),
+
+lib\services\post\post_service.dart:408: [reportedById]
+    'reportedById': user.uid,
+
+lib\services\post\post_service.dart:409: [reportedByIds]
+    'reportedByIds': [user.uid],
+
+lib\services\post\post_service.dart:411: [reportReason]
+    'reportReason': reasonEntry['reason'],
+
+lib\services\post\post_service.dart:412: [reporterReasons]
+    'reporterReasons': [reasonEntry],
+
+lib\services\post\post_service.dart:417: [reportCount]
+    'reportCount': 1,
+
+lib\services\post\post_service.dart:449: [reportCount]
+    'reportCount': FieldValue.increment(1),
+
+lib\services\post\post_service.dart:450: [reportedByIds]
+    'reportedByIds': FieldValue.arrayUnion([user.uid]),
+
+lib\services\post\post_service.dart:451: [reporterReasons]
+    'reporterReasons': FieldValue.arrayUnion([reasonEntry]),
+
+lib\services\post\post_service.dart:461: [reportedById]
+    'reportedById': user.uid,
+
+lib\services\post\post_service.dart:462: [reportedByIds]
+    'reportedByIds': [user.uid],
+
+lib\services\post\post_service.dart:464: [reportReason]
+    'reportReason': reasonEntry['reason'],
+
+lib\services\post\post_service.dart:465: [reporterReasons]
+    'reporterReasons': [reasonEntry],
+
+lib\services\post\post_service.dart:470: [reportCount]
+    'reportCount': 1,
+
+lib\services\preferences\shared_preferences.dart:11: [isDarkMode]
+    prefs?.setBool('isDarkMode', isDarkMode);
+
+lib\services\preferences\shared_preferences.dart:15: [isDarkMode]
+    return prefs?.getBool('isDarkMode');
+
+lib\services\preferences\shared_preferences.dart:19: [dominantColor]
+    prefs?.setString('dominantColor', hexColor);
+
+lib\services\preferences\shared_preferences.dart:23: [dominantColor]
+    return prefs?.getString('dominantColor');
+
+lib\services\user\user_service.dart:51: [Someone]
+    final senderUsername = _auth.currentUser?.displayName ?? 'Someone';
+
+lib\services\user\user_service.dart:213: [Someone]
+    final senderUsername = _auth.currentUser?.displayName ?? 'Someone';
+
+lib\services\user\user_service.dart:254: [Someone]
+    final myUsername = _auth.currentUser?.displayName ?? 'Someone';
+
+lib\services\user\user_service.dart:313: [closeFriendsEnabled]
+    'closeFriendsEnabled': enabled,
+
+lib\services\user\user_service.dart:321: [closeFriends]
+    'closeFriends': isAdded
+
+lib\services\user\user_service.dart:345: [reportedUserId]
+    .where('reportedUserId', isEqualTo: reportedUserId)
+
+lib\services\user\user_service.dart:354: [reportCount]
+    'reportCount': FieldValue.increment(1),
+
+lib\services\user\user_service.dart:355: [reportedByIds]
+    'reportedByIds': FieldValue.arrayUnion([user.uid]),
+
+lib\services\user\user_service.dart:356: [reporterReasons]
+    'reporterReasons': FieldValue.arrayUnion([reasonEntry]),
+
+lib\services\user\user_service.dart:361: [reportedById]
+    'reportedById': user.uid,
+
+lib\services\user\user_service.dart:362: [reportedByIds]
+    'reportedByIds': [user.uid],
+
+lib\services\user\user_service.dart:364: [reportReason]
+    'reportReason': reasonEntry['reason'],
+
+lib\services\user\user_service.dart:365: [reporterReasons]
+    'reporterReasons': [reasonEntry],
+
+lib\services\user\user_service.dart:366: [reportedUserId]
+    'reportedUserId': reportedUserId,
+
+lib\services\user\user_service.dart:371: [reportCount]
+    'reportCount': 1,
+
+lib\utils\report_reasons_helper.dart:15: [reporterReasons]
+    final reporterReasons = reportData['reporterReasons'];
+
+lib\utils\report_reasons_helper.dart:21: [Anonymous]
+    entry['username'] as String? ?? 'Anonymous',
+
+lib\utils\report_reasons_helper.dart:29: [reportReason]
+    final legacyReason = reportData['reportReason'] as String?;
+
+lib\utils\report_reasons_helper.dart:32: [Anonymous]
+    reportData['reportedByUsername'] as String? ?? 'Anonymous';
+
+lib\utils\report_reasons_helper.dart:33: [reportedById]
+    final reporterId = reportData['reportedById'] as String?;
+
+lib\widgets\safe_network_image_web.dart:30: [100%]
+    ..style.width = '100%'
+
+lib\widgets\safe_network_image_web.dart:31: [100%]
+    ..style.height = '100%'
+
+
+Total: 423 untranslated strings found

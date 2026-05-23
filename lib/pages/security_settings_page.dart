@@ -175,7 +175,7 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
                                             ),
                                             const SizedBox(width: 8),
                                             Text(
-                                              is2faEnabled ? '(Enabled)' : '(Disabled)',
+                                              is2faEnabled ? 'label_enabled'.tr() : 'label_disabled'.tr(),
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.bold,
@@ -253,7 +253,7 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
                                       ),
                                       const SizedBox(width: 16),
                                       Text(
-                                        'Change Password',
+                                        'change_password'.tr(),
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
@@ -291,7 +291,7 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
                                       child: Text(
                                         _cooldown > 0
                                             ? 'Send again in ${_cooldown}s'
-                                            : 'Send Password Reset Link',
+                                            : 'send_password_reset_link'.tr(),
                                         style: const TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.bold,

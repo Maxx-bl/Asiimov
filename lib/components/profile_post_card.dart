@@ -136,7 +136,7 @@ class ProfilePostCard extends StatelessWidget {
 
                 // Total
                 Text(
-                  'Total: ',
+                  'total_label'.tr(),
                   style: TextStyle(
                     fontSize: 13,
                     color: Theme.of(context).colorScheme.primary,

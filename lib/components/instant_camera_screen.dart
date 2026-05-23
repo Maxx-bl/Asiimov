@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class InstantCameraScreen extends StatefulWidget {
   const InstantCameraScreen({super.key});
@@ -393,7 +394,7 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                       ),
                       icon: const Icon(Icons.refresh, size: 22),
-                      label: Text("Retake", style: TextStyle(fontSize: 16)),
+                      label: Text('retake'.tr(), style: TextStyle(fontSize: 16)),
                       onPressed: _retake,
                     ),
                     ElevatedButton.icon(
@@ -404,7 +405,7 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                       ),
                       icon: const Icon(Icons.send, size: 22),
-                      label: Text("Send", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      label: Text('send'.tr(), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       onPressed: _confirm,
                     ),
                   ],

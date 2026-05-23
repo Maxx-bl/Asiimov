@@ -108,7 +108,7 @@ class _FollowListPageState extends State<FollowListPage> {
                                     await userService.removeFollower(uid);
                                     setState(() {}); // Refresh list
                                   },
-                                  child: Text('Remove', style: TextStyle(color: Colors.red)),
+                                  child: Text('remove'.tr(), style: TextStyle(color: Colors.red)),
                                 ),
                               ],
                             ),

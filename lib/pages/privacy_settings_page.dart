@@ -65,7 +65,7 @@ class PrivacySettingsPage extends StatelessWidget {
                                       ),
                                       const SizedBox(width: 16),
                                       Text(
-                                        'Public Account',
+                                        'public_account'.tr(),
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
@@ -74,7 +74,7 @@ class PrivacySettingsPage extends StatelessWidget {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        isPublic ? '(Public)' : '(Private)',
+                                        isPublic ? 'label_public'.tr() : 'label_private'.tr(),
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.bold,

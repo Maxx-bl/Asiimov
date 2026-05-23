@@ -220,7 +220,7 @@ class _CloseFriendsPageState extends State<CloseFriendsPage> {
                                   ),
                                   const SizedBox(width: 16),
                                   Text(
-                                    'Close Friends Feature',
+                                    'close_friends_feature'.tr(),
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -258,7 +258,7 @@ class _CloseFriendsPageState extends State<CloseFriendsPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Mutual Followers',
+                          'mutual_followers'.tr(),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,

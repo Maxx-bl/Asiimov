@@ -116,7 +116,7 @@ class _GroupCreationSheetState extends State<GroupCreationSheet> {
           const SizedBox(height: 16),
 
           Text(
-            "New Group",
+            'new_group'.tr(),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -131,8 +131,8 @@ class _GroupCreationSheetState extends State<GroupCreationSheet> {
             maxLength: 30,
             maxLines: 1,
             decoration: InputDecoration(
-              hintText: 'group_name'.tr().tr(),
-              helperText: "3-30 chars: a-z, 0-9, . , - , _",
+              hintText: 'group_name'.tr(),
+              helperText: 'group_name_helper'.tr(),
               helperStyle: TextStyle(
                 fontSize: 10,
                 color: _isNameValid(_nameController.text) 
@@ -155,7 +155,7 @@ class _GroupCreationSheetState extends State<GroupCreationSheet> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'search_following'.tr().tr(),
+              hintText: 'search_following'.tr(),
               prefixIcon: const Icon(Icons.search),
               filled: true,
               fillColor: Theme.of(context).colorScheme.secondary,
@@ -239,7 +239,7 @@ class _GroupCreationSheetState extends State<GroupCreationSheet> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text(_isLoading ? "Creating..." : "Create Group (${_selectedUserIds.length})"),
+                child: Text(_isLoading ? 'creating'.tr() : '${'create_group'.tr()} (${_selectedUserIds.length})'),
               ),
             ),
           ),

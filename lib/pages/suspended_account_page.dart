@@ -1,5 +1,6 @@
 import 'package:asiimov/components/logout_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class SuspendedAccountPage extends StatelessWidget {
   final String reason;
@@ -41,7 +42,7 @@ class SuspendedAccountPage extends StatelessWidget {
               
               // Title
               Text(
-                'ACCOUNT SUSPENDED',
+                'account_suspended_title'.tr(),
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
@@ -87,7 +88,7 @@ class SuspendedAccountPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'SUSPENSION REASON:',
+                      'suspension_reason_label'.tr(),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,

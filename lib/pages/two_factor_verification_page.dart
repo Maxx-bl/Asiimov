@@ -278,7 +278,7 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
                     foregroundColor: Theme.of(context).primaryColor,
                   ),
                   child: Text(
-                    canResend ? 'Resend Code' : 'Resend Code in ${countdown}s',
+                    canResend ? 'resend_code'.tr() : 'Resend Code in ${countdown}s',
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -294,7 +294,7 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
                     foregroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
                   ),
                   child: Text(
-                    'Cancel & Sign Out',
+                    'cancel_sign_out'.tr(),
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),

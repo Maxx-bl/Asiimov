@@ -142,7 +142,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
               const AsiimovMonoLogo(),
               const SizedBox(height: 32),
               Text(
-                'Check your inbox',
+                'check_inbox'.tr(),
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -223,7 +223,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                     elevation: canResendEmail ? 2 : 0,
                   ),
                   child: Text(
-                    canResendEmail ? 'Resend Email' : 'Resend Email in ${countdown}s',
+                    canResendEmail ? 'resend_email'.tr() : 'Resend Email in ${countdown}s',
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -240,7 +240,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                   foregroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
                 ),
                 child: Text(
-                  'Cancel & Sign Out',
+                  'cancel_sign_out'.tr(),
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),

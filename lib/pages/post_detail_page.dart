@@ -378,7 +378,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Restricted Access',
+                  'restricted_access'.tr(),
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -387,7 +387,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  "This post is reserved for the author's close friends.",
+                  'close_friends_restricted'.tr(),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,

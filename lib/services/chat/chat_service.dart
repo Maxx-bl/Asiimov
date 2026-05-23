@@ -13,6 +13,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
 import 'package:rxdart/rxdart.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ChatService extends ChangeNotifier {
   //get instance of firebase services
@@ -657,11 +658,11 @@ class ChatService extends ChangeNotifier {
     //send push notification to receiver(s)
     String notificationBody = message;
     if (messageType == 'post_share') {
-      notificationBody = "📜 sent a post";
+      notificationBody = 'notif_sent_post'.tr();
     } else if (messageType == 'instant_attachment' && instantAttachment != null) {
       final type = instantAttachment['type'];
       if (type == 'audio') {
-        notificationBody = "🎤 sent a voice message";
+        notificationBody = 'notif_sent_voice'.tr();
       } else if (type == 'video') {
         notificationBody = "📸 sent a video";
       } else {
@@ -678,7 +679,7 @@ class ChatService extends ChangeNotifier {
           } else if (type == 'audio') {
             notificationBody = "🎵 sent an audio file";
           } else {
-            notificationBody = "📁 sent an attachment";
+            notificationBody = 'notif_sent_attachment'.tr();
           }
         } else {
           notificationBody = "📁 sent ${attachments.length} attachments";
@@ -740,7 +741,7 @@ class ChatService extends ChangeNotifier {
     for (String receiverId in receiverIds) {
       await sendMessage(
         receiverId,
-        "Shared a post",
+        'shared_a_post'.tr(),
         messageType: 'post_share',
         sharedPostId: postId,
       );

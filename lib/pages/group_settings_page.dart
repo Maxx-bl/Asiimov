@@ -70,7 +70,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
             decoration: InputDecoration(
               hintText: 'new_name'.tr().tr(),
               helperText: "3-30 chars: a-z, 0-9, . , - , _",
-              errorText: _isNameValid(controller.text) ? null : "Invalid name",
+              errorText: _isNameValid(controller.text) ? null : 'invalid_name'.tr(),
               counterText: "",
             ),
             onChanged: (value) => setDialogState(() {}),
@@ -86,7 +86,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                     setState(() {}); // Refresh
                   }
                 : null,
-              child: Text("Save"),
+              child: Text('save'.tr()),
             ),
           ],
         ),
@@ -112,7 +112,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
               await _chatService.updateGroupMembers(widget.groupId, newMembers.where((m) => m != _currentUserId).toList());
               if (mounted) nav.pop();
             },
-            child: Text("Remove", style: TextStyle(color: Colors.red)),
+            child: Text('remove'.tr(), style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -160,7 +160,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                 }
               }
             },
-            child: Text("Leave", style: TextStyle(color: Colors.red)),
+            child: Text('leave'.tr(), style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -332,7 +332,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
               const SizedBox(height: 32),
 
               // Settings Section
-              Text("Settings", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text('settings'.tr(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 8),
               SwitchListTile(
                 title: Text('mute_notifications'.tr()),
@@ -347,7 +347,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Members", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text('members'.tr(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   if (isAdmin)
                     TextButton.icon(
                       onPressed: () {
@@ -362,7 +362,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                         );
                       },
                       icon: const Icon(Icons.person_add, size: 18),
-                      label: Text("Add"),
+                      label: Text('add'.tr()),
                     ),
                 ],
               ),
@@ -400,7 +400,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                           radius: 20,
                         ),
                         title: UsernameDisplay(userId: uid, username: username),
-                        subtitle: isMemberAdmin ? Text("Admin", style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 12)) : null,
+                        subtitle: isMemberAdmin ? Text('admin'.tr(), style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 12)) : null,
                         trailing: (isAdmin && uid != _currentUserId)
                             ? IconButton(
                                 icon: const Icon(Icons.remove_circle_outline, color: Colors.red),

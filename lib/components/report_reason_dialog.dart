@@ -28,7 +28,7 @@ class ReportReasonDialog {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Why are you reporting this?',
+                      'why_reporting'.tr(),
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade600,
@@ -42,7 +42,7 @@ class ReportReasonDialog {
                       maxLines: 3,
                       textCapitalization: TextCapitalization.sentences,
                       decoration: InputDecoration(
-                        hintText: 'describe_the_issue'.tr().tr(),
+                        hintText: 'describe_the_issue'.tr(),
                         border: OutlineInputBorder(),
                         isDense: true,
                         contentPadding: EdgeInsets.all(12),
@@ -62,7 +62,7 @@ class ReportReasonDialog {
                       ? () => Navigator.pop(dialogContext, trimmed)
                       : null,
                   child: Text(
-                    'Report',
+                    'report'.tr(),
                     style: TextStyle(
                       color: canSubmit
                           ? Theme.of(dialogContext).primaryColor

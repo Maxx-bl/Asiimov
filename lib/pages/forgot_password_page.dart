@@ -106,7 +106,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 const AsiimovMonoLogo(),
                 const SizedBox(height: 32),
                 Text(
-                  'Forgot Password?',
+                  'forgot_password_title'.tr(),
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -175,7 +175,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 SizedBox(
                   width: double.infinity,
                   child: MyButton(
-                    text: canSendReset ? 'Send Link' : 'Resend in ${countdown}s',
+                    text: canSendReset ? 'send_link'.tr() : 'Resend in ${countdown}s',
                     onTap: canSendReset ? sendResetEmail : () {},
                   ),
                 ),

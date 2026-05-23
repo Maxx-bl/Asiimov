@@ -133,7 +133,7 @@ class PostCard extends StatelessWidget {
                             backgroundColor: Colors.transparent,
                             builder: (context) => VotersListSheet(
                               userIds: post.visibleTo,
-                              title: 'Visible to Close Friends',
+                              title: 'visible_to_close_friends'.tr(),
                             ),
                           );
                         },
@@ -176,7 +176,7 @@ class PostCard extends StatelessWidget {
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(context, true),
-                              child: Text('Delete', style: TextStyle(color: Colors.red)),
+                              child: Text('delete'.tr(), style: TextStyle(color: Colors.red)),
                             ),
                           ],
                         ),
@@ -226,13 +226,13 @@ class PostCard extends StatelessWidget {
                   },
                   itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                     if (post.authorID == currentUserId || isAdminView)
-                      const PopupMenuItem<String>(
+                      PopupMenuItem<String>(
                         value: 'delete',
                         child: Row(
                           children: [
-                            Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                            SizedBox(width: 8),
-                            Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                            const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                            const SizedBox(width: 8),
+                            Text('delete'.tr(), style: const TextStyle(color: Colors.redAccent)),
                           ],
                         ),
                       ),
@@ -242,7 +242,7 @@ class PostCard extends StatelessWidget {
                         children: [
                           Icon(Icons.flag_outlined, color: Theme.of(context).primaryColor, size: 20),
                           const SizedBox(width: 8),
-                          Text('Report', style: TextStyle(color: Theme.of(context).primaryColor)),
+                          Text('report'.tr(), style: TextStyle(color: Theme.of(context).primaryColor)),
                         ],
                       ),
                     ),
@@ -331,7 +331,7 @@ class PostCard extends StatelessWidget {
                                   ),
                                   TextButton(
                                     onPressed: () => Navigator.pop(context, true),
-                                    child: Text('Continue', style: TextStyle(color: Theme.of(context).primaryColor)),
+                                    child: Text('continue_action'.tr(), style: TextStyle(color: Theme.of(context).primaryColor)),
                                   ),
                                 ],
                               ),
@@ -392,7 +392,7 @@ class PostCard extends StatelessWidget {
                               ),
                               TextButton(
                                 onPressed: () => Navigator.pop(context, true),
-                                child: Text('Continue', style: TextStyle(color: Theme.of(context).primaryColor)),
+                                child: Text('continue_action'.tr(), style: TextStyle(color: Theme.of(context).primaryColor)),
                               ),
                             ],
                           ),

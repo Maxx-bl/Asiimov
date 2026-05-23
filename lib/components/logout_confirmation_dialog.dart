@@ -17,7 +17,7 @@ Future<void> confirmAndSignOut(BuildContext context) async {
         TextButton(
           onPressed: () => Navigator.pop(dialogContext, true),
           child: Text(
-            'Log out',
+            'log_out'.tr(),
             style: TextStyle(
               color: Theme.of(dialogContext).colorScheme.primary,
               fontWeight: FontWeight.w600,

@@ -231,7 +231,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Choose Audience',
+                'choose_audience'.tr(),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -280,7 +280,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isPublic ? 'Everyone' : 'Followers',
+                              isPublic ? 'everyone'.tr() : 'followers'.tr(),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -476,7 +476,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           ),
                         )
                       : Text(
-                          'Post',
+                          'post_button'.tr(),
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                 );

@@ -339,7 +339,7 @@ class _ChatPageState extends State<ChatPage> {
                 ),
               ),
               Text(
-                'Send Attachment',
+                'send_attachment'.tr(),
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
@@ -602,7 +602,7 @@ class _ChatPageState extends State<ChatPage> {
                     const SizedBox(width: 4),
                     Text(
                       _replyToSenderID == authService.getCurrentUser()!.uid
-                          ? 'You'
+                          ? 'you'.tr()
                           : widget.receiverUsername,
                       style: TextStyle(
                         color: Theme.of(context).primaryColor,
@@ -663,7 +663,7 @@ class _ChatPageState extends State<ChatPage> {
             Icon(Icons.info_outline, color: Theme.of(context).primaryColor, size: 24),
             const SizedBox(width: 8),
             Text(
-              'Private Messages',
+              'private_messages'.tr(),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
@@ -1126,7 +1126,7 @@ class _ChatPageState extends State<ChatPage> {
 
     await chatService.sendMessage(
       widget.receiverID,
-      isVideo ? '📸 Instant Video' : '📸 Instant Photo',
+      isVideo ? 'instant_video'.tr() : 'instant_photo'.tr(),
       isGroup: widget.isGroup,
       messageType: 'instant_attachment',
       instantAttachment: instantAttachment,
@@ -1215,7 +1215,7 @@ class _ChatPageState extends State<ChatPage> {
 
     await chatService.sendMessage(
       widget.receiverID,
-      '🎤 Voice Message',
+      'voice_message_notification'.tr(),
       isGroup: widget.isGroup,
       messageType: 'instant_attachment',
       instantAttachment: instantAttachment,
@@ -1227,7 +1227,7 @@ class _ChatPageState extends State<ChatPage> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
