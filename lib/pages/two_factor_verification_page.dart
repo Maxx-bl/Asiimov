@@ -8,6 +8,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:provider/provider.dart';
+import 'package:asiimov/themes/theme_provider.dart';
 
 class TwoFactorVerificationPage extends StatefulWidget {
   const TwoFactorVerificationPage({super.key});
@@ -78,6 +80,12 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      if (!mounted) return;
+      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+      final dominantColor = themeProvider.dominantColor;
+      final hexColor = '#${ThemeProvider.colorToHex(dominantColor)}';
+      final rgbaColor = 'rgba(${dominantColor.red}, ${dominantColor.green}, ${dominantColor.blue}, 0.3)';
+
       // Write to the standard Trigger Email collection ('mail')
       await _firestore.collection('mail').add({
         'to': user.email,
@@ -85,7 +93,7 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
         'message': {
           'subject': 'Your Asiimov 2FA Code',
           'text': 'Your two-factor verification code is: $code. It expires in 5 minutes.',
-          'html': '<div style="font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif; background-color: #0c0f14; padding: 40px 20px; color: #ffffff; text-align: center;"><div style="max-width: 500px; margin: 0 auto; background-color: #171d26; border-radius: 16px; padding: 32px; border: 1.5px solid #ff9800; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"><h2 style="color: #ff9800; margin: 0 0 8px 0; font-size: 28px; letter-spacing: 2px; font-weight: 800;">ASIIMOV</h2><p style="color: #a0aec0; font-size: 13px; margin: 0 0 32px 0; letter-spacing: 1px; text-transform: uppercase;">Double Authentication (2FA)</p><div style="background-color: #0c0f14; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px dashed rgba(255, 152, 0, 0.3);"><p style="color: #a0aec0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 12px 0;">Your Verification Code</p><span style="font-size: 40px; font-weight: bold; color: #ff9800; letter-spacing: 8px; font-family: monospace;">$code</span></div><p style="color: #a0aec0; font-size: 13px; line-height: 1.6; margin: 0 0 24px 0;">This code will expire in <strong>5 minutes</strong>.<br>If you did not request this verification, you can safely ignore this email.</p><div style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; font-size: 11px; color: #718096;">This is an automated security message. Please do not reply directly to this email.</div></div></div>',
+          'html': '<div style="font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif; background-color: #0c0f14; padding: 40px 20px; color: #ffffff; text-align: center;"><div style="max-width: 500px; margin: 0 auto; background-color: #171d26; border-radius: 16px; padding: 32px; border: 1.5px solid $hexColor; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"><h2 style="color: $hexColor; margin: 0 0 8px 0; font-size: 28px; letter-spacing: 2px; font-weight: 800;">ASIIMOV</h2><p style="color: #a0aec0; font-size: 13px; margin: 0 0 32px 0; letter-spacing: 1px; text-transform: uppercase;">Double Authentication (2FA)</p><div style="background-color: #0c0f14; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px dashed $rgbaColor;"><p style="color: #a0aec0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 12px 0;">Your Verification Code</p><span style="font-size: 40px; font-weight: bold; color: $hexColor; letter-spacing: 8px; font-family: monospace;">$code</span></div><p style="color: #a0aec0; font-size: 13px; line-height: 1.6; margin: 0 0 24px 0;">This code will expire in <strong>5 minutes</strong>.<br>If you did not request this verification, you can safely ignore this email.</p><div style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; font-size: 11px; color: #718096;">This is an automated security message. Please do not reply directly to this email.</div></div></div>',
         }
       });
 
