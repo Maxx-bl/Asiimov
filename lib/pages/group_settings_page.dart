@@ -215,8 +215,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
     }
 
     // Check file size (max 20MB)
-    final file = File(pickedFile.path);
-    final length = await file.length();
+    final length = await pickedFile.length();
     if (length > 20 * 1024 * 1024) {
       if (mounted) {
         Navigator.pop(context); // Pop loading
@@ -230,7 +229,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
       return;
     }
 
-    final url = await imageService.uploadGroupProfilePicture(widget.groupId, file);
+    final url = await imageService.uploadGroupProfilePicture(widget.groupId, pickedFile);
 
     if (mounted) Navigator.pop(context); // Pop loading
 

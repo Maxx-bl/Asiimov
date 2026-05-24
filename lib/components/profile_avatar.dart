@@ -1,5 +1,5 @@
 import 'package:asiimov/services/image/image_service.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:asiimov/widgets/safe_network_image.dart';
 import 'package:flutter/material.dart';
 
 /// A reusable avatar widget that loads profile pictures with caching.
@@ -31,24 +31,34 @@ class ProfileAvatar extends StatelessWidget {
 
           return Stack(
             children: [
-              CircleAvatar(
-                radius: radius,
-                backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-                backgroundImage: url != null && url.isNotEmpty
-                    ? CachedNetworkImageProvider(url)
-                    : null,
-                child: url == null || url.isEmpty
-                    ? Text(
-                        username.isNotEmpty
-                            ? username[0].toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                          fontSize: radius * 0.8,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
+              Container(
+                width: radius * 2,
+                height: radius * 2,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                ),
+                child: url != null && url.isNotEmpty
+                    ? ClipOval(
+                        child: SafeNetworkImage(
+                          url: url,
+                          width: radius * 2,
+                          height: radius * 2,
+                          fit: BoxFit.cover,
                         ),
                       )
-                    : null,
+                    : Center(
+                        child: Text(
+                          username.isNotEmpty
+                              ? username[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            fontSize: radius * 0.8,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ),
               ),
               if (showEditIcon)
                 Positioned(

@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
@@ -64,7 +66,7 @@ class ImageService {
   }
 
   /// Upload a profile picture securely via Cloudflare Worker proxy.
-  Future<String?> uploadProfilePicture(File imageFile) async {
+  Future<String?> uploadProfilePicture(XFile imageFile) async {
     final user = _auth.currentUser;
     if (user == null) return null;
 
@@ -74,15 +76,34 @@ class ImageService {
     }
 
     try {
-      // 1. Compress image locally to preserve bandwidth
-      final compressed = await compressImage(
-        imageFile,
-        quality: 70,
-        minWidth: 400,
-        minHeight: 400,
-      );
-      final fileToUpload = compressed ?? imageFile;
-      final fileBytes = await fileToUpload.readAsBytes();
+      Uint8List fileBytes;
+      if (kIsWeb) {
+        fileBytes = await imageFile.readAsBytes();
+        try {
+          fileBytes = await FlutterImageCompress.compressWithList(
+            fileBytes,
+            minWidth: 400,
+            minHeight: 400,
+            quality: 70,
+          );
+        } catch (e) {
+          debugPrint("Web compression failed: $e");
+        }
+      } else {
+        final file = File(imageFile.path);
+        final compressed = await compressImage(
+          file,
+          quality: 70,
+          minWidth: 400,
+          minHeight: 400,
+        );
+        final fileToUpload = compressed ?? file;
+        fileBytes = await fileToUpload.readAsBytes();
+
+        if (compressed != null && await compressed.exists()) {
+          await compressed.delete();
+        }
+      }
 
       // 2. Fetch Firebase ID Token for secure Auth verification in Worker
       final idToken = await user.getIdToken();
@@ -123,11 +144,6 @@ class ImageService {
       // 7. Update local cache
       _profileUrlCache[user.uid] = downloadUrl;
 
-      // 8. Clean up temp file
-      if (compressed != null && await compressed.exists()) {
-        await compressed.delete();
-      }
-
       return downloadUrl;
     } catch (e) {
       debugPrint("Error uploading profile picture to R2: $e");
@@ -161,7 +177,7 @@ class ImageService {
   }
 
   /// Upload a group profile picture securely via Cloudflare Worker proxy.
-  Future<String?> uploadGroupProfilePicture(String groupId, File imageFile) async {
+  Future<String?> uploadGroupProfilePicture(String groupId, XFile imageFile) async {
     final user = _auth.currentUser;
     if (user == null) return null;
 
@@ -171,15 +187,34 @@ class ImageService {
     }
 
     try {
-      // 1. Compress image locally to preserve bandwidth
-      final compressed = await compressImage(
-        imageFile,
-        quality: 70,
-        minWidth: 400,
-        minHeight: 400,
-      );
-      final fileToUpload = compressed ?? imageFile;
-      final fileBytes = await fileToUpload.readAsBytes();
+      Uint8List fileBytes;
+      if (kIsWeb) {
+        fileBytes = await imageFile.readAsBytes();
+        try {
+          fileBytes = await FlutterImageCompress.compressWithList(
+            fileBytes,
+            minWidth: 400,
+            minHeight: 400,
+            quality: 70,
+          );
+        } catch (e) {
+          debugPrint("Web compression failed: $e");
+        }
+      } else {
+        final file = File(imageFile.path);
+        final compressed = await compressImage(
+          file,
+          quality: 70,
+          minWidth: 400,
+          minHeight: 400,
+        );
+        final fileToUpload = compressed ?? file;
+        fileBytes = await fileToUpload.readAsBytes();
+
+        if (compressed != null && await compressed.exists()) {
+          await compressed.delete();
+        }
+      }
 
       // 2. Fetch Firebase ID Token for secure Auth verification in Worker
       final idToken = await user.getIdToken();
@@ -211,11 +246,6 @@ class ImageService {
       await _firestore.collection('chats').doc(groupId).update({
         'groupIconUrl': downloadUrl,
       });
-
-      // 6. Clean up temp file
-      if (compressed != null && await compressed.exists()) {
-        await compressed.delete();
-      }
 
       return downloadUrl;
     } catch (e) {

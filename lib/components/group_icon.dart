@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-
+import 'package:asiimov/widgets/safe_network_image.dart';
 class GroupIcon extends StatelessWidget {
   final double size;
   final String? imageUrl;
@@ -14,11 +13,9 @@ class GroupIcon extends StatelessWidget {
         height: size,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(size / 2),
-          child: CachedNetworkImage(
-            imageUrl: imageUrl!,
+          child: SafeNetworkImage(
+            url: imageUrl!,
             fit: BoxFit.cover,
-            placeholder: (context, url) => _buildDefaultIcon(context),
-            errorWidget: (context, url, error) => _buildDefaultIcon(context),
           ),
         ),
       );

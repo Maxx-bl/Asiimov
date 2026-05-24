@@ -17,8 +17,7 @@ import 'package:asiimov/services/image/image_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
-
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:asiimov/widgets/safe_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -212,7 +211,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     try {
-      final url = await imageService.uploadProfilePicture(File(pickedFile.path));
+      final url = await imageService.uploadProfilePicture(pickedFile);
 
       // Pop loading dialog
       if (mounted) Navigator.pop(context);
@@ -549,11 +548,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                                   child: SizedBox(
                                                     width: size,
                                                     height: size,
-                                                    child: CachedNetworkImage(
-                                                      imageUrl: url,
+                                                    child: SafeNetworkImage(
+                                                      url: url,
                                                       fit: BoxFit.cover,
-                                                      placeholder: (context, url) => Center(child: CircularProgressIndicator()),
-                                                      errorWidget: (context, url, error) => const Icon(Icons.error),
                                                     ),
                                                   ),
                                                 ),
