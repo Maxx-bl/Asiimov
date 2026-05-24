@@ -901,7 +901,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               return ProfilePostCard(
                                 post: posts[index],
                                 onTap: () async {
-                                  await Navigator.push(
+                                  final deleted = await Navigator.push<bool>(
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => PostDetailPage(
@@ -910,7 +910,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                       ),
                                     ),
                                   );
-                                  _updateSinglePost(posts[index].id);
+                                  if (deleted == true) {
+                                    _refreshData();
+                                  } else {
+                                    _updateSinglePost(posts[index].id);
+                                  }
                                 },
                                 onDelete: (isOwnProfile || widget.isAdminView)
                                     ? () async {

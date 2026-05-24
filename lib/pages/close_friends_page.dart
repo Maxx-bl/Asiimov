@@ -64,10 +64,12 @@ class _CloseFriendsPageState extends State<CloseFriendsPage> {
       final closeFriends = List<String>.from(userData['closeFriends'] ?? []);
 
       // Mutual followers: intersection of followers and following
-      final mutuals = followers.toSet().intersection(following.toSet()).toList();
+      final mutualsSet = followers.toSet().intersection(following.toSet());
+      // Plus any users who are already in the close friends list
+      final allUidsList = mutualsSet.union(closeFriends.toSet()).toList();
 
-      // Sort mutuals so that existing close friends are placed at the top of the list
-      mutuals.sort((a, b) {
+      // Sort so that existing close friends are placed at the top of the list
+      allUidsList.sort((a, b) {
         final aIsCF = closeFriends.contains(a);
         final bIsCF = closeFriends.contains(b);
         if (aIsCF && !bIsCF) return -1;
@@ -77,7 +79,7 @@ class _CloseFriendsPageState extends State<CloseFriendsPage> {
 
       if (mounted) {
         setState(() {
-          _mutualUids = mutuals;
+          _mutualUids = allUidsList;
         });
         await _loadNextPage();
       }

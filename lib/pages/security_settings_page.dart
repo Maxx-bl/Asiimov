@@ -22,6 +22,10 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
   int _cooldown = 0;
   Timer? _timer;
 
+  bool _isDeletingAccount = false;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +49,8 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
   void dispose() {
     // Cancel the timer to prevent memory leaks and setState calls on disposed widget
     _timer?.cancel();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -100,6 +106,216 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
             backgroundColor: Colors.redAccent,
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _showDeleteAccountConfirmation() async {
+    final shouldProceed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('delete_account'.tr()),
+        content: Text('delete_account_warning'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'continue_action'.tr(), 
+              style: const TextStyle(color: Colors.redAccent)
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldProceed == true && mounted) {
+      _showReauthenticationDialog();
+    }
+  }
+
+  Future<void> _showReauthenticationDialog() async {
+    _emailController.clear();
+    _passwordController.clear();
+    bool isLoading = false;
+    bool obscurePassword = true;
+    String? errorText;
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Text('reauthenticate_title'.tr()),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('reauthenticate_desc'.tr()),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    labelText: 'email'.tr(),
+                    border: const OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  enabled: !isLoading,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _passwordController,
+                  decoration: InputDecoration(
+                    labelText: 'password'.tr(),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          obscurePassword = !obscurePassword;
+                        });
+                      },
+                    ),
+                  ),
+                  obscureText: obscurePassword,
+                  enabled: !isLoading,
+                ),
+                if (errorText != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    errorText!,
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isLoading ? null : () => Navigator.pop(context, false),
+                child: Text('cancel'.tr()),
+              ),
+              ElevatedButton(
+                onPressed: isLoading ? null : () async {
+                  final email = _emailController.text.trim();
+                  final password = _passwordController.text;
+
+                  if (email.isEmpty || password.isEmpty) {
+                    setState(() {
+                      errorText = 'Please enter both email and password';
+                    });
+                    return;
+                  }
+
+                  if (email.toLowerCase() != _auth.currentUser?.email?.toLowerCase()) {
+                    setState(() {
+                      errorText = 'Email does not match your account';
+                    });
+                    return;
+                  }
+
+                  setState(() {
+                    isLoading = true;
+                    errorText = null;
+                  });
+
+                  try {
+                    final credential = EmailAuthProvider.credential(email: email, password: password);
+                    await _auth.currentUser!.reauthenticateWithCredential(credential);
+                    if (context.mounted) {
+                      Navigator.pop(context, true);
+                    }
+                  } on FirebaseAuthException catch (e) {
+                    setState(() {
+                      isLoading = false;
+                      errorText = e.message ?? 'Authentication failed';
+                    });
+                  } catch (e) {
+                    setState(() {
+                      isLoading = false;
+                      errorText = 'An error occurred';
+                    });
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                child: isLoading 
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text('confirm'.tr()),
+              ),
+            ],
+          );
+        }
+      ),
+    );
+
+    if (result == true && mounted) {
+      _showFinalConfirmation();
+    }
+  }
+
+  Future<void> _showFinalConfirmation() async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text('delete_account'.tr(), style: const TextStyle(color: Colors.redAccent)),
+        content: Text('final_delete_confirmation'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'delete_account'.tr(), 
+              style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true && mounted) {
+      _executeDeletion();
+    }
+  }
+
+  Future<void> _executeDeletion() async {
+    setState(() {
+      _isDeletingAccount = true;
+    });
+
+    try {
+      await UserService().deleteUserAccount();
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDeletingAccount = false;
+        });
       }
     }
   }
@@ -302,6 +518,85 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
                                 ],
                               ),
                             ),
+
+                              const SizedBox(height: 40),
+
+                              // Delete Account Container
+                              Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Colors.redAccent.withValues(alpha: 0.2),
+                                  ),
+                                ),
+                                padding: const EdgeInsets.all(20.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.delete_forever_rounded,
+                                          color: Colors.redAccent,
+                                          size: 28,
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Text(
+                                          'delete_account'.tr(),
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.redAccent,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'delete_account_desc'.tr(),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    
+                                    // Button
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 48,
+                                      child: ElevatedButton(
+                                        onPressed: _isDeletingAccount ? null : _showDeleteAccountConfirmation,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.redAccent,
+                                          foregroundColor: Colors.white,
+                                          disabledBackgroundColor: Colors.redAccent.withValues(alpha: 0.3),
+                                          disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          elevation: 0,
+                                        ),
+                                        child: _isDeletingAccount 
+                                            ? const SizedBox(
+                                                height: 20, 
+                                                width: 20, 
+                                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                                              )
+                                            : Text(
+                                                'delete_account'.tr(),
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
                       ),

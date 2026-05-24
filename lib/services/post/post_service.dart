@@ -418,9 +418,13 @@ class PostService extends ChangeNotifier {
       });
     }
 
-    await _firestore.collection('users').doc(authorId).update({
-      'reportsCount': FieldValue.increment(1),
-    });
+    try {
+      await _firestore.collection('users').doc(authorId).update({
+        'reportsCount': FieldValue.increment(1),
+      });
+    } catch (e) {
+      // Ignore if user document doesn't exist (e.g. account deleted)
+    }
   }
 
   // Report a comment
@@ -471,8 +475,12 @@ class PostService extends ChangeNotifier {
       });
     }
 
-    await _firestore.collection('users').doc(authorId).update({
-      'reportsCount': FieldValue.increment(1),
-    });
+    try {
+      await _firestore.collection('users').doc(authorId).update({
+        'reportsCount': FieldValue.increment(1),
+      });
+    } catch (e) {
+      // Ignore if user document doesn't exist
+    }
   }
 }

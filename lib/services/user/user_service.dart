@@ -1,6 +1,8 @@
 import 'package:asiimov/services/chat/chat_service.dart';
+import 'package:asiimov/services/post/post_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -70,6 +72,7 @@ class UserService {
 
     batch.update(_firestore.collection('users').doc(targetUserId), {
       'followers': FieldValue.arrayRemove([currentUserId]),
+      'closeFriends': FieldValue.arrayRemove([currentUserId]),
     });
 
     await batch.commit();
@@ -373,9 +376,98 @@ class UserService {
     }
 
     // Increment reportsCount for the reported user
-    await _firestore.collection('users').doc(reportedUserId).update({
-      'reportsCount': FieldValue.increment(1),
-    });
+    try {
+      await _firestore.collection('users').doc(reportedUserId).update({
+        'reportsCount': FieldValue.increment(1),
+      });
+    } catch (e) {
+      // Ignore if user document doesn't exist
+    }
+  }
+
+  // Delete user account and all their content
+  Future<void> deleteUserAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final uid = user.uid;
+
+    // 2. Delete posts
+    final postService = PostService();
+    final postsSnap = await _firestore.collection('posts').where('authorID', isEqualTo: uid).get();
+    for (var doc in postsSnap.docs) {
+      try {
+        await postService.deletePost(doc.id);
+      } catch (e) {
+        // Ignore individual failures to allow process to continue
+      }
+    }
+
+    // 3. Delete comments on other posts
+    try {
+      final commentsSnap = await _firestore.collectionGroup('comments').where('authorID', isEqualTo: uid).get();
+      for (var doc in commentsSnap.docs) {
+        try {
+          await postService.deleteComment(doc.reference.path);
+        } catch (e) {
+          // Ignore
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching comments for deletion: $e");
+    }
+
+    // 4. Delete messages
+    try {
+      final messagesSnap = await _firestore.collectionGroup('messages').where('senderID', isEqualTo: uid).get();
+      for (var doc in messagesSnap.docs) {
+        try {
+          await doc.reference.delete();
+        } catch (e) {
+          // Ignore
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching messages for deletion: $e");
+    }
+
+    // 5. Leave groups
+    final chatsSnap = await _firestore.collection('chats').where('members', arrayContains: uid).get();
+    for (var doc in chatsSnap.docs) {
+      if (doc.data()['type'] == 'group') {
+        try {
+          await ChatService().leaveGroup(doc.id);
+        } catch (e) {
+          // Ignore
+        }
+      }
+    }
+
+    // 6. Clean up relationships from other users
+    final myDoc = await _firestore.collection('users').doc(uid).get();
+    if (myDoc.exists) {
+      final myFollowers = List<String>.from(myDoc.data()?['followers'] ?? []);
+      final myFollowing = List<String>.from(myDoc.data()?['following'] ?? []);
+      
+      final allRelatedUsers = <String>{...myFollowers, ...myFollowing}.toList();
+      for (var relatedId in allRelatedUsers) {
+        try {
+          await _firestore.collection('users').doc(relatedId).update({
+            'followers': FieldValue.arrayRemove([uid]),
+            'following': FieldValue.arrayRemove([uid]),
+            'closeFriends': FieldValue.arrayRemove([uid]),
+            'follow_requests': FieldValue.arrayRemove([uid]),
+          });
+        } catch (e) {
+          // Ignore
+        }
+      }
+    }
+
+    // 7. Delete User document
+    await _firestore.collection('users').doc(uid).delete();
+
+    // 8. Delete Auth Account
+    await user.delete();
   }
 }
 

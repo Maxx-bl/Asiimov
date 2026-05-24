@@ -128,14 +128,22 @@ class PostCard extends StatelessWidget {
                     if (post.isCloseFriendsOnly) ...[
                       GestureDetector(
                         onTap: () {
-                          showModalBottomSheet(
-                            context: context,
-                            backgroundColor: Colors.transparent,
-                            builder: (context) => VotersListSheet(
-                              userIds: post.visibleTo,
-                              title: 'visible_to_close_friends'.tr(),
-                            ),
-                          );
+                          if (post.authorID == currentUserId) {
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => VotersListSheet(
+                                userIds: post.visibleTo,
+                                title: 'visible_to_close_friends'.tr(),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('visible_to_close_friends'.tr()),
+                              ),
+                            );
+                          }
                         },
                         child: Container(
                           padding: const EdgeInsets.all(5),
@@ -260,9 +268,9 @@ class PostCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 46, bottom: 10),
                 child: GestureDetector(
-                  onTap: () {
+                  onTap: () async {
                     if (parentDocPath != null) {
-                      Navigator.push(
+                      final deleted = await Navigator.push<bool>(
                         context,
                         MaterialPageRoute(
                           builder: (context) => PostDetailPage(
@@ -271,6 +279,9 @@ class PostCard extends StatelessWidget {
                           ),
                         ),
                       );
+                      if (deleted == true && onAction != null) {
+                        onAction!();
+                      }
                     }
                   },
                   child: Container(

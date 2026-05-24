@@ -1317,17 +1317,19 @@ class ChatService extends ChangeNotifier {
       <String, dynamic>{}
     );
 
-    // 2. Unfollow each other & clear pending requests on both profiles
+    // 2. Unfollow each other, clear pending requests, and remove from close friends on both profiles
     batch.update(firestore.collection('users').doc(currentUserId), {
       'following': FieldValue.arrayRemove([userId]),
       'followers': FieldValue.arrayRemove([userId]),
       'follow_requests': FieldValue.arrayRemove([userId]),
+      'closeFriends': FieldValue.arrayRemove([userId]),
     });
 
     batch.update(firestore.collection('users').doc(userId), {
       'following': FieldValue.arrayRemove([currentUserId]),
       'followers': FieldValue.arrayRemove([currentUserId]),
       'follow_requests': FieldValue.arrayRemove([currentUserId]),
+      'closeFriends': FieldValue.arrayRemove([currentUserId]),
     });
 
     await batch.commit();

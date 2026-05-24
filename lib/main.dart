@@ -4,6 +4,8 @@ import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/models/post.dart';
 import 'package:asiimov/services/auth/auth_gate.dart';
 import 'package:asiimov/pages/follow_requests_page.dart';
+import 'package:asiimov/pages/support_tickets_page.dart';
+import 'package:asiimov/pages/ticket_detail_page.dart';
 import 'package:asiimov/services/notifications/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:asiimov/firebase_options.dart';
@@ -95,6 +97,21 @@ Future<void> main() async {
             builder: (context) => const FollowRequestsPage(),
           ),
         );
+      } else if (type == 'support') {
+        final ticketId = data['ticketId'];
+        if (ticketId != null) {
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (context) => TicketDetailPage(ticketId: ticketId),
+            ),
+          );
+        } else {
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (context) => const SupportTicketsPage(),
+            ),
+          );
+        }
       } else if (type == 'comment') {
         final parentPath = data['parentPath'];
         final legacyPostId = data['postId'];

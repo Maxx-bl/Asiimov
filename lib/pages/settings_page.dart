@@ -6,6 +6,7 @@ import 'security_settings_page.dart';
 import 'notification_settings_page.dart';
 import 'blocked_users_page.dart';
 import 'language_settings_page.dart';
+import 'support_page.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -70,6 +71,12 @@ class SettingsPage extends StatelessWidget {
                 icon: Icons.block_flipped,
                 title: 'blocked_users'.tr().tr(),
                 destination: BlockedUsersPage(),
+              ),
+
+              SettingCategoryTile(
+                icon: Icons.help_outline_rounded,
+                title: 'help'.tr(),
+                destination: const SupportPage(),
               ),
             ],
           ),

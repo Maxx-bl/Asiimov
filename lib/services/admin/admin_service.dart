@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:asiimov/services/chat/chat_service.dart';
 
 class AdminService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -35,4 +36,37 @@ class AdminService {
       if (reason != null) 'resolutionReason': reason,
     });
   }
+
+  // Dismiss a ticket
+  Future<void> dismissTicket(String ticketId) async {
+    await _firestore.collection('tickets').doc(ticketId).update({
+      'status': 'dismissed',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Reply to a ticket
+  Future<void> replyToTicket(String ticketId, String text, String targetUserId, String subject) async {
+    final messageData = {
+      'sender': 'admin',
+      'text': text,
+      'timestamp': Timestamp.now(),
+    };
+
+    await _firestore.collection('tickets').doc(ticketId).update({
+      'messages': FieldValue.arrayUnion([messageData]),
+      'status': 'answered',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    // Send notification to the user
+    await ChatService().sendPushNotification(
+      targetUserId,
+      subject, // Content is the subject
+      title: 'Support',
+      type: 'support',
+      extraData: {'ticketId': ticketId},
+    );
+  }
 }
+

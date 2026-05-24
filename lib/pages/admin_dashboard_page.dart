@@ -54,6 +54,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
   DocumentSnapshot? _resolvedReportsLastDoc;
   final ScrollController _resolvedReportsScrollController = ScrollController();
 
+  // Tickets lists
+  final List<DocumentSnapshot> _tickets = [];
+  bool _ticketsLoading = false;
+  bool _ticketsHasMore = true;
+  DocumentSnapshot? _ticketsLastDoc;
+  final ScrollController _ticketsScrollController = ScrollController();
+  String _selectedTicketFilter = 'pending';
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +72,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
     _fetchSuspendedUsers(refresh: true);
     _fetchReports(refresh: true);
     _fetchResolvedReports(refresh: true);
+    _fetchTickets(refresh: true);
 
     // Setup scroll listeners
     _usersScrollController.addListener(() {
@@ -89,6 +98,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
         _fetchResolvedReports();
       }
     });
+
+    _ticketsScrollController.addListener(() {
+      if (_ticketsScrollController.position.pixels >= _ticketsScrollController.position.maxScrollExtent - 200) {
+        _fetchTickets();
+      }
+    });
   }
 
   @override
@@ -99,6 +114,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
     _suspendedScrollController.dispose();
     _reportsScrollController.dispose();
     _resolvedReportsScrollController.dispose();
+    _ticketsScrollController.dispose();
     super.dispose();
   }
 
@@ -118,6 +134,46 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
 
   Color _fillColor(bool isDark) =>
       isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey.shade100;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor: _surfaceColor(isDarkMode),
+      appBar: AppBar(
+        title: Text(
+          'admin_dashboard'.tr(),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+        ),
+        centerTitle: false,
+        backgroundColor: _cardColor(isDarkMode),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorWeight: 2,
+          labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          unselectedLabelStyle: const TextStyle(fontSize: 12),
+          tabs: [
+            Tab(text: 'users'.tr()),
+            Tab(text: 'suspended'.tr()),
+            Tab(text: 'reports'.tr()),
+            Tab(text: 'tickets'.tr()),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildUsersTab(isDarkMode),
+          _buildSuspendedTab(isDarkMode),
+          _buildReportsTab(isDarkMode),
+          _buildTicketsTab(isDarkMode),
+        ],
+      ),
+    );
+  }
 
   ShapeBorder _cardShape(bool isDark) => RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -356,6 +412,58 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
       debugPrint("Error fetching resolved reports: $e");
     } finally {
       if (mounted) setState(() => _resolvedReportsLoading = false);
+    }
+  }
+
+  Future<void> _fetchTickets({bool refresh = false}) async {
+    if (_ticketsLoading || (!refresh && !_ticketsHasMore)) return;
+
+    setState(() => _ticketsLoading = true);
+
+    try {
+      Query query = FirebaseFirestore.instance.collection('tickets').limit(15);
+      
+      if (_selectedTicketFilter == 'pending') {
+        query = query.where('status', isEqualTo: 'pending');
+      } else {
+        query = query.where('status', whereIn: ['answered', 'dismissed', 'resolved']);
+      }
+
+      if (!refresh && _ticketsLastDoc != null) {
+        query = query.startAfterDocument(_ticketsLastDoc!);
+      }
+
+      final snapshot = await query.get();
+
+      if (refresh) {
+        _tickets.clear();
+        _ticketsLastDoc = null;
+      }
+
+      if (snapshot.docs.isNotEmpty) {
+        _tickets.addAll(snapshot.docs);
+        
+        // Sort in memory
+        _tickets.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>?;
+          final bData = b.data() as Map<String, dynamic>?;
+          final aTime = aData?['updatedAt'] as Timestamp?;
+          final bTime = bData?['updatedAt'] as Timestamp?;
+          if (aTime == null && bTime == null) return 0;
+          if (aTime == null) return 1;
+          if (bTime == null) return -1;
+          return bTime.compareTo(aTime);
+        });
+        
+        _ticketsLastDoc = snapshot.docs.last;
+        _ticketsHasMore = snapshot.docs.length == 15;
+      } else {
+        _ticketsHasMore = false;
+      }
+    } catch (e) {
+      debugPrint("Error fetching tickets: $e");
+    } finally {
+      if (mounted) setState(() => _ticketsLoading = false);
     }
   }
 
@@ -624,46 +732,127 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
     }
   }
 
-  // --- RENDERING WIDGETS ---
-
-  @override
-  Widget build(BuildContext context) {
+  void _showTicketReplyDialog(DocumentSnapshot ticketDoc) {
+    final replyController = TextEditingController();
+    final data = ticketDoc.data() as Map<String, dynamic>;
+    final subject = data['subject'] as String? ?? '';
+    final messages = List<Map<String, dynamic>>.from(data['messages'] ?? []);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: _surfaceColor(isDarkMode),
-      appBar: AppBar(
-        title: Text(
-          'Admin',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(subject, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = messages[index];
+                    final sender = msg['sender'] as String? ?? 'user';
+                    final text = msg['text'] as String? ?? '';
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: sender == 'admin' ? _fillColor(isDarkMode) : Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            sender == 'admin' ? 'Admin' : 'User',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _mutedColor(isDarkMode)),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(text, style: const TextStyle(fontSize: 14)),
+                        ],
+                      ),
+                    );
+                  }
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: replyController,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: 'write_reply'.tr(),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
         ),
-        centerTitle: false,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorWeight: 2,
-          labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-          unselectedLabelStyle: const TextStyle(fontSize: 12),
-          tabs: [
-            Tab(text: 'users'.tr()),
-            Tab(text: 'suspended'.tr()),
-            Tab(text: 'reports'.tr()),
-            Tab(text: 'history'.tr()),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildUsersTab(isDarkMode),
-          _buildSuspendedTab(isDarkMode),
-          _buildReportsTab(isDarkMode),
-          _buildResolvedReportsTab(isDarkMode),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('cancel'.tr()),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (replyController.text.trim().isNotEmpty) {
+                Navigator.pop(context);
+                try {
+                  await _adminService.replyToTicket(
+                    ticketDoc.id, 
+                    replyController.text.trim(), 
+                    data['userId'], 
+                    subject
+                  );
+                  if (mounted) {
+                    _showSnack('reply_sent'.tr());
+                    _fetchTickets(refresh: true);
+                  }
+                } catch (e) {
+                  if (mounted) _showSnack('Error: $e', isError: true);
+                }
+              }
+            },
+            child: Text('send'.tr()),
+          ),
         ],
       ),
     );
   }
+
+  void _dismissTicket(String ticketId) async {
+    try {
+      await _adminService.dismissTicket(ticketId);
+      if (mounted) {
+         _showSnack('ticket_dismissed'.tr());
+         _fetchTickets(refresh: true);
+      }
+    } catch (e) {
+      if (mounted) _showSnack('Error: $e', isError: true);
+    }
+  }
+
+  void _closeTicket(String ticketId) async {
+    try {
+      await FirebaseFirestore.instance.collection('tickets').doc(ticketId).update({
+        'status': 'resolved',
+        'updatedAt': Timestamp.now(),
+      });
+      if (mounted) {
+         _showSnack('ticket_closed'.tr());
+         _fetchTickets(refresh: true);
+      }
+    } catch (e) {
+      if (mounted) _showSnack('Error: $e', isError: true);
+    }
+  }
+
+  // --- RENDERING WIDGETS ---
+
+
 
   // TAB 1: USERS
   Widget _buildUsersTab(bool isDarkMode) {
@@ -1082,34 +1271,33 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
   // Filter button helper
   Widget _buildFilterButton(String value, String label, bool isDarkMode) {
     final isSelected = _selectedReportFilter == value;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedReportFilter = value;
-          });
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? _fillColor(isDarkMode) : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-            border: isSelected
-                ? Border.all(color: _borderColor(isDarkMode))
-                : null,
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected
-                  ? (isDarkMode ? Colors.white : Colors.black87)
-                  : Colors.grey,
-            ),
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedReportFilter = value;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? _fillColor(isDarkMode) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: isSelected
+              ? Border.all(color: _borderColor(isDarkMode))
+              : null,
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected
+                ? (isDarkMode ? Colors.white : Colors.black87)
+                : Colors.grey,
           ),
         ),
       ),
@@ -1118,6 +1306,186 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
 
   // TAB 3: REPORTS
   Widget _buildReportsTab(bool isDarkMode) {
+    final Widget filterBar = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Container(
+          decoration: BoxDecoration(
+            color: _cardColor(isDarkMode),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: _borderColor(isDarkMode)),
+          ),
+          padding: const EdgeInsets.all(4),
+          child: Row(
+            children: [
+              _buildFilterButton('all', 'All', isDarkMode),
+              _buildFilterButton('users', 'Users', isDarkMode),
+              _buildFilterButton('posts_comments', 'Posts', isDarkMode),
+              _buildFilterButton('chats', 'Chats', isDarkMode),
+              _buildFilterButton('history', 'History', isDarkMode),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (_selectedReportFilter == 'history') {
+      return Column(
+        children: [
+          filterBar,
+          Expanded(
+            child: _resolvedReports.isEmpty && _resolvedReportsLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _resolvedReports.isEmpty
+                    ? Center(child: Text('no_resolved_reports_history'.tr()))
+                    : RefreshIndicator(
+                        onRefresh: () => _fetchResolvedReports(refresh: true),
+                        child: ListView.builder(
+                          controller: _resolvedReportsScrollController,
+                          padding: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
+                          itemCount: _resolvedReports.length + (_resolvedReportsHasMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == _resolvedReports.length) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(child: CircularProgressIndicator()),
+                              );
+                            }
+                            final reportDoc = _resolvedReports[index];
+                            final reportData = reportDoc.data() as Map<String, dynamic>;
+                            final type = reportData['type'] as String? ?? 'post';
+                            
+                            // Values safely extracted
+                            final reporter = reportData['reportedByUsername'] as String? ?? 'Anonymous';
+                            final date = (reportData['resolutionDate'] as Timestamp?)?.toDate() ?? (reportData['timestamp'] as Timestamp?)?.toDate();
+                            final resolutionAction = reportData['resolutionAction'] as String? ?? 'resolved';
+                            
+                            String content = '';
+                            String author = '';
+                            
+                            if (type == 'post') {
+                              content = reportData['postContent'] as String? ?? '';
+                              author = reportData['postAuthorUsername'] as String? ?? 'Anonymous';
+                            } else if (type == 'comment') {
+                              content = reportData['commentContent'] as String? ?? '';
+                              author = reportData['commentAuthorUsername'] as String? ?? 'Anonymous';
+                            } else if (type == 'message') {
+                              content = reportData['messageContent'] as String? ?? '';
+                              author = reportData['messageAuthorUsername'] as String? ?? 'Anonymous';
+                            } else if (type == 'user') {
+                              author = reportData['reportedUserUsername'] as String? ?? 'Anonymous';
+                            }
+                            
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              shape: _cardShape(isDarkMode),
+                              color: _cardColor(isDarkMode),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: _fillColor(isDarkMode),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            type.toUpperCase(),
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: _mutedColor(isDarkMode),
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          date != null
+                                              ? '${date.day}/${date.month}/${date.year}'
+                                              : 'Unknown',
+                                          style: TextStyle(fontSize: 12, color: _mutedColor(isDarkMode)),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'Reported by: $reporter',
+                                      style: TextStyle(fontSize: 12, color: _mutedColor(isDarkMode)),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Target: $author',
+                                      style: TextStyle(fontSize: 12, color: _mutedColor(isDarkMode)),
+                                    ),
+                                    if (content.isNotEmpty) ...[
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: _fillColor(isDarkMode),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          content,
+                                          style: const TextStyle(fontSize: 14),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 16),
+                                    const Divider(),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          resolutionAction == 'dismissed' ? Icons.close : Icons.gavel,
+                                          size: 16,
+                                          color: resolutionAction == 'dismissed' ? Colors.red : Colors.green,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          resolutionAction == 'dismissed' ? 'Dismissed' : 'Action Taken',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: resolutionAction == 'dismissed' ? Colors.red : Colors.green,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (reportData['resolutionReason'] != null && (reportData['resolutionReason'] as String).isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          reportData['resolutionReason'] as String,
+                                          style: const TextStyle(fontSize: 12, color: Colors.amber),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+          ),
+        ],
+      );
+    }
+
     final filteredReports = _reports.where((report) {
       final reportData = report.data() as Map<String, dynamic>;
       final type = reportData['type'] as String? ?? 'post';
@@ -1133,30 +1501,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-          child: Container(
-            decoration: BoxDecoration(
-              color: _cardColor(isDarkMode),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: _borderColor(isDarkMode)),
-            ),
-            padding: const EdgeInsets.all(4),
-            child: Row(
-              children: [
-                _buildFilterButton('all', 'All', isDarkMode),
-                _buildFilterButton('users', 'Users', isDarkMode),
-                _buildFilterButton('posts_comments', 'Posts', isDarkMode),
-                _buildFilterButton('chats', 'Chats', isDarkMode),
-              ],
-            ),
-          ),
-        ),
+        filterBar,
 
         // Main List Content
         Expanded(
           child: _reports.isEmpty && _reportsLoading
-              ? Center(child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator())
               : filteredReports.isEmpty
                   ? Center(
                       child: Column(
@@ -1342,174 +1692,188 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
     );
   }
 
-  Widget _buildResolvedReportsTab(bool isDarkMode) {
-    return _resolvedReports.isEmpty && _resolvedReportsLoading
-        ? Center(child: CircularProgressIndicator())
-        : _resolvedReports.isEmpty
-            ? Center(child: Text('no_resolved_reports_history'.tr()))
-            : RefreshIndicator(
-                onRefresh: () => _fetchResolvedReports(refresh: true),
-                child: ListView.builder(
-                  controller: _resolvedReportsScrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  itemCount: _resolvedReports.length + (_resolvedReportsLoading ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == _resolvedReports.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
+  Widget _buildTicketsTab(bool isDarkMode) {
+    return Column(
+      children: [
+        // Filter segment
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SegmentedButton<String>(
+            segments: [
+              ButtonSegment(
+                value: 'pending',
+                label: Text('ticket_pending'.tr()),
+                icon: const Icon(Icons.pending_actions),
+              ),
+              ButtonSegment(
+                value: 'history',
+                label: Text('ticket_history'.tr()),
+                icon: const Icon(Icons.history),
+              ),
+            ],
+            selected: {_selectedTicketFilter},
+            onSelectionChanged: (Set<String> newSelection) {
+              setState(() {
+                _selectedTicketFilter = newSelection.first;
+              });
+              _fetchTickets(refresh: true);
+            },
+          ),
+        ),
+        // List
+        Expanded(
+          child: _ticketsLoading && _tickets.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : _tickets.isEmpty
+                ? Center(
+                    child: Text(
+                      'no_tickets_found'.tr(),
+                      style: TextStyle(color: _mutedColor(isDarkMode)),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _ticketsScrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    itemCount: _tickets.length + (_ticketsHasMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == _tickets.length) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+                      final doc = _tickets[index];
+                      final data = doc.data() as Map<String, dynamic>;
+                      final subject = data['subject'] as String? ?? '';
+                      final messages = List<Map<String, dynamic>>.from(data['messages'] ?? []);
+                      final date = (data['updatedAt'] as Timestamp?)?.toDate();
+                      final status = data['status'] as String? ?? 'pending';
+                      final isPending = status == 'pending';
+                      final isDismissed = status == 'dismissed';
 
-                    final reportDoc = _resolvedReports[index];
-                    final reportData = reportDoc.data() as Map<String, dynamic>;
-                    final type = reportData['type'] as String? ?? 'post';
-
-                    final reporter = reportData['reportedByUsername'] as String? ?? 'Anonymous';
-                    final date = (reportData['timestamp'] as Timestamp?)?.toDate();
-                    final resolvedDate = (reportData['resolvedAt'] as Timestamp?)?.toDate();
-                    final resolutionAction = reportData['resolutionAction'] as String? ?? 'resolved';
-                    final reportCount = reportData['reportCount'] as int? ?? 1;
-
-                    String content = '';
-                    String author = 'Anonymous';
-
-                    if (type == 'post') {
-                      content = reportData['postContent'] as String? ?? '';
-                      author = reportData['postAuthorUsername'] as String? ?? 'Anonymous';
-                    } else if (type == 'comment') {
-                      content = reportData['commentContent'] as String? ?? '';
-                      author = reportData['commentAuthorUsername'] as String? ?? 'Anonymous';
-                    } else if (type == 'message') {
-                      content = reportData['messageContent'] as String? ?? '';
-                      author = reportData['messageAuthorUsername'] as String? ?? 'Anonymous';
-                    } else if (type == 'user') {
-                      content = 'Reported User Profile';
-                      author = reportData['reportedUserUsername'] as String? ?? 'Anonymous';
-                    }
-
-                    final resolutionLabel = resolutionAction == 'deleted'
-                        ? 'Content deleted'
-                        : resolutionAction == 'dismissed'
-                            ? 'status_dismissed'.tr()
-                            : 'status_resolved'.tr();
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      elevation: 0,
-                      color: _cardColor(isDarkMode),
-                      shape: _cardShape(isDarkMode),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    _chip(_typeLabel(type), isDarkMode, emphasized: true),
-                                    if (reportCount > 1) ...[
-                                      const SizedBox(width: 6),
-                                      _chip('$reportCount reports', isDarkMode),
-                                    ],
-                                  ],
-                                ),
-                                Text(
-                                  date != null ? '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}' : '',
-                                  style: TextStyle(color: _mutedColor(isDarkMode), fontSize: 12),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: _fillColor(isDarkMode),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: _borderColor(isDarkMode)),
-                              ),
-                              child: Text(
-                                content != '' ? content : '[Media content]',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: isDarkMode ? Colors.white70 : Colors.black87,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                            _buildReportedMediaPreview(reportData),
-                            _buildReportReasonsSection(reportData, isDarkMode),
-                            const SizedBox(height: 12),
-
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '@$author',
-                                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        elevation: 0,
+                        color: _cardColor(isDarkMode),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: _borderColor(isDarkMode)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      subject,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                     ),
+                                  ),
+                                  if (date != null)
                                     Text(
-                                      'Reported by @$reporter',
-                                      style: TextStyle(color: _mutedColor(isDarkMode), fontSize: 12),
+                                      '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}',
+                                      style: TextStyle(fontSize: 12, color: _mutedColor(isDarkMode)),
                                     ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            Divider(height: 24, color: _borderColor(isDarkMode)),
-
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  resolutionLabel,
-                                  style: TextStyle(
-                                    color: _mutedColor(isDarkMode),
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                if (resolvedDate != null)
-                                  Text(
-                                    '${resolvedDate.day}/${resolvedDate.month} ${resolvedDate.hour}:${resolvedDate.minute.toString().padLeft(2, '0')}',
-                                    style: TextStyle(color: _mutedColor(isDarkMode), fontSize: 12),
-                                  ),
-                              ],
-                            ),
-                            if (reportData['resolutionReason'] != null && (reportData['resolutionReason'] as String).isNotEmpty) ...[
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  const Text('User: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  UsernameDisplay(userId: data['userId'], username: '', style: TextStyle(fontSize: 12, color: _mutedColor(isDarkMode))),
+                                ],
+                              ),
                               const SizedBox(height: 8),
                               Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: _fillColor(isDarkMode),
+                                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: _borderColor(isDarkMode)),
                                 ),
                                 child: Text(
-                                  reportData['resolutionReason'] as String,
-                                  style: TextStyle(
-                                    color: isDarkMode ? Colors.white70 : Colors.black87,
-                                    fontSize: 12,
-                                    height: 1.35,
-                                  ),
+                                  messages.isNotEmpty ? (messages.last['text'] as String? ?? '') : '',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              if (isPending) ...[
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      onPressed: () => _dismissTicket(doc.id),
+                                      icon: const Icon(Icons.close, size: 18),
+                                      label: Text('dismiss'.tr()),
+                                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    OutlinedButton(
+                                      onPressed: () => _closeTicket(doc.id),
+                                      style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
+                                      child: Text('close_ticket'.tr()),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    FilledButton.icon(
+                                      onPressed: () => _showTicketReplyDialog(doc),
+                                      icon: const Icon(Icons.reply, size: 18),
+                                      label: Text('reply'.tr()),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              if (!isPending) ...[
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    if (isDismissed)
+                                      Text(
+                                        'ticket_dismissed'.tr(),
+                                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                      )
+                                    else if (status == 'resolved')
+                                      Text(
+                                        'ticket_closed'.tr(),
+                                        style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                                      )
+                                    else
+                                      Text(
+                                        'ticket_answered'.tr(),
+                                        style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                                      ),
+                                    const Spacer(),
+                                    if (status != 'resolved' && status != 'dismissed') ...[
+                                      OutlinedButton(
+                                        onPressed: () => _closeTicket(doc.id),
+                                        style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
+                                        child: Text('close_ticket'.tr()),
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    OutlinedButton(
+                                      onPressed: () => _showTicketReplyDialog(doc),
+                                      child: Text('view_ticket'.tr()),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-              );
+                      );
+                    },
+                  ),
+        ),
+      ],
+    );
   }
 }
 

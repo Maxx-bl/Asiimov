@@ -434,6 +434,19 @@ class _PostDetailPageState extends State<PostDetailPage> {
                             parentDocPath: _parentDocPath,
                             onAction: _onRefresh,
                             isAdminView: widget.isAdminView,
+                            onDelete: (isAuthor || widget.isAdminView)
+                                ? () async {
+                                    final navigator = Navigator.of(context);
+                                    if (widget.docPath.contains('/comments/')) {
+                                      await _postService.deleteComment(widget.docPath);
+                                    } else {
+                                      await _postService.deletePost(_post.id);
+                                    }
+                                    if (mounted) {
+                                      navigator.pop(true);
+                                    }
+                                  }
+                                : null,
                           );
                         }
                         // 1: Divider

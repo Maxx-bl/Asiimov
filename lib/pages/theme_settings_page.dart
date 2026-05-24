@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
 import 'package:asiimov/themes/theme_provider.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -337,23 +338,66 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           const SizedBox(width: 16),
 
                           // Color preview box
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: _previewColor,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: Colors.white24,
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _previewColor.withValues(alpha: 0.3),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 3),
+                          GestureDetector(
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  Color tempColor = _previewColor;
+                                  return AlertDialog(
+                                    title: Text('vibrant_palette'.tr()),
+                                    content: SingleChildScrollView(
+                                      child: ColorPicker(
+                                        pickerColor: _previewColor,
+                                        onColorChanged: (color) {
+                                          tempColor = color;
+                                        },
+                                        enableAlpha: false,
+                                        displayThumbColor: true,
+                                        hexInputBar: true,
+                                      ),
+                                    ),
+                                    actions: <Widget>[
+                                      TextButton(
+                                        child: Text('cancel'.tr(), style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                      ),
+                                      TextButton(
+                                        child: Text('apply'.tr(), style: TextStyle(color: activeColor, fontWeight: FontWeight.bold)),
+                                        onPressed: () {
+                                          setState(() {
+                                            _previewColor = tempColor;
+                                            _hexController.text = tempColor.value.toRadixString(16).substring(2, 8).toUpperCase();
+                                            _errorMessage = null;
+                                          });
+                                          Navigator.of(context).pop();
+                                        },
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: _previewColor,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.white24,
+                                  width: 1.5,
                                 ),
-                              ],
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: _previewColor.withValues(alpha: 0.3),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],

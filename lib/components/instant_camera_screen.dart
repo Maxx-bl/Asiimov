@@ -100,8 +100,9 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
     if (_isRecording || _capturedFile != null) return;
     setState(() => _isPressed = true);
     
-    // Start video recording after a shorter delay than standard long-press (e.g. 250ms)
-    _longPressTimer = Timer(const Duration(milliseconds: 250), () {
+    // Start video recording after a shorter delay (150ms) to reduce perceived freeze
+    // while still reliably detecting a quick tap for a photo.
+    _longPressTimer = Timer(const Duration(milliseconds: 150), () {
       if (_isPressed) {
         _startVideoRecording();
       }
@@ -148,11 +149,6 @@ class _InstantCameraScreenState extends State<InstantCameraScreen> with SingleTi
       _animationController.reset();
       _animationController.forward();
       
-      // Allow UI to render the 'recording' state before calling the blocking native method
-      await Future.delayed(const Duration(milliseconds: 50));
-      
-      if (!_isRecording) return; // Cancel if user already released
-
       _startRecordingFuture = _controller!.startVideoRecording();
       await _startRecordingFuture;
     } catch (e) {

@@ -63,6 +63,7 @@ dependencies:
   record: ^6.2.0
   audioplayers: ^6.6.0
   easy_localization: ^3.0.8
+  flutter_colorpicker: ^1.1.0
 
 dev_dependencies:
   flutter_test:

@@ -399,7 +399,7 @@ class _FeedPageState extends State<FeedPage> {
             currentUserId: currentUserId,
             onAction: () => _updateSinglePost(post.id),
             onTap: () async {
-              await Navigator.push(
+              final deleted = await Navigator.push<bool>(
                 context,
                 MaterialPageRoute(
                   builder: (context) => PostDetailPage(
@@ -408,8 +408,11 @@ class _FeedPageState extends State<FeedPage> {
                   ),
                 ),
               );
-              // Refresh this post in case comments or votes changed inside detail page
-              _updateSinglePost(post.id);
+              if (deleted == true) {
+                _onRefresh();
+              } else {
+                _updateSinglePost(post.id);
+              }
             },
             onDelete: () async {
               await postService.deletePost(post.id);

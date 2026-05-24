@@ -7,6 +7,7 @@ import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:rxdart/rxdart.dart';
 
 class ShareSheet extends StatefulWidget {
   final Post post;
@@ -28,11 +29,16 @@ class _ShareSheetState extends State<ShareSheet> {
   late Stream<List<Map<String, dynamic>>> _recentChatsStream;
   late Stream<List<Map<String, dynamic>>> _allUsersStream;
   late Stream<List<Map<String, dynamic>>> _groupsStream;
+  late Stream<List<Map<String, dynamic>>> _combinedSearchStream;
   final Set<String> _selectedGroupIds = {};
 
   @override
   void initState() {
     super.initState();
+    _initStreams();
+  }
+
+  void _initStreams() {
     _recentChatsStream = _chatService.getContactsStreamExcludingBlocked();
     _allUsersStream = _chatService.getUsersStream();
     _groupsStream = _chatService.getConversationsStream().map((convs) => 
@@ -42,6 +48,11 @@ class _ShareSheetState extends State<ShareSheet> {
         'groupIconUrl': c.groupIconUrl,
         'isGroup': true,
       }).toList()
+    );
+    _combinedSearchStream = Rx.combineLatest2<List<Map<String, dynamic>>, List<Map<String, dynamic>>, List<Map<String, dynamic>>>(
+      _groupsStream,
+      _allUsersStream,
+      (groups, allUsers) => [...groups, ...allUsers],
     );
   }
 
@@ -131,6 +142,18 @@ class _ShareSheetState extends State<ShareSheet> {
             decoration: InputDecoration(
               hintText: 'search_user'.tr(),
               prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        setState(() {
+                          _searchController.clear();
+                          _searchQuery = "";
+                          _initStreams();
+                        });
+                      },
+                    )
+                  : null,
               filled: true,
               fillColor: Theme.of(context).colorScheme.secondary,
               border: OutlineInputBorder(
@@ -139,8 +162,13 @@ class _ShareSheetState extends State<ShareSheet> {
               ),
             ),
             onChanged: (value) {
+              final wasEmpty = _searchQuery.isEmpty;
+              final isEmpty = value.isEmpty;
               setState(() {
                 _searchQuery = value.toLowerCase();
+                if (wasEmpty != isEmpty) {
+                  _initStreams();
+                }
               });
             },
           ),
@@ -178,83 +206,98 @@ class _ShareSheetState extends State<ShareSheet> {
   }
 
   Widget _buildRecentChatsList() {
-    return Column(
-      children: [
-        // Groups section
-        StreamBuilder<List<Map<String, dynamic>>>(
-          stream: _groupsStream,
-          builder: (context, snapshot) {
-            final groups = snapshot.data ?? [];
-            if (groups.isEmpty) return const SizedBox();
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                  child: Text('groups'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                ),
-                ...groups.map((g) => _buildUserTile(g, _selectedGroupIds.contains(g['uid']), isGroup: true)),
-                const Divider(),
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _groupsStream,
+      builder: (context, groupsSnapshot) {
+        final groups = groupsSnapshot.data ?? [];
+        return StreamBuilder<List<Map<String, dynamic>>>(
+          stream: _recentChatsStream,
+          builder: (context, chatsSnapshot) {
+            if (chatsSnapshot.connectionState == ConnectionState.waiting &&
+                groupsSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final chats = chatsSnapshot.data ?? [];
+            if (groups.isEmpty && chats.isEmpty) {
+              return Center(child: Text('no_recent_chats'.tr()));
+            }
+
+            return CustomScrollView(
+              slivers: [
+                if (groups.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      child: Text('groups'.tr(),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                  ),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final g = groups[index];
+                        return _buildUserTile(
+                            g, _selectedGroupIds.contains(g['uid']),
+                            isGroup: true);
+                      },
+                      childCount: groups.length,
+                    ),
+                  ),
+                  if (chats.isNotEmpty)
+                    const SliverToBoxAdapter(
+                      child: Divider(),
+                    ),
+                ],
+                if (chats.isNotEmpty)
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final user = chats[index];
+                        final userId = user['uid'];
+                        final isSelected = _selectedUserIds.contains(userId);
+                        return _buildUserTile(user, isSelected);
+                      },
+                      childCount: chats.length,
+                    ),
+                  ),
               ],
             );
           },
-        ),
-        // Users section
-        Expanded(
-          child: StreamBuilder<List<Map<String, dynamic>>>(
-            stream: _recentChatsStream,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(child: CircularProgressIndicator());
-              }
-
-              final users = snapshot.data ?? [];
-              if (users.isEmpty && _selectedGroupIds.isEmpty) {
-                return Center(child: Text('no_recent_chats'.tr()));
-              }
-
-              return ListView.builder(
-                itemCount: users.length,
-                itemBuilder: (context, index) {
-                  final user = users[index];
-                  final userId = user['uid'];
-                  final isSelected = _selectedUserIds.contains(userId);
-
-                  return _buildUserTile(user, isSelected);
-                },
-              );
-            },
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
   Widget _buildSearchList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: _allUsersStream,
+      stream: _combinedSearchStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         }
 
-        final users = (snapshot.data ?? []).where((user) {
-          final username = user['username']?.toString().toLowerCase() ?? "";
+        final items = (snapshot.data ?? []).where((item) {
+          final username = item['username']?.toString().toLowerCase() ?? "";
           return username.contains(_searchQuery);
         }).toList();
 
-        if (users.isEmpty) {
+        if (items.isEmpty) {
           return Center(child: Text('no_user_found'.tr()));
         }
 
         return ListView.builder(
-          itemCount: users.length,
+          itemCount: items.length,
           itemBuilder: (context, index) {
-            final user = users[index];
-            final userId = user['uid'];
-            final isSelected = _selectedUserIds.contains(userId);
+            final item = items[index];
+            final id = item['uid'];
+            final isGroup = item['isGroup'] == true;
+            final isSelected = isGroup
+                ? _selectedGroupIds.contains(id)
+                : _selectedUserIds.contains(id);
 
-            return _buildUserTile(user, isSelected);
+            return _buildUserTile(item, isSelected, isGroup: isGroup);
           },
         );
       },
