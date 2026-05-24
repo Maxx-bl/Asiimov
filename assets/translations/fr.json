@@ -310,5 +310,13 @@
   "final_delete_confirmation": "Confirmation finale : Cela supprimera définitivement votre compte. Voulez-vous continuer ?",
   "admin_dashboard": "Panneau Admin",
   "close_ticket": "Fermer le ticket",
-  "ticket_closed": "Ce ticket est fermé."
+  "ticket_closed": "Ce ticket est fermé.",
+  "about": "À propos",
+  "version": "Version",
+  "update_required_title": "Mise à jour requise",
+  "update_required_desc": "Une nouvelle version de l'application est disponible et est requise pour continuer. Veuillez mettre à jour maintenant.",
+  "update_recommended_title": "Mise à jour disponible",
+  "update_recommended_desc": "Une nouvelle version de l'application est disponible. Nous vous recommandons de la mettre à jour pour profiter des dernières fonctionnalités.",
+  "update_now": "Mettre à jour",
+  "later": "Plus tard"
 }

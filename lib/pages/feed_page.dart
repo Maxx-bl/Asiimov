@@ -99,7 +99,7 @@ class _FeedPageState extends State<FeedPage> {
 
             // Normal feed rules
             return _allowedUserIds.contains(post.authorID) ||
-                post.authorUsername.toLowerCase() == 'asiimov';
+                post.authorUsername.toLowerCase() == 'glyphe';
           })
           .toList();
 
@@ -305,7 +305,7 @@ class _FeedPageState extends State<FeedPage> {
                 },
               )
             : Text(
-                'A S I I M O V',
+                'G L Y P H E',
                 style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2),
               ),
         foregroundColor: Theme.of(context).colorScheme.primary,

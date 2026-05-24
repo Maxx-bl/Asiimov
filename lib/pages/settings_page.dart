@@ -8,6 +8,7 @@ import 'blocked_users_page.dart';
 import 'language_settings_page.dart';
 import 'support_page.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'about_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -78,6 +79,13 @@ class SettingsPage extends StatelessWidget {
                 title: 'help'.tr(),
                 destination: const SupportPage(),
               ),
+
+              SettingCategoryTile(
+                icon: Icons.info_outline_rounded,
+                title: 'about'.tr(),
+                destination: const AboutPage(),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

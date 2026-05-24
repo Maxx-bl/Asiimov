@@ -290,7 +290,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                             const SizedBox(height: 4),
                             Text(
                               isPublic
-                                  ? 'Anyone on Asiimov can see this post.'
+                                  ? 'Anyone on Glyphe can see this post.'
                                   : 'Only your followers can see this post.',
                               style: TextStyle(
                                 fontSize: 12,

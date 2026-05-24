@@ -1302,6 +1302,45 @@ class ChatService extends ChangeNotifier {
     }
 
     await messageRef.delete();
+    await _updateLastMessageAfterDeletion(chatRoomId);
+  }
+
+  // Helper to update the last message in a chat room after a deletion
+  Future<void> _updateLastMessageAfterDeletion(String chatRoomID) async {
+    try {
+      final messagesRef = firestore
+          .collection('chats')
+          .doc(chatRoomID)
+          .collection('messages');
+      
+      final latestMessagesSnapshot = await messagesRef
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get();
+
+      if (latestMessagesSnapshot.docs.isNotEmpty) {
+        final latestMessage = latestMessagesSnapshot.docs.first.data();
+        await firestore.collection('chats').doc(chatRoomID).update({
+          'lastMessage': latestMessage['message'] ?? '',
+          'lastSenderID': latestMessage['senderID'] ?? '',
+          'lastSenderUsername': latestMessage['senderUsername'] ?? '',
+          'lastTimestamp': latestMessage['timestamp'],
+          'lastMessageRead': latestMessage['isRead'] ?? false,
+          'lastIsSystem': latestMessage['isSystemMessage'] ?? false,
+        });
+      } else {
+        await firestore.collection('chats').doc(chatRoomID).update({
+          'lastMessage': '',
+          'lastSenderID': '',
+          'lastSenderUsername': '',
+          'lastTimestamp': FieldValue.serverTimestamp(),
+          'lastMessageRead': true,
+          'lastIsSystem': false,
+        });
+      }
+    } catch (e) {
+      debugPrint("Error updating last message after deletion: $e");
+    }
   }
 
   //block user
@@ -1407,6 +1446,7 @@ class ChatService extends ChangeNotifier {
     }
 
     await messageRef.delete();
+    await _updateLastMessageAfterDeletion(chatRoomID);
   }
 
   //edit message

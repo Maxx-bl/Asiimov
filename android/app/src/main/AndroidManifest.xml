@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
-        android:label="asiimov"
+        android:label="Glyphe"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
 

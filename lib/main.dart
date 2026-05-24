@@ -12,6 +12,7 @@ import 'package:asiimov/firebase_options.dart';
 import 'package:asiimov/themes/theme_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:asiimov/services/update/update_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -176,7 +177,7 @@ class MyApp extends StatelessWidget {
       locale: context.locale,
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      home: const AuthGate(),
+      home: const UpdateGate(child: AuthGate()),
       theme: Provider.of<ThemeProvider>(context).themeData,
     );
   }

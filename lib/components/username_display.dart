@@ -86,9 +86,9 @@ class _UsernameDisplayState extends State<UsernameDisplay> {
   @override
   Widget build(BuildContext context) {
     final currentUsername = _username ?? widget.username;
-    final bool isAsiimov = currentUsername.toLowerCase() == 'asiimov';
+    final bool isGlyphe = currentUsername.toLowerCase() == 'glyphe';
     final defaultStyle = widget.style ?? const TextStyle(fontWeight: FontWeight.bold);
-    final appliedStyle = isAsiimov 
+    final appliedStyle = isGlyphe 
         ? defaultStyle.copyWith(color: Colors.blue) 
         : defaultStyle;
 

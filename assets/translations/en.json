@@ -310,5 +310,13 @@
   "final_delete_confirmation": "Final confirmation: This will permanently delete your account. Do you wish to proceed?",
   "admin_dashboard": "Admin Dashboard",
   "close_ticket": "Close Ticket",
-  "ticket_closed": "This ticket is closed."
+  "ticket_closed": "This ticket is closed.",
+  "about": "About",
+  "version": "Version",
+  "update_required_title": "Update Required",
+  "update_required_desc": "A new version of the app is available and required to continue. Please update now.",
+  "update_recommended_title": "Update Available",
+  "update_recommended_desc": "A new version of the app is available. We recommend updating to get the latest features.",
+  "update_now": "Update Now",
+  "later": "Later"
 }
