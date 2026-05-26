@@ -5,15 +5,31 @@ import 'package:asiimov/components/my_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
-class RegisterPage extends StatelessWidget {
+class RegisterPage extends StatefulWidget {
+  final void Function()? onTap;
+
+  const RegisterPage({super.key, required this.onTap});
+
+  @override
+  State<RegisterPage> createState() => _RegisterPageState();
+}
+
+class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmController = TextEditingController();
   final TextEditingController usernameController = TextEditingController();
 
-  final void Function()? onTap;
+  bool _isLoading = false;
 
-  RegisterPage({super.key, required this.onTap});
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    confirmController.dispose();
+    usernameController.dispose();
+    super.dispose();
+  }
 
   bool passwordSize() {
     bool isValid = true;
@@ -38,6 +54,9 @@ class RegisterPage extends StatelessWidget {
 
   //register
   void register(BuildContext context) async {
+    // Prevent multiple simultaneous registration attempts
+    if (_isLoading) return;
+
     final auth = AuthService();
 
     String email = emailController.text.trim();
@@ -69,6 +88,8 @@ class RegisterPage extends StatelessWidget {
       return;
     }
 
+    setState(() => _isLoading = true);
+
     try {
       await auth.signUpWithEmailAndPassword(email, password, username);
     } catch (e) {
@@ -90,6 +111,10 @@ class RegisterPage extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -151,7 +176,7 @@ class RegisterPage extends StatelessWidget {
               //login button
               MyButton(
                 text: "register".tr(),
-                onTap: () => register(context),
+                onTap: _isLoading ? null : () => register(context),
               ),
 
               const SizedBox(height: 50),
@@ -164,7 +189,7 @@ class RegisterPage extends StatelessWidget {
                       TextStyle(color: Theme.of(context).colorScheme.primary),
                 ),
                 GestureDetector(
-                  onTap: onTap,
+                  onTap: widget.onTap,
                   child: Text("login_now".tr(),
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
@@ -176,3 +201,4 @@ class RegisterPage extends StatelessWidget {
         )));
   }
 }
+
