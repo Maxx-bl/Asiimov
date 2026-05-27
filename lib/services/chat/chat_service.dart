@@ -1,17 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:asiimov/models/conversation.dart';
 import 'package:asiimov/models/message.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
 import 'package:asiimov/services/file/file_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:googleapis_auth/auth_io.dart';
-import 'package:http/http.dart' as http;
 import 'package:rxdart/rxdart.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -21,9 +18,6 @@ class ChatService extends ChangeNotifier {
   final FirebaseAuth auth = FirebaseAuth.instance;
   final EncryptionService encryption =
       EncryptionService(dotenv.env['ENCRYPTION_KEY'] ?? '');
-
-  // Cached OAuth2 access token for FCM V1 API
-  AccessCredentials? _cachedCredentials;
 
   //get all users stream
   Stream<List<Map<String, dynamic>>> getUsersStream() {
@@ -619,13 +613,61 @@ class ChatService extends ChangeNotifier {
       chatRoomID = ids.join('_');
     }
 
+    // Format notification body (stored for Cloud Function trigger)
+    String notifBody = message;
+    if (messageType == 'post_share') {
+      notifBody = 'notif_sent_post'.tr();
+    } else if (messageType == 'instant_attachment' && instantAttachment != null) {
+      final type = instantAttachment['type'];
+      if (type == 'audio') {
+        notifBody = 'notif_sent_voice'.tr();
+      } else if (type == 'video') {
+        notifBody = "📸 sent a video";
+      } else {
+        notifBody = "📸 sent a photo";
+      }
+    } else if (attachments != null && attachments.isNotEmpty) {
+      if (message.isEmpty) {
+        if (attachments.length == 1) {
+          final type = attachments[0]['type'];
+          if (type == 'image') {
+            notifBody = "📷 sent a photo";
+          } else if (type == 'video') {
+            notifBody = "🎥 sent a video";
+          } else if (type == 'audio') {
+            notifBody = "🎵 sent an audio file";
+          } else {
+            notifBody = 'notif_sent_attachment'.tr();
+          }
+        } else {
+          notifBody = "📁 sent ${attachments.length} attachments";
+        }
+      } else {
+        if (attachments.length == 1) {
+          final type = attachments[0]['type'];
+          if (type == 'image') {
+            notifBody = "📷 Photo: $message";
+          } else if (type == 'video') {
+            notifBody = "🎥 Video: $message";
+          } else if (type == 'audio') {
+            notifBody = "🎵 Audio: $message";
+          } else {
+            notifBody = "📁 Attachment: $message";
+          }
+        } else {
+          notifBody = "📁 ${attachments.length} attachments: $message";
+        }
+      }
+    }
+
     //add to db
     final messageMap = newMessage.toMap();
     messageMap['senderUsername'] = senderName;
+    messageMap['notifBody'] = notifBody;
     if (isGroup) {
       messageMap['unreadBy'] = unreadBy;
     }
-    
+
     await firestore
         .collection('chats')
         .doc(chatRoomID)
@@ -645,7 +687,7 @@ class ChatService extends ChangeNotifier {
 
     // For groups, we don't want to overwrite the whole doc, just merge metadata
     await firestore.collection('chats').doc(chatRoomID).set(updateData, SetOptions(merge: true));
-    
+
     // For private chats, we ensure users list exists (groups set it at creation)
     if (!isGroup) {
       final List<String> ids = [currentUserId, receiverID];
@@ -653,86 +695,6 @@ class ChatService extends ChangeNotifier {
       await firestore.collection('chats').doc(chatRoomID).update({
         'users': ids,
       }).catchError((_) => firestore.collection('chats').doc(chatRoomID).set({'users': ids}, SetOptions(merge: true)));
-    }
-
-    //send push notification to receiver(s)
-    String notificationBody = message;
-    if (messageType == 'post_share') {
-      notificationBody = 'notif_sent_post'.tr();
-    } else if (messageType == 'instant_attachment' && instantAttachment != null) {
-      final type = instantAttachment['type'];
-      if (type == 'audio') {
-        notificationBody = 'notif_sent_voice'.tr();
-      } else if (type == 'video') {
-        notificationBody = "📸 sent a video";
-      } else {
-        notificationBody = "📸 sent a photo";
-      }
-    } else if (attachments != null && attachments.isNotEmpty) {
-      if (message.isEmpty) {
-        if (attachments.length == 1) {
-          final type = attachments[0]['type'];
-          if (type == 'image') {
-            notificationBody = "📷 sent a photo";
-          } else if (type == 'video') {
-            notificationBody = "🎥 sent a video";
-          } else if (type == 'audio') {
-            notificationBody = "🎵 sent an audio file";
-          } else {
-            notificationBody = 'notif_sent_attachment'.tr();
-          }
-        } else {
-          notificationBody = "📁 sent ${attachments.length} attachments";
-        }
-      } else {
-        if (attachments.length == 1) {
-          final type = attachments[0]['type'];
-          if (type == 'image') {
-            notificationBody = "📷 Photo: $message";
-          } else if (type == 'video') {
-            notificationBody = "🎥 Video: $message";
-          } else if (type == 'audio') {
-            notificationBody = "🎵 Audio: $message";
-          } else {
-            notificationBody = "📁 Attachment: $message";
-          }
-        } else {
-          notificationBody = "📁 ${attachments.length} attachments: $message";
-        }
-      }
-    }
-
-    if (isGroup && groupData != null) {
-      // Reuse the groupData we already fetched — NO second fetch
-      final List<String> members = List<String>.from(groupData['members'] ?? []);
-      final String groupName = groupData['groupName'] ?? 'Group';
-      final List<String> mutedBy = List<String>.from(groupData['mutedBy'] ?? []);
-      final String? creatorId = groupData['creatorId'];
-
-      for (String memberId in members) {
-        if (memberId != currentUserId && !mutedBy.contains(memberId)) {
-          final extra = {
-            'isGroup': 'true',
-            'groupId': chatRoomID,
-            'groupName': groupName,
-            'creatorId': creatorId ?? '',
-            'senderID': currentUserId,
-            'senderUsername': senderName,
-          };
-          debugPrint('Sending Group Notif to $memberId with data: $extra');
-          await sendPushNotification(
-            memberId, 
-            "$senderName: $notificationBody", 
-            title: groupName,
-            extraData: extra,
-          );
-        }
-      }
-    } else if (!isGroup) {
-      await sendPushNotification(receiverID, notificationBody, extraData: {
-        'senderID': currentUserId,
-        'senderUsername': senderName,
-      });
     }
   }
 
@@ -812,7 +774,7 @@ class ChatService extends ChangeNotifier {
     await sendPushNotification(
       receiverID,
       "$senderUsername reacted $emoji to your message",
-      title: title, // if null, defaults to senderUsername
+      title: title ?? senderUsername,
       extraData: extra,
     );
   }
@@ -833,144 +795,19 @@ class ChatService extends ChangeNotifier {
         .update({'reactions.$currentUserId': FieldValue.delete()});
   }
 
-  //send push notification via FCM V1 API
   Future<void> sendPushNotification(String receiverID, String messageText,
       {String? title, String? type, Map<String, dynamic>? extraData}) async {
     try {
-      //get receiver's FCM token
-      final receiverDoc =
-          await firestore.collection('users').doc(receiverID).get();
-      final receiverData = receiverDoc.data();
-      if (receiverData == null) return;
-
-      final fcmToken = receiverData['fcmToken'];
-      if (fcmToken == null || fcmToken.isEmpty) return;
-
-      // Check receiver's notification preferences (uses same doc, 0 extra reads)
-      final notificationType = extraData?['type'] ?? type ?? 'chat_message';
-      final prefs = receiverData['notificationPrefs'] as Map<String, dynamic>? ?? {};
-      
-      // Map notification types to preference categories
-      String? prefKey;
-      if (notificationType == 'chat_message' || notificationType == 'post_share') {
-        prefKey = 'messages';
-      } else if (notificationType == 'follow' || notificationType == 'follow_request' || notificationType == 'follow_accept') {
-        prefKey = 'followers';
-      } else if (notificationType == 'comment') {
-        prefKey = 'comments';
-      }
-
-      // If the receiver has disabled this category, don't send
-      if (prefKey != null && prefs[prefKey] == false) {
-        debugPrint('🔕 Notification suppressed: $notificationType (user disabled $prefKey)');
-        return;
-      }
-
-      //get sender's username
-      final senderUsername = auth.currentUser?.displayName ?? 'Someone';
-
-      //truncate message preview (increased for stacked messages)
-      final preview = messageText.length > 200
-          ? '${messageText.substring(0, 200)}...'
-          : messageText;
-
-      //get OAuth2 access token
-      final accessToken = await _getAccessToken();
-      if (accessToken == null) return;
-
-      final String finalTitle = (title != null && title.isNotEmpty) ? title : senderUsername;
-
-      // Prepare data payload (FCM V1 requires all values to be Strings)
-      final Map<String, String> dataPayload = {
-        'senderID': auth.currentUser!.uid,
-        'senderUsername': senderUsername,
-        'type': notificationType,
-        'title': finalTitle,
-        'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-      };
-      
-      if (extraData != null) {
-        extraData.forEach((key, value) {
-          dataPayload[key] = value.toString();
-        });
-      }
-
-      // Use senderID as tag for chats to stack/replace.
-      // For others, use unique tag (timestamp) to keep them separate.
-      final String tag = notificationType == 'chat_message'
-          ? auth.currentUser!.uid
-          : DateTime.now().millisecondsSinceEpoch.toString();
-
-      final body = {
-        'message': {
-          'token': fcmToken,
-          'notification': {
-            'title': finalTitle,
-            'body': preview,
-          },
-          'data': dataPayload,
-          'android': {
-            'notification': {
-              'channel_id': 'chat_messages',
-              'tag': tag,
-            },
-          },
-        },
-      };
-
-      debugPrint('🚀 SENDING NOTIFICATION - Title: "$finalTitle" | Body: "$preview"');
-      debugPrint('FCM Payload: ${jsonEncode(body)}');
-
-      //send notification via FCM V1 API
-      final response = await http.post(
-        Uri.parse(
-            'https://fcm.googleapis.com/v1/projects/asiimov-b3792/messages:send'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-        },
-        body: jsonEncode(body),
-      );
-
-      if (response.statusCode != 200) {
-        debugPrint('FCM error: ${response.statusCode} - ${response.body}');
-      } else {
-        debugPrint('Notification sent successfully');
-      }
+      final callable = FirebaseFunctions.instance.httpsCallable('sendNotification');
+      await callable.call({
+        'receiverID': receiverID,
+        'message': messageText,
+        if (title != null) 'title': title,
+        'type': type ?? 'notification',
+        if (extraData != null) 'extraData': extraData,
+      });
     } catch (e) {
-      debugPrint('Error sending push notification: $e');
-    }
-  }
-
-  //get OAuth2 access token from service account
-  Future<String?> _getAccessToken() async {
-    try {
-      // Return cached token if still valid
-      if (_cachedCredentials != null &&
-          _cachedCredentials!.accessToken.expiry
-              .isAfter(DateTime.now().add(const Duration(minutes: 1)))) {
-        return _cachedCredentials!.accessToken.data;
-      }
-
-      // Load service account JSON from assets
-      final serviceAccountJson =
-          await rootBundle.loadString('assets/service-account.json');
-      final credentials =
-          ServiceAccountCredentials.fromJson(serviceAccountJson);
-
-      // Get access token with FCM scope
-      final client = http.Client();
-      _cachedCredentials = await obtainAccessCredentialsViaServiceAccount(
-        credentials,
-        ['https://www.googleapis.com/auth/firebase.messaging'],
-        client,
-      );
-      client.close();
-
-      return _cachedCredentials?.accessToken.data;
-    } catch (e) {
-      debugPrint('Error getting FCM access token: $e');
-      return null;
+      debugPrint('Error calling sendNotification function: $e');
     }
   }
 

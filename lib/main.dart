@@ -7,7 +7,9 @@ import 'package:asiimov/pages/follow_requests_page.dart';
 import 'package:asiimov/pages/support_tickets_page.dart';
 import 'package:asiimov/pages/ticket_detail_page.dart';
 import 'package:asiimov/services/notifications/notification_service.dart';
+import 'package:asiimov/pages/suspended_account_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:asiimov/firebase_options.dart';
 import 'package:asiimov/themes/theme_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -179,6 +181,26 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       home: const UpdateGate(child: AuthGate()),
       theme: Provider.of<ThemeProvider>(context).themeData,
+      builder: (context, child) {
+        return StreamBuilder<User?>(
+          stream: FirebaseAuth.instance.authStateChanges(),
+          builder: (context, authSnapshot) {
+            final user = authSnapshot.data;
+            if (user == null) return child!;
+            return StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
+              builder: (context, userSnapshot) {
+                final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
+                if (userData?['isSuspended'] == true) {
+                  final reason = userData?['suspensionReason'] as String? ?? '';
+                  return SuspendedAccountPage(reason: reason);
+                }
+                return child!;
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

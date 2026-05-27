@@ -619,22 +619,29 @@ class _ProfilePageState extends State<ProfilePage> {
                         const SizedBox(height: 16),
 
                         // Followers / Following counts
-                        Row(
+                        Builder(builder: (context) {
+                          final canSeeFollowLists = isOwnProfile ||
+                              (userData!['public_account'] ?? false) ||
+                              isFollowing ||
+                              widget.isAdminView;
+                          return Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => FollowListPage(
-                                      userId: widget.userId,
-                                      title: 'followers'.tr(),
-                                      isFollowers: true,
-                                    ),
-                                  ),
-                                );
-                              },
+                              onTap: canSeeFollowLists
+                                  ? () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => FollowListPage(
+                                            userId: widget.userId,
+                                            title: 'followers'.tr(),
+                                            isFollowers: true,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  : null,
                               child: Column(
                                 children: [
                                   Text(
@@ -661,18 +668,20 @@ class _ProfilePageState extends State<ProfilePage> {
                               margin: const EdgeInsets.symmetric(horizontal: 24),
                             ),
                             GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => FollowListPage(
-                                      userId: widget.userId,
-                                      title: 'following'.tr(),
-                                      isFollowers: false,
-                                    ),
-                                  ),
-                                );
-                              },
+                              onTap: canSeeFollowLists
+                                  ? () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => FollowListPage(
+                                            userId: widget.userId,
+                                            title: 'following'.tr(),
+                                            isFollowers: false,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  : null,
                               child: Column(
                                 children: [
                                   Text(
@@ -693,7 +702,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                           ],
-                        ),
+                        );
+                        }),
 
                         const SizedBox(height: 16),
 
