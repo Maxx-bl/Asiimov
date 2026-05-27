@@ -36,7 +36,10 @@ jobs:
           echo "{}" > assets/service-account.json
 
       - name: Build Web
-        run: flutter build web --release --base-href "/Asiimov/"
+        run: flutter build web --release --base-href "/"
+
+      - name: Add CNAME
+        run: echo "glyphe-app.synae.dev" > build/web/CNAME
         
       - name: Add .nojekyll
         run: touch build/web/.nojekyll
