@@ -97,6 +97,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
       String message;
       switch (error) {
+        case 'disposable-email':
+          message = 'disposable_email_not_allowed'.tr();
+          break;
         case 'email-already-in-use':
           message = 'This email is already in use.';
           break;
@@ -176,7 +179,8 @@ class _RegisterPageState extends State<RegisterPage> {
               //login button
               MyButton(
                 text: "register".tr(),
-                onTap: _isLoading ? null : () => register(context),
+                onTap: () => register(context),
+                isLoading: _isLoading,
               ),
 
               const SizedBox(height: 50),

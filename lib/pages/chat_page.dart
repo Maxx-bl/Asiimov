@@ -7,6 +7,7 @@ import 'package:asiimov/components/chat_bubble.dart';
 import 'package:asiimov/components/group_icon.dart';
 import 'package:asiimov/components/instant_camera_screen.dart';
 import 'package:asiimov/components/profile_avatar.dart';
+import 'package:asiimov/components/typing_dots.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/pages/group_settings_page.dart';
 import 'package:asiimov/pages/pinned_messages_page.dart';
@@ -16,6 +17,7 @@ import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
 import 'package:asiimov/services/file/file_service.dart';
 import 'package:asiimov/services/image/image_service.dart';
+import 'package:asiimov/services/draft_service.dart';
 import 'package:asiimov/services/notifications/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -66,19 +68,65 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+
+    // Compute the stable chat room ID once
+    final currentUid = authService.getCurrentUser()!.uid;
+    if (widget.isGroup) {
+      _chatRoomId = widget.receiverID;
+    } else {
+      final ids = [currentUid, widget.receiverID]..sort();
+      _chatRoomId = ids.join('_');
+    }
+
     NotificationService().setActiveChatUser(widget.receiverID);
     chatService.markMessageAsRead(widget.receiverID, isGroup: widget.isGroup);
-    // cleanUpOldMessages needs update in ChatService to handle group IDs correctly
+    // Clear any stale typing status left from a previous session
+    chatService.setTypingStatus(_chatRoomId, false);
     chatService.cleanUpOldMessages(widget.receiverID, isGroup: widget.isGroup);
     scrollController.addListener(_onScroll);
 
-    // Track text input to toggle between + and send button
+    // Restore any saved draft before attaching the listener (avoids false typing signal)
+    final savedDraft = DraftService.get(widget.receiverID);
+    if (savedDraft != null && savedDraft.isNotEmpty) {
+      messageController.text = savedDraft;
+      _hasText = true;
+    }
+
+    // Track text input: toggle send button + drive typing indicator
     messageController.addListener(() {
       final hasText = messageController.text.trim().isNotEmpty;
       if (hasText != _hasText) {
         setState(() => _hasText = hasText);
       }
+
+      // Typing indicator debounce
+      if (hasText) {
+        if (!_isTyping) {
+          _isTyping = true;
+          chatService.setTypingStatus(_chatRoomId, true);
+        }
+        _typingTimer?.cancel();
+        _typingTimer = Timer(const Duration(seconds: 3), () {
+          _isTyping = false;
+          chatService.setTypingStatus(_chatRoomId, false);
+        });
+      } else {
+        _typingTimer?.cancel();
+        if (_isTyping) {
+          _isTyping = false;
+          chatService.setTypingStatus(_chatRoomId, false);
+        }
+      }
+
+      _detectMention(messageController.text);
+
+      // Persist draft (skip during message-edit mode to avoid overwriting the real draft)
+      if (_editingMessageId == null) {
+        DraftService.save(widget.receiverID, messageController.text.trim());
+      }
     });
+
+    _loadConversationMembers();
 
     // Listen for new messages while the page is open to mark them as read automatically
     _messageSubscription = chatService
@@ -117,6 +165,9 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    _typingTimer?.cancel();
+    // Fire-and-forget: clear typing status when leaving the chat
+    chatService.setTypingStatus(_chatRoomId, false);
     _recordingTimer?.cancel();
     _audioRecorder.dispose();
     _messageSubscription?.cancel();
@@ -125,13 +176,18 @@ class _ChatPageState extends State<ChatPage> {
     myFocusNode.dispose();
     messageController.dispose();
     scrollController.dispose();
+    _mentionQueryNotifier.dispose();
     super.dispose();
   }
+
+  // Chat room ID (computed once in initState)
+  late final String _chatRoomId;
 
   // Reply state
   String? _replyToMessageId;
   String? _replyToMessage;
   String? _replyToSenderID;
+  String? _replyToSenderUsername;
 
   // Edit state
   String? _editingMessageId;
@@ -141,6 +197,10 @@ class _ChatPageState extends State<ChatPage> {
   final AudioRecorder _audioRecorder = AudioRecorder();
   bool _isRecording = false;
   Timer? _recordingTimer;
+
+  // Typing indicator
+  Timer? _typingTimer;
+  bool _isTyping = false;
   int _recordingDuration = 0;
 
   // Attachment state
@@ -152,6 +212,10 @@ class _ChatPageState extends State<ChatPage> {
   // GlobalKeys for each message to allow scrolling to them
   final Map<String, GlobalKey<ChatBubbleState>> _messageKeys = {};
   List<String> _loadedMessageIds = [];
+
+  // Mention state
+  List<Map<String, dynamic>> _conversationMembers = [];
+  final ValueNotifier<String?> _mentionQueryNotifier = ValueNotifier(null);
 
   // Scroll to a specific message by ID
   void _scrollToMessage(String messageId, {int retryCount = 0}) {
@@ -204,11 +268,12 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   //set reply
-  void setReplyTo(String messageId, String message, String senderID) {
+  void setReplyTo(String messageId, String message, String senderID, {String? senderUsername}) {
     setState(() {
       _replyToMessageId = messageId;
       _replyToMessage = message;
       _replyToSenderID = senderID;
+      _replyToSenderUsername = senderUsername;
     });
     // Delay focus to ensure the UI has settled after swipe animation
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -222,6 +287,7 @@ class _ChatPageState extends State<ChatPage> {
       _replyToMessageId = null;
       _replyToMessage = null;
       _replyToSenderID = null;
+      _replyToSenderUsername = null;
     });
   }
 
@@ -244,8 +310,118 @@ class _ChatPageState extends State<ChatPage> {
     setState(() {
       _editingMessageId = null;
       _editingMessageText = null;
-      messageController.clear();
     });
+    messageController.text = DraftService.get(widget.receiverID) ?? '';
+  }
+
+  // Load members of the current conversation for @mention suggestions
+  Future<void> _loadConversationMembers() async {
+    final currentUserId = authService.getCurrentUser()!.uid;
+
+    if (widget.isGroup) {
+      final groupDoc = await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(widget.receiverID)
+          .get();
+      final memberIds = List<String>.from(groupDoc.data()?['members'] ?? [])
+          .where((id) => id != currentUserId)
+          .toList();
+      if (memberIds.isEmpty) return;
+
+      final usersSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: memberIds)
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _conversationMembers = usersSnap.docs
+              .map((doc) => <String, dynamic>{
+                    'uid': doc.id,
+                    'username': doc.data()['username'] ?? '',
+                  })
+              .toList();
+        });
+      }
+    } else {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.receiverID)
+          .get();
+      if (userDoc.exists && mounted) {
+        setState(() {
+          _conversationMembers = [
+            <String, dynamic>{
+              'uid': widget.receiverID,
+              'username': userDoc.data()?['username'] ?? widget.receiverUsername,
+            }
+          ];
+        });
+      }
+    }
+  }
+
+  // Detect if the cursor is right after a @query and update suggestion state
+  void _detectMention(String text) {
+    final cursorPos = messageController.selection.baseOffset;
+    if (cursorPos < 0 || cursorPos > text.length) {
+      if (_mentionQueryNotifier.value != null) _mentionQueryNotifier.value = null;
+      return;
+    }
+
+    final textBeforeCursor = text.substring(0, cursorPos);
+    final atIndex = textBeforeCursor.lastIndexOf('@');
+
+    if (atIndex >= 0) {
+      final afterAt = textBeforeCursor.substring(atIndex + 1);
+      if (!afterAt.contains(' ') && !afterAt.contains('\n')) {
+        final query = afterAt.toLowerCase();
+        if (_mentionQueryNotifier.value != query) _mentionQueryNotifier.value = query;
+        return;
+      }
+    }
+
+    if (_mentionQueryNotifier.value != null) _mentionQueryNotifier.value = null;
+  }
+
+  // Insert the selected member's @username into the text field
+  void _onMemberSelected(Map<String, dynamic> member) {
+    final username = member['username'] as String? ?? '';
+    final text = messageController.text;
+    final cursorPos = messageController.selection.baseOffset;
+    if (cursorPos < 0) return;
+
+    final textBeforeCursor = text.substring(0, cursorPos);
+    final atIndex = textBeforeCursor.lastIndexOf('@');
+    if (atIndex < 0) return;
+
+    final insertion = '@$username ';
+    final newText = text.substring(0, atIndex) + insertion + text.substring(cursorPos);
+    final newCursor = atIndex + insertion.length;
+
+    messageController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newCursor),
+    );
+
+    _mentionQueryNotifier.value = null;
+  }
+
+  // Extract all valid @mentions from a text, returning {username: userId}
+  Map<String, String> _extractMentions(String text) {
+    final result = <String, String>{};
+    final regex = RegExp(r'@(\w+)', caseSensitive: false);
+    for (final match in regex.allMatches(text)) {
+      final username = match.group(1)!.toLowerCase();
+      final member = _conversationMembers.firstWhere(
+        (m) => (m['username'] as String? ?? '').toLowerCase() == username,
+        orElse: () => {},
+      );
+      if (member.isNotEmpty) {
+        result[username] = member['uid'] as String;
+      }
+    }
+    return result;
   }
 
   //send message
@@ -270,6 +446,7 @@ class _ChatPageState extends State<ChatPage> {
     final String? replyId = _replyToMessageId;
     final String? replyText = _replyToMessage;
     final String? replySender = _replyToSenderID;
+    final String? replySenderUsername = _replyToSenderUsername;
     final List<File> filesToUpload = List.from(_stagedFiles);
 
     // Clear immediately for better UX
@@ -302,6 +479,9 @@ class _ChatPageState extends State<ChatPage> {
       if (attachments.isEmpty && message.isEmpty) return;
     }
 
+    // Extract @mentions from text
+    final mentions = _extractMentions(message);
+
     // Send in background
     await chatService.sendMessage(
       widget.receiverID,
@@ -310,7 +490,9 @@ class _ChatPageState extends State<ChatPage> {
       replyToMessageId: replyId,
       replyToMessage: replyText,
       replyToSenderID: replySender,
+      replyToSenderUsername: replySenderUsername,
       attachments: attachments,
+      mentions: mentions.isNotEmpty ? mentions : null,
     );
   }
 
@@ -479,6 +661,8 @@ class _ChatPageState extends State<ChatPage> {
                 ],
               ),
             ),
+          // Typing indicator
+          _buildTypingIndicator(),
           // Reply or Edit banner
           if (_editingMessageId != null)
             buildEditBanner()
@@ -603,7 +787,7 @@ class _ChatPageState extends State<ChatPage> {
                     Text(
                       _replyToSenderID == authService.getCurrentUser()!.uid
                           ? 'you'.tr()
-                          : widget.receiverUsername,
+                          : (_replyToSenderUsername ?? widget.receiverUsername),
                       style: TextStyle(
                         color: Theme.of(context).primaryColor,
                         fontWeight: FontWeight.bold,
@@ -640,6 +824,48 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  Widget _buildTypingIndicator() {
+    return StreamBuilder<List<String>>(
+      stream: chatService.getTypingUsernamesStream(_chatRoomId),
+      builder: (context, snapshot) {
+        final typers = snapshot.data ?? [];
+        if (typers.isEmpty) return const SizedBox.shrink();
+
+        final String label;
+        if (typers.length == 1) {
+          label = 'x_is_typing'.tr(namedArgs: {'name': '@${typers[0]}'});
+        } else if (typers.length == 2) {
+          label = 'x_and_y_are_typing'.tr(namedArgs: {
+            'name1': '@${typers[0]}',
+            'name2': '@${typers[1]}',
+          });
+        } else {
+          label = 'several_typing'.tr();
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+          child: Row(
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(width: 4),
+              TypingDots(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   // Overscroll pull-to-info state
   double _overscrollAmount = 0.0;
   static const double _overscrollThreshold = 250.0; // 2.5x longer pull
@@ -669,8 +895,7 @@ class _ChatPageState extends State<ChatPage> {
           ],
         ),
         content: Text(
-          'Messages are automatically deleted after 24 hours once they have been read, '
-          'unless they are among the 30 most recent messages in the conversation.',
+          'chat_retention_info'.tr(),
           style: TextStyle(fontSize: 14, height: 1.5),
         ),
         actions: [
@@ -915,7 +1140,14 @@ class _ChatPageState extends State<ChatPage> {
       replyToMessageId: data['replyToMessageId'],
       replyToMessage: decryptedReply,
       replyToSenderID: data['replyToSenderID'],
+      replyToSenderUsername: data['replyToSenderUsername'] as String? ??
+          (data['replyToSenderID'] == currentUid
+              ? null // bubble will show 'You'
+              : (!widget.isGroup ? widget.receiverUsername : null)),
       reactions: reactions,
+      mentions: data['mentions'] != null
+          ? Map<String, String>.from(data['mentions'] as Map)
+          : null,
       timestamp: data['timestamp'] as Timestamp?,
       isSeen: data['isRead'] == true,
       showStatus: !widget.isGroup && isLast && isCurrentUser,
@@ -933,7 +1165,12 @@ class _ChatPageState extends State<ChatPage> {
         if (replyText.trim().isEmpty) {
           replyText = 'Replied to an attachment';
         }
-        setReplyTo(messageId, replyText, data['senderID']);
+        setReplyTo(
+          messageId,
+          replyText,
+          data['senderID'],
+          senderUsername: isCurrentUser ? null : (data['senderUsername'] as String?),
+        );
       },
       onReplyTap: (repliedId) {
         _scrollToMessage(repliedId);
@@ -950,6 +1187,27 @@ class _ChatPageState extends State<ChatPage> {
     // In group chats, show avatar next to other users' messages
     final bool showGroupAvatar = widget.isGroup && !isCurrentUser;
 
+    // Build the "replied to" label shown above every reply message
+    final bool isReply = data['replyToMessageId'] != null;
+    final String? replySenderUsername = data['replyToSenderUsername'] as String?;
+    final String? replySenderID = data['replyToSenderID'] as String?;
+
+    String replyTarget() {
+      if (replySenderID == currentUid) return 'you'.tr().toLowerCase();
+      final name = replySenderUsername ?? '';
+      return name.isNotEmpty ? '@$name' : 'you'.tr().toLowerCase();
+    }
+
+    String replyLabel() {
+      if (isCurrentUser) {
+        return 'you_replied_to'.tr(namedArgs: {'target': replyTarget()});
+      }
+      return 'user_replied_to'.tr(namedArgs: {
+        'sender': '@${data['senderUsername'] ?? ''}',
+        'target': replyTarget(),
+      });
+    }
+
     return Column(
       crossAxisAlignment: isCurrentUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
@@ -962,6 +1220,24 @@ class _ChatPageState extends State<ChatPage> {
                 fontSize: 11,
                 color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        if (isReply)
+          Padding(
+            padding: EdgeInsets.only(
+              left: isCurrentUser ? 0 : (showGroupAvatar ? 48 : 25),
+              right: isCurrentUser ? 25 : 0,
+              bottom: 2,
+              top: showUsername ? 0 : 4,
+            ),
+            child: Text(
+              replyLabel(),
+              textAlign: isCurrentUser ? TextAlign.right : TextAlign.left,
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                fontStyle: FontStyle.italic,
               ),
             ),
           ),
@@ -1222,10 +1498,69 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  Widget _buildMentionSuggestions(List<Map<String, dynamic>> suggestions) {
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 220),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+          ),
+        ),
+      ),
+      child: ListView.separated(
+        shrinkWrap: true,
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        itemCount: suggestions.length,
+        separatorBuilder: (_, __) => Divider(
+          height: 1,
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
+        ),
+        itemBuilder: (context, index) {
+          final member = suggestions[index];
+          final username = member['username'] as String? ?? '';
+          final uid = member['uid'] as String? ?? '';
+          return InkWell(
+            onTap: () => _onMemberSelected(member),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  ProfileAvatar(userId: uid, username: username, radius: 16),
+                  const SizedBox(width: 12),
+                  Text(
+                    '@$username',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget buildUserInput() {
     final bool showSendButton = _hasText || _stagedFiles.isNotEmpty;
 
-    return Container(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ValueListenableBuilder<String?>(
+          valueListenable: _mentionQueryNotifier,
+          builder: (context, query, _) {
+            if (query == null) return const SizedBox.shrink();
+            final suggestions = _conversationMembers.where((m) {
+              final username = (m['username'] as String? ?? '').toLowerCase();
+              return query.isEmpty || username.startsWith(query);
+            }).take(5).toList();
+            if (suggestions.isEmpty) return const SizedBox.shrink();
+            return _buildMentionSuggestions(suggestions);
+          },
+        ),
+        Container(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
@@ -1369,6 +1704,9 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ),
       ),
+        ),
+      ],
     );
   }
 }
+

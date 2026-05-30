@@ -301,6 +301,12 @@ class ChatService extends ChangeNotifier {
             'isRead': chatData['lastMessageRead'] ?? false,
             'isSystemMessage': chatData['lastIsSystem'] ?? false,
           } : null,
+          lastReaction: chatData['lastReactionEmoji'] != null ? {
+            'emoji': chatData['lastReactionEmoji'],
+            'senderID': chatData['lastReactionSenderID'],
+            'senderUsername': chatData['lastReactionSenderUsername'],
+            'timestamp': chatData['lastReactionTimestamp'],
+          } : null,
         ));
       }
 
@@ -563,10 +569,12 @@ class ChatService extends ChangeNotifier {
       String? replyToMessageId,
       String? replyToMessage,
       String? replyToSenderID,
+      String? replyToSenderUsername,
       String messageType = 'text',
       String? sharedPostId,
       List<dynamic>? attachments,
-      Map<String, dynamic>? instantAttachment}) async {
+      Map<String, dynamic>? instantAttachment,
+      Map<String, String>? mentions}) async {
     //get current user info
     final String currentUserId = auth.currentUser!.uid;
     final String currentUserEmail = auth.currentUser!.email!;
@@ -589,8 +597,10 @@ class ChatService extends ChangeNotifier {
       replyToMessageId: replyToMessageId,
       replyToMessage: replyToMessage,
       replyToSenderID: replyToSenderID,
+      replyToSenderUsername: replyToSenderUsername,
       attachments: attachments,
       instantAttachment: instantAttachment,
+      mentions: mentions,
     );
 
     // For groups, fetch the doc ONCE and reuse for unread + notifications
@@ -714,6 +724,7 @@ class ChatService extends ChangeNotifier {
   Future<void> addReaction(
       String otherUserId, String messageDocId, String emoji, {bool isGroup = false}) async {
     final currentUserId = auth.currentUser!.uid;
+    final currentUsername = auth.currentUser?.displayName ?? 'Someone';
 
     String chatRoomID;
     if (isGroup) {
@@ -741,9 +752,27 @@ class ChatService extends ChangeNotifier {
     if (reactions[currentUserId] == emoji) {
       reactions.remove(currentUserId);
       await docRef.update({'reactions': reactions});
+      // Clear lastReaction only if it was set by the current user
+      final chatDoc = await firestore.collection('chats').doc(chatRoomID).get();
+      if (chatDoc.data()?['lastReactionSenderID'] == currentUserId) {
+        await firestore.collection('chats').doc(chatRoomID).update({
+          'lastReactionEmoji': FieldValue.delete(),
+          'lastReactionSenderID': FieldValue.delete(),
+          'lastReactionSenderUsername': FieldValue.delete(),
+          'lastReactionTimestamp': FieldValue.delete(),
+        });
+      }
     } else {
       reactions[currentUserId] = emoji;
       await docRef.update({'reactions': reactions});
+
+      // Update lastReaction in chat doc
+      await firestore.collection('chats').doc(chatRoomID).set({
+        'lastReactionEmoji': emoji,
+        'lastReactionSenderID': currentUserId,
+        'lastReactionSenderUsername': currentUsername,
+        'lastReactionTimestamp': Timestamp.now(),
+      }, SetOptions(merge: true));
 
       // Send notification to the original message sender
       final String originalSenderID = data['senderID'];
@@ -756,9 +785,11 @@ class ChatService extends ChangeNotifier {
   // Send notification for reaction
   Future<void> _sendReactionNotification(String receiverID, String emoji, {bool isGroup = false, String? groupId}) async {
     final senderUsername = auth.currentUser?.displayName ?? 'Someone';
-    
-    String? title;
-    Map<String, String>? extra;
+    final senderID = auth.currentUser?.uid ?? '';
+
+    String title;
+    Map<String, String> extra;
+    String androidTag;
 
     if (isGroup && groupId != null) {
       final groupDoc = await firestore.collection('chats').doc(groupId).get();
@@ -766,16 +797,27 @@ class ChatService extends ChangeNotifier {
       extra = {
         'isGroup': 'true',
         'groupId': groupId,
-        'groupName': title!,
+        'groupName': title,
+        'senderUsername': senderUsername,
         'type': 'chat_message',
       };
+      androidTag = groupId;
+    } else {
+      title = senderUsername;
+      extra = {
+        'senderUsername': senderUsername,
+        'type': 'chat_message',
+      };
+      androidTag = senderID;
     }
 
     await sendPushNotification(
       receiverID,
       "$senderUsername reacted $emoji to your message",
-      title: title ?? senderUsername,
+      title: title,
+      type: 'chat_message',
       extraData: extra,
+      androidTag: androidTag,
     );
   }
 
@@ -795,8 +837,53 @@ class ChatService extends ChangeNotifier {
         .update({'reactions.$currentUserId': FieldValue.delete()});
   }
 
+  // ─── Typing indicator ───────────────────────────────────────────────────────
+
+  Future<void> setTypingStatus(String chatRoomId, bool isTyping) async {
+    final uid = auth.currentUser?.uid;
+    if (uid == null) return;
+    final ref = firestore
+        .collection('chats')
+        .doc(chatRoomId)
+        .collection('typing')
+        .doc(uid);
+    if (isTyping) {
+      await ref.set({
+        'at': Timestamp.now(),
+        'name': auth.currentUser?.displayName ?? 'Someone',
+      });
+    } else {
+      await ref.delete().catchError((_) {});
+    }
+  }
+
+  /// Returns the display names of other users currently typing.
+  Stream<List<String>> getTypingUsernamesStream(String chatRoomId) {
+    final uid = auth.currentUser?.uid ?? '';
+    return firestore
+        .collection('chats')
+        .doc(chatRoomId)
+        .collection('typing')
+        .snapshots()
+        .map((snapshot) {
+      final now = DateTime.now();
+      return snapshot.docs
+          .where((doc) => doc.id != uid)
+          .where((doc) {
+            final at = (doc.data()['at'] as Timestamp?)?.toDate();
+            if (at == null) return false;
+            // Discard stale entries (crash / network failure safety net)
+            return now.difference(at).inSeconds < 10;
+          })
+          .map((doc) => (doc.data()['name'] as String?) ?? 'Someone')
+          .toList();
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+
   Future<void> sendPushNotification(String receiverID, String messageText,
-      {String? title, String? type, Map<String, dynamic>? extraData}) async {
+      {String? title, String? type, Map<String, dynamic>? extraData, String? androidTag}) async {
     try {
       final callable = FirebaseFunctions.instance.httpsCallable('sendNotification');
       await callable.call({
@@ -805,6 +892,7 @@ class ChatService extends ChangeNotifier {
         if (title != null) 'title': title,
         'type': type ?? 'notification',
         if (extraData != null) 'extraData': extraData,
+        if (androidTag != null) 'androidTag': androidTag,
       });
     } catch (e) {
       debugPrint('Error calling sendNotification function: $e');

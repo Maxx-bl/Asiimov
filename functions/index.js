@@ -3,6 +3,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
+const disposableDomainsSet = new Set(require("disposable-email-domains"));
 
 initializeApp();
 
@@ -23,14 +24,23 @@ function prefAllowed(prefs, type) {
 
 async function deliverNotification(userId, title, body, data, androidTag) {
   const userDoc = await db.collection("users").doc(userId).get();
-  if (!userDoc.exists) return;
+  if (!userDoc.exists) {
+    console.warn(`deliverNotification: user ${userId} not found`);
+    return;
+  }
 
   const userData = userDoc.data();
   const fcmToken = userData.fcmToken;
-  if (!fcmToken) return;
+  if (!fcmToken) {
+    console.warn(`deliverNotification: no FCM token for user ${userId}`);
+    return;
+  }
 
   const prefs = userData.notificationPrefs || {};
-  if (!prefAllowed(prefs, data.type)) return;
+  if (!prefAllowed(prefs, data.type)) {
+    console.log(`deliverNotification: blocked by prefs for user ${userId}, type=${data.type}`);
+    return;
+  }
 
   const truncatedBody =
     body.length > 200 ? body.substring(0, 200) + "..." : body;
@@ -43,6 +53,7 @@ async function deliverNotification(userId, title, body, data, androidTag) {
       notification: {
         channelId: "chat_messages",
         priority: "high",
+        color: "#A8C4D8",
         ...(androidTag ? { tag: androidTag } : {}),
       },
     },
@@ -55,7 +66,10 @@ async function deliverNotification(userId, title, body, data, androidTag) {
       err.code === "messaging/invalid-registration-token" ||
       err.code === "messaging/registration-token-not-registered"
     ) {
+      console.warn(`deliverNotification: stale token for user ${userId}, clearing`);
       await db.collection("users").doc(userId).update({ fcmToken: null });
+    } else {
+      console.error(`deliverNotification: FCM send failed for user ${userId}`, err.code, err.message);
     }
   }
 }
@@ -82,25 +96,34 @@ exports.onNewMessage = onDocumentCreated(
       const mutedBy = chatData.mutedBy || [];
       const groupName = chatData.groupName || "Group";
       const creatorId = chatData.creatorId || "";
+      const mentionedIds = Array.isArray(msg.mentionedIds) ? msg.mentionedIds : [];
 
-      for (const memberId of members) {
-        if (memberId === senderID || mutedBy.includes(memberId)) continue;
-        await deliverNotification(
-          memberId,
-          groupName,
-          `${senderUsername}: ${notifBody}`,
-          {
-            senderID,
-            senderUsername,
-            type: "chat_message",
-            isGroup: "true",
-            groupId: chatId,
+      // Members muted the group but are mentioned still receive a notification
+      // (unless they disabled message notifications globally — deliverNotification handles that)
+      const recipients = members.filter(
+        (id) => id !== senderID && (!mutedBy.includes(id) || mentionedIds.includes(id))
+      );
+
+      // Send all group notifications in parallel — avoids sequential timeouts
+      await Promise.allSettled(
+        recipients.map((memberId) =>
+          deliverNotification(
+            memberId,
             groupName,
-            creatorId,
-          },
-          senderID
-        );
-      }
+            `${senderUsername}: ${notifBody}`,
+            {
+              senderID,
+              senderUsername,
+              type: "chat_message",
+              isGroup: "true",
+              groupId: chatId,
+              groupName,
+              creatorId,
+            },
+            chatId
+          )
+        )
+      );
     } else {
       const receiverID = msg.receiverID;
       if (!receiverID) return;
@@ -115,13 +138,30 @@ exports.onNewMessage = onDocumentCreated(
   }
 );
 
+// Callable: validates that an email is not from a disposable provider
+exports.validateEmail = onCall((request) => {
+  const { email } = request.data;
+  if (!email || typeof email !== "string") {
+    throw new HttpsError("invalid-argument", "Email is required");
+  }
+  const parts = email.split("@");
+  if (parts.length !== 2 || !parts[1]) {
+    throw new HttpsError("invalid-argument", "Invalid email format");
+  }
+  const domain = parts[1].toLowerCase();
+  if (disposableDomainsSet.has(domain)) {
+    throw new HttpsError("invalid-argument", "disposable-email");
+  }
+  return { valid: true };
+});
+
 // Callable: for follows, comments, reactions, support
 exports.sendNotification = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication required");
   }
 
-  const { receiverID, message, title, type, extraData } = request.data;
+  const { receiverID, message, title, type, extraData, androidTag } = request.data;
   if (!receiverID || !message) return;
 
   const rawData = {
@@ -135,5 +175,5 @@ exports.sendNotification = onCall(async (request) => {
     data[k] = String(v);
   }
 
-  await deliverNotification(receiverID, title || "Notification", message, data);
+  await deliverNotification(receiverID, title || "Notification", message, data, androidTag || null);
 });

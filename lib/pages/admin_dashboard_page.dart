@@ -943,7 +943,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
                                   ),
                                   if (official) ...[
                                     const SizedBox(width: 4),
-                                    Icon(Icons.verified, color: _mutedColor(isDarkMode), size: 16),
+                                    Icon(Icons.verified, color: const Color(0xFFA8C4D8), size: 16),
                                   ],
                                   if (isSuspended) ...[
                                     const SizedBox(width: 6),

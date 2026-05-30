@@ -6,17 +6,33 @@ import 'package:asiimov/pages/forgot_password_page.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
-class LoginPage extends StatelessWidget {
-  //text controllers
+class LoginPage extends StatefulWidget {
+  final void Function()? onTap;
+
+  const LoginPage({super.key, required this.onTap});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  final void Function()? onTap;
+  bool _isLoading = false;
 
-  LoginPage({super.key, required this.onTap});
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
-  //login
   void login(BuildContext context) async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+
     final authServices = AuthService();
 
     try {
@@ -31,24 +47,35 @@ class LoginPage extends StatelessWidget {
       final error = e.toString().replaceFirst('Exception: ', '');
 
       String message;
+      bool delayBeforeShow = false;
       switch (error) {
         case 'user-not-found':
           message = 'No user found for that email.';
+          delayBeforeShow = true;
+          break;
+        case 'invalid-email':
+          message = 'Invalid email address.';
+          delayBeforeShow = true;
           break;
         case 'wrong-password':
           message = 'Incorrect password.';
           break;
-        case 'invalid-email':
-          message = 'Invalid email address.';
-          break;
         default:
           message = 'Login failed.';
+      }
+
+      if (delayBeforeShow) {
+        await Future.delayed(const Duration(seconds: 1));
       }
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -95,6 +122,7 @@ class LoginPage extends StatelessWidget {
               MyButton(
                 text: "go".tr(),
                 onTap: () => login(context),
+                isLoading: _isLoading,
               ),
 
               const SizedBox(height: 50),
@@ -107,7 +135,7 @@ class LoginPage extends StatelessWidget {
                       TextStyle(color: Theme.of(context).colorScheme.primary),
                 ),
                 GestureDetector(
-                  onTap: onTap,
+                  onTap: widget.onTap,
                   child: Text("register_now".tr(),
                       style: TextStyle(
                           fontWeight: FontWeight.bold,

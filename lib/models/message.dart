@@ -14,9 +14,13 @@ class Message {
   final String? replyToMessageId;
   final String? replyToMessage;
   final String? replyToSenderID;
+  final String? replyToSenderUsername;
 
   // Reactions: {userID: emoji}
   final Map<String, String>? reactions;
+
+  // Mentions: {username: userID}
+  final Map<String, String>? mentions;
 
   // Attachments: [{url, type, name, size, objectKey}]
   final List<dynamic>? attachments;
@@ -36,7 +40,9 @@ class Message {
     this.replyToMessageId,
     this.replyToMessage,
     this.replyToSenderID,
+    this.replyToSenderUsername,
     this.reactions,
+    this.mentions,
     this.attachments,
     this.instantAttachment,
   });
@@ -61,10 +67,18 @@ class Message {
       map['replyToMessageId'] = replyToMessageId;
       map['replyToMessage'] = replyToMessage;
       map['replyToSenderID'] = replyToSenderID;
+      if (replyToSenderUsername != null) {
+        map['replyToSenderUsername'] = replyToSenderUsername;
+      }
     }
 
     if (reactions != null) {
       map['reactions'] = reactions;
+    }
+
+    if (mentions != null && mentions!.isNotEmpty) {
+      map['mentions'] = mentions;
+      map['mentionedIds'] = mentions!.values.toList();
     }
 
     if (attachments != null && attachments!.isNotEmpty) {

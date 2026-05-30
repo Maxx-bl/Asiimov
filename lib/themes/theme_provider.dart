@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 class ThemeProvider extends ChangeNotifier {
   ThemeData _themeData = lightMode;
-  Color _dominantColor = Colors.orange;
+  Color _dominantColor = const Color(0xFFFFC490);
 
   final Preferences _preferences = Preferences();
 
@@ -56,7 +56,7 @@ class ThemeProvider extends ChangeNotifier {
     if (hexColor != null && hexColor.runtimeType == String && hexColor.isNotEmpty) {
       _dominantColor = hexToColor(hexColor);
     } else {
-      _dominantColor = Colors.orange;
+      _dominantColor = const Color(0xFFFFC490);
     }
 
     notifyListeners();

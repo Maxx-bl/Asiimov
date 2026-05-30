@@ -7,6 +7,27 @@ import 'package:path_provider/path_provider.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:easy_localization/easy_localization.dart';
 
+Widget _deletedMediaPlaceholder(BuildContext context, {double? height, double? width}) {
+  return Container(
+    height: height,
+    width: width,
+    color: Colors.grey.shade900,
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.image_not_supported_outlined, color: Colors.grey.shade600, size: 28),
+        const SizedBox(height: 4),
+        Text(
+          'media_deleted'.tr(),
+          style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    ),
+  );
+}
+
 class ChatAttachmentViewer extends StatelessWidget {
   final Map<String, dynamic> attachment;
   final bool isDarkMode;
@@ -106,7 +127,7 @@ class ChatAttachmentViewer extends StatelessWidget {
                     child: CircularProgressIndicator(color: Theme.of(context).primaryColor),
                   ),
                 ),
-                errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                errorWidget: (context, url, error) => _deletedMediaPlaceholder(context),
               ),
             ),
           ),
@@ -282,7 +303,7 @@ class _ImagePreviewScreen extends StatelessWidget {
               imageUrl: url,
               fit: BoxFit.contain,
               placeholder: (context, url) => CircularProgressIndicator(color: Theme.of(context).primaryColor),
-              errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey, size: 50),
+              errorWidget: (context, url, error) => _deletedMediaPlaceholder(context, height: 200),
             ),
           ),
         ),
@@ -306,6 +327,7 @@ class _ChatVideoPlayer extends StatefulWidget {
 class _ChatVideoPlayerState extends State<_ChatVideoPlayer> {
   late VideoPlayerController _controller;
   bool _isInitialized = false;
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -315,6 +337,12 @@ class _ChatVideoPlayerState extends State<_ChatVideoPlayer> {
         if (mounted) {
           setState(() {
             _isInitialized = true;
+          });
+        }
+      }).catchError((_) {
+        if (mounted) {
+          setState(() {
+            _hasError = true;
           });
         }
       });
@@ -328,6 +356,14 @@ class _ChatVideoPlayerState extends State<_ChatVideoPlayer> {
 
   @override
   Widget build(BuildContext context) {
+    if (_hasError) {
+      return _deletedMediaPlaceholder(
+        context,
+        height: widget.isFullScreen ? null : 180,
+        width: widget.isFullScreen ? null : 220,
+      );
+    }
+
     if (!_isInitialized) {
       return Container(
         height: widget.isFullScreen ? double.infinity : 180,
@@ -450,7 +486,7 @@ class ChatMediaGrid extends StatelessWidget {
         imageUrl: url,
         fit: BoxFit.cover,
         placeholder: (context, url) => Container(color: Colors.grey.shade800),
-        errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+        errorWidget: (context, url, error) => _deletedMediaPlaceholder(context),
       );
     }
 
@@ -614,7 +650,7 @@ class _MediaCarouselScreenState extends State<MediaCarouselScreen> {
                     imageUrl: url,
                     fit: BoxFit.contain,
                     placeholder: (context, url) => CircularProgressIndicator(color: Theme.of(context).primaryColor),
-                    errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey, size: 50),
+                    errorWidget: (context, url, error) => _deletedMediaPlaceholder(context, height: 200),
                   ),
                 ),
               );

@@ -39,6 +39,7 @@
   "passwords_do_not_match": "Passwords do not match!",
   "password_too_short": "Password must be at least 6 characters.",
   "invalid_username_format": "Username must be 3-20 characters, lowercase letters/numbers/._- only.",
+  "disposable_email_not_allowed": "Temporary email addresses are not allowed. Please use a permanent email.",
   "user_not_found": "User not found.",
   "user_blocked_you": "This user blocked you",
   "cannot_view_profile": "You cannot view this profile or follow this account.",
@@ -295,6 +296,11 @@
   "tickets": "Tickets",
   "ticket_history": "Ticket History",
   "reply": "Reply",
+  "you_replied_to": "You replied to {target}",
+  "user_replied_to": "{sender} replied to {target}",
+  "x_is_typing": "{name} is typing",
+  "x_and_y_are_typing": "{name1} and {name2} are typing",
+  "several_typing": "Several people are typing",
   "ticket_answered": "Answered",
   "ticket_pending": "Pending",
   "no_tickets_found": "No tickets found.",
@@ -318,5 +324,9 @@
   "update_recommended_title": "Update Available",
   "update_recommended_desc": "A new version of the app is available. We recommend updating to get the latest features.",
   "update_now": "Update Now",
-  "later": "Later"
+  "later": "Later",
+  "reacted": "reacted",
+  "draft_prefix": "Draft: ",
+  "media_deleted": "Content deleted",
+  "chat_retention_info": "Messages are automatically deleted after 24 hours once they have been read, unless they are among the 30 most recent messages in the conversation.\n\nMedia content (photos, videos, voice messages, and files) is permanently deleted after 2 days."
 }

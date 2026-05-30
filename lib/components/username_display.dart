@@ -88,8 +88,8 @@ class _UsernameDisplayState extends State<UsernameDisplay> {
     final currentUsername = _username ?? widget.username;
     final bool isGlyphe = currentUsername.toLowerCase() == 'glyphe';
     final defaultStyle = widget.style ?? const TextStyle(fontWeight: FontWeight.bold);
-    final appliedStyle = isGlyphe 
-        ? defaultStyle.copyWith(color: Colors.blue) 
+    final appliedStyle = isGlyphe
+        ? defaultStyle.copyWith(color: const Color(0xFFA8C4D8))
         : defaultStyle;
 
     if (currentUsername.isEmpty) {
@@ -115,7 +115,7 @@ class _UsernameDisplayState extends State<UsernameDisplay> {
           const SizedBox(width: 4),
           Icon(
             Icons.verified,
-            color: Colors.blue,
+            color: const Color(0xFFA8C4D8),
             size: widget.iconSize,
           ),
         ],

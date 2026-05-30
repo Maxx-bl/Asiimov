@@ -1,4 +1,5 @@
 import 'package:asiimov/services/chat/chat_service.dart';
+import 'package:asiimov/services/notifications/notification_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -252,8 +253,14 @@ class UserService {
     });
 
     await batch.commit();
-    
-    // Optional: Send notification back to requester that request was accepted
+
+    // Clear the local follow_request notification from this requester
+    await NotificationService().cancelNotification(
+      requesterId.hashCode,
+      tag: 'follow_$requesterId',
+    );
+
+    // Send notification back to requester that request was accepted
     final myUsername = _auth.currentUser?.displayName ?? 'Someone';
     await ChatService().sendPushNotification(
       requesterId,

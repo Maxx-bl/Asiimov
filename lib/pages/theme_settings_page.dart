@@ -15,18 +15,15 @@ class ThemeSettingsPage extends StatefulWidget {
 
 class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
   final TextEditingController _hexController = TextEditingController();
-  Color _previewColor = Colors.orange;
+  Color _previewColor = const Color(0xFFFFC490);
   String? _errorMessage;
 
   final List<String> _curatedColors = [
-    'FF9800', // Orange
-    '2196F3', // Neon Blue
-    '00E5FF', // Aqua Cyan
-    '00E676', // Spring Green
-    '9C27B0', // Purple
-    'E91E63', // Hot Pink
-    'FFEB3B', // Cyberpunk Yellow
-    'FF5252', // Coral Red
+    'FFC490', // Orange
+    'FFB0D0', // Rose
+    'BFCEA0', // Vert
+    'A8C4D8', // Bleu
+    'C4AEEA', // Lavande
   ];
 
   @override
@@ -165,7 +162,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Select a vibrant accent color that will be applied across the entire app interface instead of the classic orange.',
+                  'Select a pastel accent color that will be applied across the entire app interface.',
                   style: TextStyle(
                     fontSize: 13,
                     color: Theme.of(context)
@@ -369,7 +366,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                                         onPressed: () {
                                           setState(() {
                                             _previewColor = tempColor;
-                                            _hexController.text = tempColor.value.toRadixString(16).substring(2, 8).toUpperCase();
+                                            _hexController.text = tempColor.toARGB32().toRadixString(16).substring(2, 8).toUpperCase();
                                             _errorMessage = null;
                                           });
                                           Navigator.of(context).pop();

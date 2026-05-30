@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -51,6 +52,18 @@ class AuthService {
   //signup
   Future<UserCredential> signUpWithEmailAndPassword(
       String email, password, username) async {
+    try {
+      // Reject disposable/temporary email providers
+      final validateEmail =
+          FirebaseFunctions.instance.httpsCallable('validateEmail');
+      await validateEmail.call({'email': email});
+    } on FirebaseFunctionsException catch (e) {
+      if (e.message == 'disposable-email') {
+        throw Exception('disposable-email');
+      }
+      throw Exception('unknown-error');
+    }
+
     try {
       //username already exists?
       final usernameQuery = await firestore

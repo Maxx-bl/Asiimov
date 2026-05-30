@@ -4,6 +4,7 @@ import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/themes/theme_provider.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -17,6 +18,7 @@ import 'package:asiimov/components/chat_attachment_viewer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:http/http.dart' as http;
 
 class ChatBubble extends StatefulWidget {
   final String message;
@@ -26,11 +28,13 @@ class ChatBubble extends StatefulWidget {
   final String? replyToMessageId;
   final String? replyToMessage;
   final String? replyToSenderID;
+  final String? replyToSenderUsername;
   final String currentUserId;
   final String otherUserId;
   final String messageType;
   final String? sharedPostId;
   final Map<String, String>? reactions;
+  final Map<String, String>? mentions;
   final Timestamp? timestamp;
   final bool isSeen;
   final bool showStatus;
@@ -58,7 +62,9 @@ class ChatBubble extends StatefulWidget {
     this.replyToMessageId,
     this.replyToMessage,
     this.replyToSenderID,
+    this.replyToSenderUsername,
     this.reactions,
+    this.mentions,
     this.timestamp,
     this.isSeen = false,
     this.showStatus = false,
@@ -91,6 +97,9 @@ class ChatBubbleState extends State<ChatBubble>
   late AnimationController _highlightController;
   late Animation<Color?> _highlightAnimation;
 
+  // One recognizer per unique mentioned username
+  final Map<String, TapGestureRecognizer> _mentionRecognizers = {};
+
   @override
   void initState() {
     super.initState();
@@ -111,6 +120,26 @@ class ChatBubbleState extends State<ChatBubble>
       parent: _highlightController,
       curve: Curves.easeInOut,
     ));
+
+    _buildMentionRecognizers();
+  }
+
+  void _buildMentionRecognizers() {
+    if (widget.mentions == null) return;
+    for (final entry in widget.mentions!.entries) {
+      _mentionRecognizers[entry.key] = TapGestureRecognizer()
+        ..onTap = () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ProfilePage(
+                userId: entry.value,
+                username: entry.key,
+              ),
+            ),
+          );
+        };
+    }
   }
 
   // Method to trigger the highlight flash
@@ -124,9 +153,54 @@ class ChatBubbleState extends State<ChatBubble>
 
   @override
   void dispose() {
+    for (final r in _mentionRecognizers.values) {
+      r.dispose();
+    }
     _animController.dispose();
     _highlightController.dispose();
     super.dispose();
+  }
+
+  // Renders message text with tappable bold @mention spans
+  Widget _buildMentionText(bool isDarkMode) {
+    final textColor = widget.isCurrentUser
+        ? (isDarkMode
+            ? Colors.black
+            : (Theme.of(context).primaryColor.computeLuminance() > 0.4
+                ? Theme.of(context).colorScheme.inversePrimary
+                : Colors.white))
+        : (isDarkMode ? Colors.white : Theme.of(context).colorScheme.inversePrimary);
+
+    final pattern = RegExp(r'@(\w+)', caseSensitive: false);
+    final spans = <InlineSpan>[];
+    int lastEnd = 0;
+
+    for (final match in pattern.allMatches(widget.message)) {
+      if (match.start > lastEnd) {
+        spans.add(TextSpan(
+          text: widget.message.substring(lastEnd, match.start),
+          style: TextStyle(color: textColor),
+        ));
+      }
+
+      final username = match.group(1)!.toLowerCase();
+      spans.add(TextSpan(
+        text: match.group(0)!,
+        style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+        recognizer: _mentionRecognizers[username],
+      ));
+
+      lastEnd = match.end;
+    }
+
+    if (lastEnd < widget.message.length) {
+      spans.add(TextSpan(
+        text: widget.message.substring(lastEnd),
+        style: TextStyle(color: textColor),
+      ));
+    }
+
+    return RichText(text: TextSpan(children: spans));
   }
 
   void _onDragUpdate(DragUpdateDetails details) {
@@ -536,8 +610,7 @@ class ChatBubbleState extends State<ChatBubble>
                     : widget.replyToMessage!,
                 style: TextStyle(
                   fontSize: 12,
-                  color:
-                      isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+                  color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
                   fontStyle: FontStyle.italic,
                 ),
                 maxLines: 2,
@@ -592,9 +665,7 @@ class ChatBubbleState extends State<ChatBubble>
             decoration: BoxDecoration(
                 color: widget.isCurrentUser
                     ? Theme.of(context).primaryColor
-                    : (isDarkMode
-                        ? Colors.grey.shade800
-                        : Colors.grey.shade200),
+                    : Theme.of(context).colorScheme.secondary,
                 borderRadius: BorderRadius.circular(18)),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Wrap(
@@ -607,7 +678,9 @@ class ChatBubbleState extends State<ChatBubble>
                       ? _buildInstantAttachment(isDarkMode)
                       : widget.messageType == 'post_share'
                           ? _buildPostShare(isDarkMode)
-                          : Linkify(
+                          : (widget.mentions != null && widget.mentions!.isNotEmpty)
+                              ? _buildMentionText(isDarkMode)
+                              : Linkify(
                           onOpen: (link) async {
                             final Uri url = Uri.parse(link.url);
                             
@@ -645,12 +718,20 @@ class ChatBubbleState extends State<ChatBubble>
                           text: widget.message,
                           style: TextStyle(
                               color: widget.isCurrentUser
-                                  ? Colors.white
-                                  : (isDarkMode ? Colors.white : Colors.black)),
+                                  ? (isDarkMode
+                                      ? Colors.black
+                                      : (Theme.of(context).primaryColor.computeLuminance() > 0.4
+                                          ? Theme.of(context).colorScheme.inversePrimary
+                                          : Colors.white))
+                                  : (isDarkMode ? Colors.white : Theme.of(context).colorScheme.inversePrimary)),
                           linkStyle: TextStyle(
                             color: widget.isCurrentUser
-                                ? Colors.white
-                                : (isDarkMode ? Colors.white : Colors.black),
+                                ? (isDarkMode
+                                    ? Colors.black
+                                    : (Theme.of(context).primaryColor.computeLuminance() > 0.4
+                                        ? Theme.of(context).colorScheme.inversePrimary
+                                        : Colors.white))
+                                : (isDarkMode ? Colors.white : Theme.of(context).colorScheme.inversePrimary),
                             fontWeight: FontWeight.bold,
                             decoration: TextDecoration.none,
                           ),
@@ -668,7 +749,13 @@ class ChatBubbleState extends State<ChatBubble>
                           'pinned_prefix'.tr(),
                           style: TextStyle(
                             fontSize: 10,
-                            color: widget.isCurrentUser ? Colors.white70 : Theme.of(context).primaryColor,
+                            color: widget.isCurrentUser
+                                ? (isDarkMode
+                                    ? Colors.black54
+                                    : (Theme.of(context).primaryColor.computeLuminance() > 0.4
+                                        ? Theme.of(context).colorScheme.inversePrimary.withValues(alpha: 0.6)
+                                        : Colors.white70))
+                                : Theme.of(context).primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -684,10 +771,14 @@ class ChatBubbleState extends State<ChatBubble>
                         style: TextStyle(
                           fontSize: 10,
                           color: widget.isCurrentUser
-                              ? Colors.white70
+                              ? (isDarkMode
+                                  ? Colors.black45
+                                  : (Theme.of(context).primaryColor.computeLuminance() > 0.4
+                                      ? Theme.of(context).colorScheme.inversePrimary.withValues(alpha: 0.5)
+                                      : Colors.white70))
                               : (isDarkMode
                                   ? Colors.grey.shade400
-                                  : Colors.grey.shade600),
+                                  : Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
                         ),
                       ),
                     ],
@@ -1034,7 +1125,17 @@ class ChatBubbleState extends State<ChatBubble>
                         imageUrl: url,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Center(child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).primaryColor)),
-                        errorWidget: (context, url, error) => const Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                        errorWidget: (context, url, error) => Container(
+                          color: Colors.grey.shade900,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.image_not_supported_outlined, color: Colors.grey.shade600, size: 28),
+                              const SizedBox(height: 4),
+                              Text('media_deleted'.tr(), style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+                            ],
+                          ),
+                        ),
                       ),
               ),
             ),
@@ -1071,6 +1172,7 @@ class VoiceMessagePlayer extends StatefulWidget {
 class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isPlaying = false;
+  bool _hasError = false;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
 
@@ -1078,6 +1180,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
   void initState() {
     super.initState();
     _duration = Duration(seconds: widget.duration);
+    _checkUrlValidity();
 
     _audioPlayer.onPlayerStateChanged.listen((state) {
       if (mounted) {
@@ -1119,23 +1222,68 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
     super.dispose();
   }
 
+  void _checkUrlValidity() async {
+    if (widget.url.isEmpty) {
+      if (mounted) setState(() => _hasError = true);
+      return;
+    }
+    try {
+      final response = await http.head(Uri.parse(widget.url));
+      if (response.statusCode >= 400) {
+        if (mounted) setState(() => _hasError = true);
+      }
+    } catch (_) {
+      // Network error — don't mark as deleted, let play attempt handle it
+    }
+  }
+
   void _togglePlay() async {
     if (_isPlaying) {
       await _audioPlayer.pause();
     } else {
-      await _audioPlayer.play(UrlSource(widget.url));
+      try {
+        await _audioPlayer.play(UrlSource(widget.url));
+      } catch (_) {
+        if (mounted) setState(() => _hasError = true);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color fgColor = widget.isCurrentUser
-        ? Colors.white
-        : (widget.isDarkMode ? Colors.white : Colors.black);
-
     final Color bgColor = widget.isCurrentUser
         ? Theme.of(context).primaryColor
-        : (widget.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300);
+        : Theme.of(context).colorScheme.secondary;
+
+    if (widget.url.isEmpty || _hasError) {
+      return Container(
+        width: 220,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.mic_off_outlined, color: Colors.grey.shade500, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'media_deleted'.tr(),
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final Color fgColor = widget.isCurrentUser
+        ? (widget.isDarkMode
+            ? Colors.black
+            : (Theme.of(context).primaryColor.computeLuminance() > 0.4
+                ? Theme.of(context).colorScheme.inversePrimary
+                : Colors.white))
+        : (widget.isDarkMode ? Colors.white : Theme.of(context).colorScheme.inversePrimary);
 
     return Container(
       width: 220,

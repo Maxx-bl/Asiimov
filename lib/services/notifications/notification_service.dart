@@ -1,9 +1,7 @@
 import 'dart:convert';
-import 'package:asiimov/themes/theme_provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Top-level background message handler (must be top-level function)
 @pragma('vm:entry-point')
@@ -107,30 +105,54 @@ class NotificationService {
     }
   }
 
-  /// Clear all notifications from a specific sender (by tag)
-  Future<void> clearNotificationsForUser(String senderUserId) async {
+  /// Clear all notifications from a specific conversation (local + FCM background).
+  Future<void> clearNotificationsForUser(String userId) async {
     final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
-    if (androidPlugin != null) {
-      await androidPlugin.cancel(senderUserId.hashCode);
-      _messageHistory.remove(senderUserId);
+    if (androidPlugin == null) return;
+
+    // Cancel local notification by integer ID (foreground-shown)
+    await androidPlugin.cancel(userId.hashCode);
+
+    // Cancel FCM-managed background notifications that carry the same tag
+    try {
+      final activeNotifs = await androidPlugin.getActiveNotifications();
+      for (final notif in activeNotifs) {
+        if (notif.tag == userId || notif.id == userId.hashCode) {
+          await androidPlugin.cancel(notif.id ?? 0, tag: notif.tag);
+        }
+      }
+    } catch (e) {
+      debugPrint('getActiveNotifications error: $e');
+    }
+
+    _messageHistory.remove(userId);
+  }
+
+  /// Cancel a single notification by (id, tag) — used for follow/comment notifs.
+  Future<void> cancelNotification(int id, {String? tag}) async {
+    final androidPlugin = _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin == null) return;
+    await androidPlugin.cancel(id, tag: tag);
+    // Also scan active notifications to catch FCM-managed ones with matching tag
+    if (tag != null) {
+      try {
+        final activeNotifs = await androidPlugin.getActiveNotifications();
+        for (final notif in activeNotifs) {
+          if (notif.tag == tag) {
+            await androidPlugin.cancel(notif.id ?? 0, tag: notif.tag);
+          }
+        }
+      } catch (e) {
+        debugPrint('getActiveNotifications error: $e');
+      }
     }
   }
 
-  /// Read the user's dominant color from SharedPreferences
-  Future<Color> _getDominantColor() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final hexColor = prefs.getString('dominantColor');
-      if (hexColor != null && hexColor.isNotEmpty) {
-        return ThemeProvider.hexToColor(hexColor);
-      }
-    } catch (e) {
-      debugPrint('Error reading dominant color: $e');
-    }
-    return const Color(0xFFFF9800); // Default orange
-  }
+  static const Color _notificationColor = Color(0xFFA8C4D8);
 
   /// Handle foreground messages — show notification unless we're in that conversation
   void _handleForegroundMessage(RemoteMessage message) async {
@@ -188,8 +210,8 @@ class NotificationService {
         );
       }
 
-      // Limit history to last 10 messages
-      if (messages.length > 10) messages.removeAt(0);
+      // Limit history to last 4 messages (shown in expanded notification)
+      if (messages.length > 4) messages.removeAt(0);
 
       final messagingStyle = MessagingStyleInformation(
         Person(name: 'Me', key: 'me'),
@@ -211,7 +233,8 @@ class NotificationService {
             priority: Priority.high,
             styleInformation: messagingStyle,
             groupKey: historyKey,
-            color: await _getDominantColor(),
+            color: _notificationColor,
+            colorized: true,
             // We set the ticker to the full message for accessibility
             ticker: bodyText,
           ),
@@ -219,9 +242,24 @@ class NotificationService {
         payload: jsonEncode(message.data),
       );
     } else {
-      // Non-chat notifications (standard)
+      // Non-chat notifications: use stable IDs so they can be cancelled on tap.
+      // follow/follow_request/follow_accept → group by sender (one notif per person)
+      // comment → group by post path
+      int notifId;
+      String? notifTag;
+      if (type == 'follow' || type == 'follow_request' || type == 'follow_accept') {
+        notifId = senderID?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode;
+        notifTag = 'follow_$senderID';
+      } else if (type == 'comment') {
+        final parentPath = message.data['parentPath'] ?? message.data['postId'];
+        notifId = parentPath?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode;
+        notifTag = 'comment_$parentPath';
+      } else {
+        notifId = DateTime.now().millisecondsSinceEpoch.hashCode;
+      }
+
       _localNotifications.show(
-        DateTime.now().millisecondsSinceEpoch.hashCode,
+        notifId,
         notification.title,
         notification.body,
         NotificationDetails(
@@ -231,7 +269,9 @@ class NotificationService {
             channelDescription: _chatChannel.description,
             importance: Importance.high,
             priority: Priority.high,
-            color: await _getDominantColor(),
+            color: _notificationColor,
+            colorized: true,
+            tag: notifTag,
           ),
         ),
         payload: jsonEncode(message.data),

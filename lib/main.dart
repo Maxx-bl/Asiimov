@@ -6,6 +6,7 @@ import 'package:asiimov/services/auth/auth_gate.dart';
 import 'package:asiimov/pages/follow_requests_page.dart';
 import 'package:asiimov/pages/support_tickets_page.dart';
 import 'package:asiimov/pages/ticket_detail_page.dart';
+import 'package:asiimov/services/draft_service.dart';
 import 'package:asiimov/services/notifications/notification_service.dart';
 import 'package:asiimov/pages/suspended_account_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -32,6 +33,9 @@ Future<void> main() async {
 
     // Register background message handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+    // Initialize draft persistence
+    await DraftService.init();
 
     // Initialize notification service
     final notificationService = NotificationService();
@@ -86,6 +90,11 @@ Future<void> main() async {
       } else if (type == 'follow' || type == 'follow_accept') {
         final senderID = data['senderID'];
         final senderUsername = data['senderUsername'] ?? '';
+        // Cancel the follow notification for this sender
+        NotificationService().cancelNotification(
+          senderID?.hashCode ?? 0,
+          tag: 'follow_$senderID',
+        );
         navigatorKey.currentState?.push(
           MaterialPageRoute(
             builder: (context) => ProfilePage(
@@ -95,6 +104,11 @@ Future<void> main() async {
           ),
         );
       } else if (type == 'follow_request') {
+        final senderID = data['senderID'];
+        NotificationService().cancelNotification(
+          senderID?.hashCode ?? 0,
+          tag: 'follow_$senderID',
+        );
         navigatorKey.currentState?.push(
           MaterialPageRoute(
             builder: (context) => const FollowRequestsPage(),
@@ -118,10 +132,15 @@ Future<void> main() async {
       } else if (type == 'comment') {
         final parentPath = data['parentPath'];
         final legacyPostId = data['postId'];
-        
+
         final String? docPath = parentPath ?? (legacyPostId != null ? 'posts/$legacyPostId' : null);
 
         if (docPath != null) {
+          // Cancel the comment notification for this post
+          NotificationService().cancelNotification(
+            docPath.hashCode,
+            tag: 'comment_$docPath',
+          );
           // Fetch the post/comment first to pass it to PostDetailPage
           final doc = await FirebaseFirestore.instance.doc(docPath).get();
           if (doc.exists) {

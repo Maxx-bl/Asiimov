@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:asiimov/components/group_creation_sheet.dart';
 import 'package:asiimov/components/group_icon.dart';
+import 'package:asiimov/components/typing_dots.dart';
 import 'package:asiimov/components/user_tile.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/models/conversation.dart';
@@ -9,6 +10,7 @@ import 'package:asiimov/pages/chat_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
+import 'package:asiimov/services/draft_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -312,6 +314,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget buildConversationItem(Conversation conv) {
+    // Compute the Firestore chat room ID (matches chats/{id}/typing subcollection)
+    final currentUid = authService.getCurrentUser()!.uid;
+    final String chatRoomId;
+    if (conv.isGroup) {
+      chatRoomId = conv.id;
+    } else {
+      final ids = [currentUid, conv.id]..sort();
+      chatRoomId = ids.join('_');
+    }
+
     // Format date
     String dateString = '';
     final DateTime date = conv.lastActive;
@@ -359,6 +371,37 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
+    // Override with reaction preview if it's more recent than the last message
+    if (conv.lastReaction != null) {
+      final lastMsgTimestamp = conv.lastMessage?['timestamp'] as Timestamp?;
+      final lastReactionTimestamp = conv.lastReaction!['timestamp'] as Timestamp?;
+      final reactionIsNewer = lastReactionTimestamp != null &&
+          (lastMsgTimestamp == null ||
+              lastReactionTimestamp.compareTo(lastMsgTimestamp) > 0);
+
+      if (reactionIsNewer) {
+        final emoji = conv.lastReaction!['emoji'] as String? ?? '';
+        final senderID = conv.lastReaction!['senderID'] as String?;
+        final senderUsername = conv.lastReaction!['senderUsername'] as String? ?? '';
+        final isMe = senderID == authService.getCurrentUser()!.uid;
+
+        if (conv.isGroup) {
+          messagePreview = isMe
+              ? '${'you'.tr()} ${'reacted'.tr()} $emoji'
+              : '$senderUsername ${'reacted'.tr()} $emoji';
+        } else {
+          messagePreview = isMe
+              ? '${'you'.tr()} ${'reacted'.tr()} $emoji'
+              : '$senderUsername ${'reacted'.tr()} $emoji';
+        }
+      }
+    }
+
+    // Override with unsent draft if present
+    final draft = DraftService.get(conv.id);
+    final hasDraft = draft != null && draft.isNotEmpty;
+    if (hasDraft) messagePreview = draft;
+
     // Determine status (sent/seen) if I am the sender
     String? status;
     if (conv.lastMessage != null && !conv.isGroup) {
@@ -375,18 +418,78 @@ class _HomePageState extends State<HomePage> {
       leading: conv.isGroup
           ? GroupIcon(size: 40, imageUrl: conv.groupIconUrl)
           : null,
-      subtitle: Text(
-        messagePreview,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: conv.unreadCount > 0
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
-          fontSize: 13,
-          fontWeight:
-              conv.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
-        ),
+      subtitle: StreamBuilder<List<String>>(
+        stream: chatService.getTypingUsernamesStream(chatRoomId),
+        builder: (context, snapshot) {
+          final typers = snapshot.data ?? [];
+          final indicatorColor =
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.6);
+
+          if (hasDraft) {
+            return Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                  text: 'draft_prefix'.tr(),
+                  style: TextStyle(
+                    color: Theme.of(context).primaryColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                TextSpan(
+                  text: messagePreview,
+                  style: TextStyle(color: indicatorColor, fontSize: 13),
+                ),
+              ]),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            );
+          }
+
+          if (typers.isNotEmpty) {
+            final String label;
+            if (typers.length == 1) {
+              label = 'x_is_typing'.tr(namedArgs: {'name': '@${typers[0]}'});
+            } else if (typers.length == 2) {
+              label = 'x_and_y_are_typing'.tr(
+                  namedArgs: {'name1': '@${typers[0]}', 'name2': '@${typers[1]}'});
+            } else {
+              label = 'several_typing'.tr();
+            }
+            return Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: indicatorColor,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 2),
+                TypingDots(color: indicatorColor),
+              ],
+            );
+          }
+
+          return Text(
+            messagePreview,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: conv.unreadCount > 0
+                  ? Theme.of(context).colorScheme.primary
+                  : indicatorColor,
+              fontSize: 13,
+              fontWeight:
+                  conv.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+            ),
+          );
+        },
       ),
       trailing: Column(
         mainAxisSize: MainAxisSize.min,
@@ -448,7 +551,9 @@ class _HomePageState extends State<HomePage> {
               creatorId: conv.creatorId,
             ),
           ),
-        );
+        ).then((_) {
+          if (mounted) setState(() {});
+        });
       },
     );
   }
