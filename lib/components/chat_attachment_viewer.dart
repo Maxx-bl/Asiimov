@@ -293,16 +293,19 @@ class _ImagePreviewScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
+      body: SizedBox.expand(
         child: InteractiveViewer(
-          minScale: 0.1,
-          maxScale: 4.0,
+          minScale: 0.8,
+          maxScale: 6.0,
+          clipBehavior: Clip.none,
           child: Hero(
             tag: url,
             child: CachedNetworkImage(
               imageUrl: url,
               fit: BoxFit.contain,
-              placeholder: (context, url) => CircularProgressIndicator(color: Theme.of(context).primaryColor),
+              width: double.infinity,
+              height: double.infinity,
+              placeholder: (context, url) => Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor)),
               errorWidget: (context, url, error) => _deletedMediaPlaceholder(context, height: 200),
             ),
           ),
@@ -560,8 +563,81 @@ class MediaCarouselScreen extends StatefulWidget {
   State<MediaCarouselScreen> createState() => _MediaCarouselScreenState();
 }
 
+class _ZoomableImage extends StatefulWidget {
+  final String url;
+  final ValueChanged<bool> onZoomChanged;
+
+  const _ZoomableImage({required this.url, required this.onZoomChanged});
+
+  @override
+  State<_ZoomableImage> createState() => _ZoomableImageState();
+}
+
+class _ZoomableImageState extends State<_ZoomableImage> {
+  final TransformationController _transformController = TransformationController();
+  int _pointerCount = 0;
+
+  @override
+  void dispose() {
+    _transformController.dispose();
+    super.dispose();
+  }
+
+  void _onInteractionEnd(ScaleEndDetails details) {
+    final scale = _transformController.value.getMaxScaleOnAxis();
+    if (scale < 1.05) {
+      _transformController.value = Matrix4.identity();
+      widget.onZoomChanged(false);
+    } else {
+      widget.onZoomChanged(true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      // Disable PageView swipe as soon as 2 fingers touch the screen
+      onPointerDown: (_) {
+        _pointerCount++;
+        if (_pointerCount >= 2) widget.onZoomChanged(true);
+      },
+      onPointerUp: (_) {
+        _pointerCount = (_pointerCount - 1).clamp(0, 10);
+        if (_pointerCount == 0) {
+          final scale = _transformController.value.getMaxScaleOnAxis();
+          if (scale < 1.05) widget.onZoomChanged(false);
+        }
+      },
+      onPointerCancel: (_) {
+        _pointerCount = (_pointerCount - 1).clamp(0, 10);
+      },
+      child: SizedBox.expand(
+        child: InteractiveViewer(
+          transformationController: _transformController,
+          minScale: 0.8,
+          maxScale: 6.0,
+          clipBehavior: Clip.none,
+          onInteractionEnd: _onInteractionEnd,
+          child: Hero(
+            tag: widget.url,
+            child: CachedNetworkImage(
+              imageUrl: widget.url,
+              fit: BoxFit.contain,
+              width: double.infinity,
+              height: double.infinity,
+              placeholder: (context, url) => Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor)),
+              errorWidget: (context, url, error) => _deletedMediaPlaceholder(context, height: 200),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MediaCarouselScreenState extends State<MediaCarouselScreen> {
   late PageController _pageController;
+  bool _isZoomed = false;
 
   @override
   void initState() {
@@ -629,6 +705,7 @@ class _MediaCarouselScreenState extends State<MediaCarouselScreen> {
       ),
       body: PageView.builder(
         controller: _pageController,
+        physics: _isZoomed ? const NeverScrollableScrollPhysics() : const PageScrollPhysics(),
         itemCount: widget.attachments.length,
         itemBuilder: (context, index) {
           final attachment = Map<String, dynamic>.from(widget.attachments[index]);
@@ -637,29 +714,20 @@ class _MediaCarouselScreenState extends State<MediaCarouselScreen> {
 
           Widget content;
           if (type == 'video') {
-             content = Center(
-               child: _ChatVideoPlayer(url: url, fileName: attachment['name'] ?? 'video', onDownload: () {}, isFullScreen: true),
-             );
+            content = Center(
+              child: _ChatVideoPlayer(url: url, fileName: attachment['name'] ?? 'video', onDownload: () {}, isFullScreen: true),
+            );
           } else {
-             content = InteractiveViewer(
-                minScale: 0.1,
-                maxScale: 4.0,
-                child: Hero(
-                  tag: url,
-                  child: CachedNetworkImage(
-                    imageUrl: url,
-                    fit: BoxFit.contain,
-                    placeholder: (context, url) => CircularProgressIndicator(color: Theme.of(context).primaryColor),
-                    errorWidget: (context, url, error) => _deletedMediaPlaceholder(context, height: 200),
-                  ),
-                ),
-              );
+            content = _ZoomableImage(
+              url: url,
+              onZoomChanged: (zoomed) => setState(() => _isZoomed = zoomed),
+            );
           }
 
           return Stack(
             fit: StackFit.expand,
             children: [
-              Center(child: content),
+              content,
               Positioned(
                 top: 10,
                 right: 10,

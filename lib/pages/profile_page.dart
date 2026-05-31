@@ -611,132 +611,134 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             child: Column(
                               children: [
-                                // Avatar (left) + Bio (right)
+                                // Avatar + Bio — layout depends on visibility
                                 Builder(builder: (context) {
                                   final bio = userData!['bio'] as String? ?? '';
                                   final isPublic = userData!['public_account'] ?? false;
                                   final canSeeBio = isOwnProfile || isPublic || isFollowing || widget.isAdminView;
 
-                                  return Row(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      // Avatar with gradient ring
-                                      Container(
-                                        padding: const EdgeInsets.all(3),
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          gradient: SweepGradient(
-                                            colors: [
-                                              Theme.of(context).primaryColor.withValues(alpha: 0.70),
-                                              Theme.of(context).primaryColor.withValues(alpha: 0.20),
-                                              Theme.of(context).primaryColor.withValues(alpha: 0.70),
+                                  Widget avatarWidget(double radius) => Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: SweepGradient(
+                                        colors: [
+                                          Theme.of(context).primaryColor.withValues(alpha: 0.70),
+                                          Theme.of(context).primaryColor.withValues(alpha: 0.20),
+                                          Theme.of(context).primaryColor.withValues(alpha: 0.70),
+                                        ],
+                                      ),
+                                    ),
+                                    child: ProfileAvatar(
+                                      userId: widget.userId,
+                                      username: widget.username,
+                                      radius: radius,
+                                      showEditIcon: isOwnProfile,
+                                      onTap: isOwnProfile
+                                          ? () => _changeProfilePicture()
+                                          : () {
+                                              showDialog(
+                                                context: context,
+                                                builder: (context) => Dialog(
+                                                  backgroundColor: Colors.transparent,
+                                                  elevation: 0,
+                                                  child: GestureDetector(
+                                                    behavior: HitTestBehavior.opaque,
+                                                    onTap: () => Navigator.pop(context),
+                                                    child: FutureBuilder<String?>(
+                                                      future: ImageService().getProfilePictureUrl(widget.userId),
+                                                      builder: (context, snapshot) {
+                                                        final url = snapshot.data;
+                                                        final size = MediaQuery.of(context).size.width * 0.65;
+                                                        if (url != null && url.isNotEmpty) {
+                                                          return Center(
+                                                            child: ClipRRect(
+                                                              borderRadius: BorderRadius.circular(20),
+                                                              child: SizedBox(
+                                                                width: size,
+                                                                height: size,
+                                                                child: SafeNetworkImage(url: url, fit: BoxFit.cover),
+                                                              ),
+                                                            ),
+                                                          );
+                                                        } else {
+                                                          return Center(
+                                                            child: CircleAvatar(
+                                                              radius: size / 2,
+                                                              backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                                                              child: Text(
+                                                                widget.username.isNotEmpty ? widget.username[0].toUpperCase() : '?',
+                                                                style: TextStyle(
+                                                                  fontSize: size * 0.4,
+                                                                  fontWeight: FontWeight.bold,
+                                                                  color: Theme.of(context).primaryColor,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          );
+                                                        }
+                                                      },
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                    ),
+                                  );
+
+                                  if (canSeeBio) {
+                                    // pfp left + bio right
+                                    return Row(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        avatarWidget(44),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Expanded(
+                                                child: bio.isNotEmpty
+                                                    ? Text(
+                                                        bio,
+                                                        style: TextStyle(
+                                                          fontSize: 14.5,
+                                                          color: Theme.of(context).colorScheme.inversePrimary.withValues(alpha: 0.85),
+                                                          height: 1.45,
+                                                        ),
+                                                      )
+                                                    : isOwnProfile
+                                                        ? Text(
+                                                            'bio_placeholder'.tr(),
+                                                            style: TextStyle(
+                                                              fontSize: 14.5,
+                                                              fontStyle: FontStyle.italic,
+                                                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.40),
+                                                            ),
+                                                          )
+                                                        : const SizedBox.shrink(),
+                                              ),
+                                              if (isOwnProfile)
+                                                GestureDetector(
+                                                  onTap: () => _editBio(bio),
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.only(left: 6, top: 1),
+                                                    child: Icon(
+                                                      Icons.edit_outlined,
+                                                      size: 15,
+                                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.45),
+                                                    ),
+                                                  ),
+                                                ),
                                             ],
                                           ),
                                         ),
-                                        child: ProfileAvatar(
-                                          userId: widget.userId,
-                                          username: widget.username,
-                                          radius: 44,
-                                          showEditIcon: isOwnProfile,
-                                          onTap: isOwnProfile
-                                              ? () => _changeProfilePicture()
-                                              : () {
-                                                  showDialog(
-                                                    context: context,
-                                                    builder: (context) => Dialog(
-                                                      backgroundColor: Colors.transparent,
-                                                      elevation: 0,
-                                                      child: GestureDetector(
-                                                        behavior: HitTestBehavior.opaque,
-                                                        onTap: () => Navigator.pop(context),
-                                                        child: FutureBuilder<String?>(
-                                                          future: ImageService().getProfilePictureUrl(widget.userId),
-                                                          builder: (context, snapshot) {
-                                                            final url = snapshot.data;
-                                                            final size = MediaQuery.of(context).size.width * 0.65;
-                                                            if (url != null && url.isNotEmpty) {
-                                                              return Center(
-                                                                child: ClipRRect(
-                                                                  borderRadius: BorderRadius.circular(20),
-                                                                  child: SizedBox(
-                                                                    width: size,
-                                                                    height: size,
-                                                                    child: SafeNetworkImage(url: url, fit: BoxFit.cover),
-                                                                  ),
-                                                                ),
-                                                              );
-                                                            } else {
-                                                              return Center(
-                                                                child: CircleAvatar(
-                                                                  radius: size / 2,
-                                                                  backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-                                                                  child: Text(
-                                                                    widget.username.isNotEmpty ? widget.username[0].toUpperCase() : '?',
-                                                                    style: TextStyle(
-                                                                      fontSize: size * 0.4,
-                                                                      fontWeight: FontWeight.bold,
-                                                                      color: Theme.of(context).primaryColor,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              );
-                                                            }
-                                                          },
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
-                                        ),
-                                      ),
-
-                                      const SizedBox(width: 16),
-
-                                      // Bio zone
-                                      Expanded(
-                                        child: canSeeBio
-                                            ? Row(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Expanded(
-                                                    child: bio.isNotEmpty
-                                                        ? Text(
-                                                            bio,
-                                                            style: TextStyle(
-                                                              fontSize: 13,
-                                                              color: Theme.of(context).colorScheme.inversePrimary.withValues(alpha: 0.85),
-                                                              height: 1.4,
-                                                            ),
-                                                          )
-                                                        : isOwnProfile
-                                                            ? Text(
-                                                                'bio_placeholder'.tr(),
-                                                                style: TextStyle(
-                                                                  fontSize: 13,
-                                                                  fontStyle: FontStyle.italic,
-                                                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.40),
-                                                                ),
-                                                              )
-                                                            : const SizedBox.shrink(),
-                                                  ),
-                                                  if (isOwnProfile)
-                                                    GestureDetector(
-                                                      onTap: () => _editBio(bio),
-                                                      child: Padding(
-                                                        padding: const EdgeInsets.only(left: 6, top: 1),
-                                                        child: Icon(
-                                                          Icons.edit_outlined,
-                                                          size: 15,
-                                                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.45),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                ],
-                                              )
-                                            : const SizedBox.shrink(),
-                                      ),
-                                    ],
-                                  );
+                                      ],
+                                    );
+                                  } else {
+                                    // pfp centered, no bio (private account not followed)
+                                    return Center(child: avatarWidget(52));
+                                  }
                                 }),
 
                                 const SizedBox(height: 14),

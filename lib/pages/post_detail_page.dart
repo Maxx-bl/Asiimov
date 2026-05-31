@@ -580,6 +580,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
                           focusNode: _commentFocus,
                           maxLength: 250,
                           textCapitalization: TextCapitalization.sentences,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _addComment(),
                           decoration: InputDecoration(
                             hintText: 'add_a_comment'.tr().tr(),
                             border: OutlineInputBorder(
