@@ -1,4 +1,6 @@
 import 'package:asiimov/services/chat/chat_service.dart';
+import 'package:asiimov/services/file/file_service.dart';
+import 'package:asiimov/services/image/image_service.dart';
 import 'package:asiimov/services/notifications/notification_service.dart';
 import 'package:asiimov/services/post/post_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -334,6 +336,14 @@ class UserService {
     });
   }
 
+  // Update current user's bio
+  Future<void> updateBio(String bio) async {
+    final currentUserId = _auth.currentUser!.uid;
+    await _firestore.collection('users').doc(currentUserId).set({
+      'bio': bio.trim(),
+    }, SetOptions(merge: true));
+  }
+
   // Report a user profile
   Future<void> reportUserProfile({
     required String reportedUserId,
@@ -470,10 +480,22 @@ class UserService {
       }
     }
 
-    // 7. Delete User document
+    // 7. Delete R2 files (chat files + profile picture)
+    try {
+      await FileService().clearMyChatFiles();
+    } catch (e) {
+      debugPrint("Error clearing chat files on account deletion: $e");
+    }
+    try {
+      await ImageService().deleteMyProfilePicture();
+    } catch (e) {
+      debugPrint("Error deleting profile picture on account deletion: $e");
+    }
+
+    // 8. Delete User document
     await _firestore.collection('users').doc(uid).delete();
 
-    // 8. Delete Auth Account
+    // 9. Delete Auth Account
     await user.delete();
   }
 }

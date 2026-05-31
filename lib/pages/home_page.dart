@@ -11,6 +11,8 @@ import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/services/draft_service.dart';
+import 'package:asiimov/services/encryption/conversation_key_service.dart';
+import 'package:asiimov/services/encryption/encryption_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -117,21 +119,24 @@ class _HomePageState extends State<HomePage> {
                 controller: _searchController,
                 focusNode: _searchFocusNode,
                 decoration: InputDecoration(
-                  hintText: 'search_user'.tr().tr(),
+                  hintText: 'search_user'.tr(),
                   border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 2),
                   hintStyle: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.45),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
+                  color: Theme.of(context).colorScheme.inversePrimary,
                 ),
                 onChanged: (value) {
                   if (_debounce?.isActive ?? false) _debounce!.cancel();
                   _debounce = Timer(const Duration(milliseconds: 300), () {
                     setState(() {
                       _searchQuery = value.trim().toLowerCase();
-                      _searchLimit = 20; // Reset limit on new search
+                      _searchLimit = 20;
                     });
                   });
                 },
@@ -155,29 +160,67 @@ class _HomePageState extends State<HomePage> {
                         userId: user.uid,
                         username: user.displayName!,
                         style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontSize: 20),
-                        iconSize: 20,
+                          color: Theme.of(context).colorScheme.inversePrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        iconSize: 18,
                       ),
                     );
                   })
                 : Text('home'.tr())),
-        foregroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          if (!_isSearching)
-            IconButton(
-              onPressed: _openGroupCreation,
-              icon: const Icon(Icons.add),
-            ),
-          _isSearching
-              ? IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: _stopSearch,
-                )
-              : IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: _startSearch,
+          if (!_isSearching) ...[
+            GestureDetector(
+              onTap: _openGroupCreation,
+              child: Container(
+                width: 34,
+                height: 34,
+                margin: const EdgeInsets.only(right: 4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Theme.of(context).colorScheme.secondary,
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.40),
+                    width: 0.5,
+                  ),
                 ),
+                child: Icon(
+                  Icons.add,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: GestureDetector(
+                onTap: _startSearch,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondary,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.5),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.search_rounded,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.65),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          if (_isSearching)
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: _stopSearch,
+            ),
         ],
       ),
       body: RefreshIndicator(
@@ -279,18 +322,28 @@ class _HomePageState extends State<HomePage> {
         final conversations = snapshot.data ?? [];
         if (conversations.isEmpty) return _buildEmptyState();
 
-        return ListView.separated(
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 4, bottom: 24),
           itemCount: conversations.length,
-          separatorBuilder: (context, index) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Divider(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-              thickness: 1,
-              height: 1,
-            ),
-          ),
           itemBuilder: (context, index) {
-            return buildConversationItem(conversations[index]);
+            final conv = conversations[index];
+            final isUnread = conv.unreadCount > 0;
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: isUnread
+                    ? Theme.of(context).colorScheme.secondary
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+                border: isUnread
+                    ? Border.all(
+                        color: Theme.of(context).primaryColor.withValues(alpha: 0.18),
+                        width: 0.5,
+                      )
+                    : null,
+              ),
+              child: buildConversationItem(conv),
+            );
           },
         );
       },
@@ -299,16 +352,51 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey),
-          const SizedBox(height: 8),
-          Text(
-            _isSearching ? "no_user_found".tr() : "no_conversations_yet".tr(),
-            style: const TextStyle(color: Colors.grey),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Theme.of(context).colorScheme.secondary,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.35),
+                  width: 0.5,
+                ),
+              ),
+              child: Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 32,
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              _isSearching ? 'no_user_found'.tr() : 'no_conversations_yet'.tr(),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.inversePrimary,
+              ),
+            ),
+            if (!_isSearching) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Start a new conversation by tapping the compose button above.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -348,7 +436,30 @@ class _HomePageState extends State<HomePage> {
         if (lastMsg['isSystemMessage'] == true) {
           messagePreview = rawMsg;
         } else {
-          final decrypted = chatService.encryption.decrypt(rawMsg);
+          String decrypted;
+          // Compute the real chatRoomId (groups use conv.id directly; private chats use sorted uid_uid)
+          final myUid = authService.getCurrentUser()!.uid;
+          final chatRoomId = conv.isGroup
+              ? conv.id
+              : ([myUid, conv.id]..sort()).join('_');
+          final cachedKey = ConversationKeyService.getCachedKey(chatRoomId);
+          if (cachedKey != null) {
+            try {
+              decrypted = EncryptionService.decryptWithKey(rawMsg, cachedKey);
+            } catch (_) {
+              try {
+                decrypted = chatService.encryption.decrypt(rawMsg);
+              } catch (_) {
+                decrypted = '';
+              }
+            }
+          } else {
+            try {
+              decrypted = chatService.encryption.decrypt(rawMsg);
+            } catch (_) {
+              decrypted = '';
+            }
+          }
           final senderName =
               lastMsg['senderID'] == authService.getCurrentUser()!.uid
                   ? 'you'.tr()
@@ -415,8 +526,9 @@ class _HomePageState extends State<HomePage> {
     return UserTile(
       text: conv.otherUsername,
       userId: conv.isGroup ? '' : conv.otherUserId,
+      avatarRadius: 22,
       leading: conv.isGroup
-          ? GroupIcon(size: 40, imageUrl: conv.groupIconUrl)
+          ? GroupIcon(size: 44, imageUrl: conv.groupIconUrl)
           : null,
       subtitle: StreamBuilder<List<String>>(
         stream: chatService.getTypingUsernamesStream(chatRoomId),
@@ -501,12 +613,11 @@ class _HomePageState extends State<HomePage> {
               child: Text(
                 status,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 11,
                   color: status == 'seen'.tr()
                       ? Theme.of(context).primaryColor
-                      : Colors.grey.shade500,
-                  fontWeight:
-                      status == 'seen'.tr() ? FontWeight.bold : FontWeight.normal,
+                      : Colors.grey.shade400,
+                  fontWeight: status == 'seen'.tr() ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
@@ -515,26 +626,33 @@ class _HomePageState extends State<HomePage> {
             style: TextStyle(
               color: conv.unreadCount > 0
                   ? Theme.of(context).primaryColor
-                  : Colors.grey,
+                  : Theme.of(context).colorScheme.primary.withValues(alpha: 0.50),
               fontSize: 11,
-              fontWeight:
-                  conv.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+              fontWeight: conv.unreadCount > 0 ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
           if (conv.unreadCount > 0) ...[
             const SizedBox(height: 4),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
               decoration: BoxDecoration(
                 color: Theme.of(context).primaryColor,
                 borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.35),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Text(
-                '+${conv.unreadCount}',
+                conv.unreadCount <= 9 ? '${conv.unreadCount}' : '9+',
                 style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold),
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],

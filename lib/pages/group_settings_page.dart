@@ -52,8 +52,8 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
   bool _isNameValid(String name) {
     final trimmed = name.trim();
     if (trimmed.length < 3 || trimmed.length > 30) return false;
-    final regex = RegExp(r'^[a-zA-Z0-9._ -]+$');
-    return regex.hasMatch(trimmed);
+    final forbidden = RegExp(r'[<>&"`{}\[\]\\/\x00-\x1F]');
+    return !forbidden.hasMatch(trimmed);
   }
 
   void _renameGroup() {

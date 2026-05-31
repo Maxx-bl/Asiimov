@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:asiimov/models/conversation.dart';
 import 'package:asiimov/models/message.dart';
+import 'package:asiimov/services/encryption/conversation_key_service.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
 import 'package:asiimov/services/file/file_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -311,6 +312,23 @@ class ChatService extends ChangeNotifier {
       }
 
       conversations.sort((a, b) => b.lastActive.compareTo(a.lastActive));
+
+      // Pre-load conversation keys so the home page can decrypt message previews
+      // without needing to open each conversation first.
+      await Future.wait(conversations.map((conv) async {
+        final chatRoomId = conv.isGroup
+            ? conv.id
+            : ([currentUserId, conv.id]..sort()).join('_');
+        if (ConversationKeyService.getCachedKey(chatRoomId) != null) return;
+        try {
+          final participantIds = conv.isGroup
+              ? (conv.members ?? [currentUserId])
+              : [currentUserId, conv.id];
+          await ConversationKeyService.getOrCreateConversationKey(
+              chatRoomId, participantIds);
+        } catch (_) {}
+      }));
+
       return conversations;
     });
   }
@@ -452,6 +470,19 @@ class ChatService extends ChangeNotifier {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
+    // Distribute conversation E2EE key to newly added members
+    if (added.isNotEmpty) {
+      try {
+        // Load key from cache or Firestore before distributing
+        final convKey = ConversationKeyService.getCachedKey(groupId) ??
+            await ConversationKeyService.getOrCreateConversationKey(
+              groupId, [currentUserId, ...newMemberIds]);
+        for (final uid in added) {
+          await ConversationKeyService.addParticipant(groupId, uid, convKey);
+        }
+      } catch (_) {}
+    }
+
     // Send system messages
     if (added.isNotEmpty) {
       final usersSnap = await firestore.collection('users').where(FieldPath.documentId, whereIn: added).get();
@@ -581,8 +612,45 @@ class ChatService extends ChangeNotifier {
     final String senderName = auth.currentUser?.displayName ?? 'Someone';
     final Timestamp timestamp = Timestamp.now();
 
-    //encrypt the message
-    final String encryptedMessage = encryption.encrypt(message);
+    // For groups, fetch the doc ONCE and reuse for unread + notifications
+    Map<String, dynamic>? groupData;
+    List<String> unreadBy = [];
+    List<String> participantIds;
+    if (isGroup) {
+      final groupDoc = await firestore.collection('chats').doc(receiverID).get();
+      groupData = groupDoc.data();
+      final List<String> members = List<String>.from(groupData?['members'] ?? []);
+      unreadBy = members.where((id) => id != currentUserId).toList();
+      participantIds = members;
+    } else {
+      participantIds = [currentUserId, receiverID];
+    }
+
+    // Construct chat room ID
+    String chatRoomID;
+    if (isGroup) {
+      chatRoomID = receiverID; // For groups, receiverID is the groupId
+    } else {
+      List<String> ids = [currentUserId, receiverID];
+      ids.sort();
+      chatRoomID = ids.join('_');
+    }
+
+    // Encrypt with per-conversation key (E2EE), fallback to global key if user has no E2EE keys yet
+    String encryptedMessage;
+    String? encryptedReplyToMessage;
+    try {
+      final convKey = await ConversationKeyService.getOrCreateConversationKey(chatRoomID, participantIds);
+      encryptedMessage = EncryptionService.encryptWithKey(message, convKey);
+      if (replyToMessage != null) {
+        encryptedReplyToMessage = EncryptionService.encryptWithKey(replyToMessage, convKey);
+      }
+    } catch (_) {
+      encryptedMessage = encryption.encrypt(message);
+      if (replyToMessage != null) {
+        encryptedReplyToMessage = encryption.encrypt(replyToMessage);
+      }
+    }
 
     //create a new message
     Message newMessage = Message(
@@ -595,33 +663,13 @@ class ChatService extends ChangeNotifier {
       messageType: messageType,
       sharedPostId: sharedPostId,
       replyToMessageId: replyToMessageId,
-      replyToMessage: replyToMessage,
+      replyToMessage: encryptedReplyToMessage,
       replyToSenderID: replyToSenderID,
       replyToSenderUsername: replyToSenderUsername,
       attachments: attachments,
       instantAttachment: instantAttachment,
       mentions: mentions,
     );
-
-    // For groups, fetch the doc ONCE and reuse for unread + notifications
-    Map<String, dynamic>? groupData;
-    List<String> unreadBy = [];
-    if (isGroup) {
-      final groupDoc = await firestore.collection('chats').doc(receiverID).get();
-      groupData = groupDoc.data();
-      final List<String> members = List<String>.from(groupData?['members'] ?? []);
-      unreadBy = members.where((id) => id != currentUserId).toList();
-    }
-
-    // Construct chat room ID
-    String chatRoomID;
-    if (isGroup) {
-      chatRoomID = receiverID; // For groups, receiverID is the groupId
-    } else {
-      List<String> ids = [currentUserId, receiverID];
-      ids.sort();
-      chatRoomID = ids.join('_');
-    }
 
     // Format notification body (stored for Cloud Function trigger)
     String notifBody = message;
@@ -1377,9 +1425,6 @@ class ChatService extends ChangeNotifier {
   //edit message
   Future<void> editMessage(String otherUserId, String messageId, String newMessage, {bool isGroup = false}) async {
     final currentUserId = auth.currentUser!.uid;
-    
-    // Encrypt the new message
-    final String encryptedMessage = encryption.encrypt(newMessage);
 
     String chatRoomID;
     if (isGroup) {
@@ -1388,6 +1433,17 @@ class ChatService extends ChangeNotifier {
       List<String> ids = [currentUserId, otherUserId];
       ids.sort();
       chatRoomID = ids.join('_');
+    }
+
+    // Encrypt with per-conversation key, fallback to global key
+    String encryptedMessage;
+    try {
+      final convKey = ConversationKeyService.getCachedKey(chatRoomID) ??
+          await ConversationKeyService.getOrCreateConversationKey(
+              chatRoomID, [currentUserId, otherUserId]);
+      encryptedMessage = EncryptionService.encryptWithKey(newMessage, convKey);
+    } catch (_) {
+      encryptedMessage = encryption.encrypt(newMessage);
     }
 
     await firestore

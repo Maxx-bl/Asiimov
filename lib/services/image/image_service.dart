@@ -220,7 +220,7 @@ class ImageService {
       final idToken = await user.getIdToken();
 
       // 3. Upload to Cloudflare Worker securely
-      final objectKey = 'chat_files/${user.uid}/group_$groupId.jpg';
+      final objectKey = 'pfp/group_$groupId.jpg';
       final cleanWorkerUrl = _workerUrl.endsWith('/') 
           ? _workerUrl.substring(0, _workerUrl.length - 1) 
           : _workerUrl;
@@ -251,6 +251,31 @@ class ImageService {
     } catch (e) {
       debugPrint("Error uploading group profile picture to R2: $e");
       return null;
+    }
+  }
+
+  /// Delete the current user's profile picture from R2 and Firestore.
+  Future<bool> deleteMyProfilePicture() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+
+    try {
+      final idToken = await user.getIdToken();
+      final objectKey = 'pfp/${user.uid}.jpg';
+      final cleanWorkerUrl = _workerUrl.endsWith('/')
+          ? _workerUrl.substring(0, _workerUrl.length - 1)
+          : _workerUrl;
+
+      await http.delete(
+        Uri.parse('$cleanWorkerUrl/$objectKey'),
+        headers: {'Authorization': 'Bearer $idToken'},
+      );
+      // R2 delete is best-effort — proceed even if the file didn't exist
+      invalidateCache(user.uid);
+      return true;
+    } catch (e) {
+      debugPrint("Error deleting profile picture from R2: $e");
+      return false;
     }
   }
 

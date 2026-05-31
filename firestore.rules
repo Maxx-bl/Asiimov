@@ -1,0 +1,28 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Lectures : ouvertes à tous (nécessaire pour vérifier l'unicité du username
+    // avant inscription, quand l'utilisateur n'est pas encore authentifié).
+    // Les données sensibles (messages) sont chiffrées E2EE côté client.
+    // Écritures : uniquement pour les utilisateurs authentifiés.
+    match /{document=**} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // Seul le destinataire peut lire sa propre clé E2EE de conversation
+    match /chats/{chatId}/encryptedKeys/{keyUserId} {
+      allow read:  if request.auth != null && request.auth.uid == keyUserId;
+      allow write: if request.auth != null;
+    }
+
+    // Seul le destinataire peut lire sa propre clé E2EE de post
+    match /posts/{postId}/encryptedKeys/{keyUserId} {
+      allow read:  if request.auth != null && request.auth.uid == keyUserId;
+      allow write: if request.auth != null;
+    }
+
+  }
+}

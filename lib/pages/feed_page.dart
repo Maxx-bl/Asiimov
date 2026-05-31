@@ -285,14 +285,17 @@ class _FeedPageState extends State<FeedPage> {
                 controller: _searchController,
                 focusNode: _searchFocusNode,
                 decoration: InputDecoration(
-                  hintText: 'search_user'.tr().tr(),
+                  hintText: 'search_user'.tr(),
                   border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 2),
                   hintStyle: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.45),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
+                  color: Theme.of(context).colorScheme.inversePrimary,
                 ),
                 onChanged: (value) {
                   if (_debounce?.isActive ?? false) _debounce!.cancel();
@@ -304,20 +307,47 @@ class _FeedPageState extends State<FeedPage> {
                   });
                 },
               )
-            : Text(
-                'G L Y P H E',
-                style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2),
-              ),
-        foregroundColor: Theme.of(context).colorScheme.primary,
+            : const Text('GLYPHE'),
         actions: [
           _isSearching
               ? IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: _stopSearch,
                 )
-              : IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: _startSearch,
+              : Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: GestureDetector(
+                    onTap: _startSearch,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.secondary,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.5),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.search_rounded,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.65),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Search',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
         ],
       ),
@@ -327,21 +357,20 @@ class _FeedPageState extends State<FeedPage> {
       floatingActionButton: _isSearching
           ? null
           : Container(
-              height: 48,
-              width: 48,
+              height: 44,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(22),
                 gradient: LinearGradient(
                   colors: [
                     Theme.of(context).primaryColor,
-                    Theme.of(context).primaryColor.withValues(alpha: 0.85),
+                    Theme.of(context).primaryColor.withValues(alpha: 0.75),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.18),
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.20),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
@@ -350,7 +379,7 @@ class _FeedPageState extends State<FeedPage> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  customBorder: const CircleBorder(),
+                  customBorder: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                   onTap: () async {
                     final result = await Navigator.push(
                       context,
@@ -362,10 +391,24 @@ class _FeedPageState extends State<FeedPage> {
                       _onRefresh();
                     }
                   },
-                  child: const Icon(
-                    Icons.history_edu_rounded,
-                    color: Colors.white,
-                    size: 22,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.history_edu_rounded, color: Colors.white, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Post',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -383,6 +426,7 @@ class _FeedPageState extends State<FeedPage> {
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(top: 8, bottom: 100),
         itemCount: _posts.length + (_isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == _posts.length) {
@@ -426,30 +470,76 @@ class _FeedPageState extends State<FeedPage> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: ListView( // Needed for RefreshIndicator to work on empty state
+      child: ListView(
         shrinkWrap: true,
         children: [
           Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.article_outlined,
-                    size: 48, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(height: 12),
-                Text(
-                  'No posts yet.\nFollow someone or be the first to post!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontSize: 16,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context).colorScheme.secondary,
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.40),
+                        width: 0.5,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.history_edu_rounded,
+                      size: 32,
+                      color: Theme.of(context).primaryColor.withValues(alpha: 0.65),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: _onRefresh,
-                  child: Text("Refresh"),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  Text(
+                    'No posts yet.',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.inversePrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Follow someone or be the first to post!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.65),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  GestureDetector(
+                    onTap: _onRefresh,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        color: Theme.of(context).colorScheme.secondary,
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.35),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Text(
+                        'Refresh',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.inversePrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

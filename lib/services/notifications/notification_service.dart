@@ -162,8 +162,9 @@ class NotificationService {
     final isGroup = message.data['isGroup'] == 'true';
     final groupName = message.data['groupName'];
     
-    // Treat post_share like a chat_message for notification stacking
-    final isChat = type == 'chat_message' || type == 'post_share';
+    // Everything except social notifications is a conversation message → stack it
+    const socialTypes = {'follow', 'follow_request', 'follow_accept', 'comment'};
+    final isChat = senderID != null && !socialTypes.contains(type);
 
     // Don't show notification if we're already chatting with this person or group
     if (isChat) {

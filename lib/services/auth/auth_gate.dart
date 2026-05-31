@@ -5,6 +5,8 @@ import 'package:asiimov/pages/two_factor_verification_page.dart';
 import 'package:asiimov/pages/suspended_account_page.dart';
 import 'package:asiimov/pages/user_warning_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
+import 'package:asiimov/services/encryption/conversation_key_service.dart';
+import 'package:asiimov/services/encryption/user_key_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +27,8 @@ class AuthGate extends StatelessWidget {
                 if (!user.emailVerified) {
                   return const VerifyEmailPage();
                 }
+                // Initialize E2EE keys for this user (idempotent — fast no-op if already done)
+                UserKeyService.initUserKeys();
                 
                 // Listen reactively to A2F validation status changes
                 return ValueListenableBuilder<bool>(
@@ -64,6 +68,9 @@ class AuthGate extends StatelessWidget {
               }
               //if not logged in
               else {
+                // Clear all E2EE state on logout
+                ConversationKeyService.clearAll();
+                UserKeyService.resetForLogout();
                 return const LoginOrRegister();
               }
             }));

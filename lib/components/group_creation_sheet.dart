@@ -60,8 +60,8 @@ class _GroupCreationSheetState extends State<GroupCreationSheet> {
   bool _isNameValid(String name) {
     final trimmed = name.trim();
     if (trimmed.length < 3 || trimmed.length > 30) return false;
-    final regex = RegExp(r'^[a-zA-Z0-9._ -]+$');
-    return regex.hasMatch(trimmed);
+    final forbidden = RegExp(r'[<>&"`{}\[\]\\/\x00-\x1F]');
+    return !forbidden.hasMatch(trimmed);
   }
 
   Future<void> _createGroup() async {
@@ -233,8 +233,9 @@ class _GroupCreationSheetState extends State<GroupCreationSheet> {
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.surface,
+                  foregroundColor: Colors.white,
                   disabledBackgroundColor: Colors.grey.shade800,
+                  disabledForegroundColor: Colors.white60,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),

@@ -238,6 +238,66 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _editBio(String currentBio) async {
+    final controller = TextEditingController(text: currentBio);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('edit_bio'.tr()),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  TextField(
+                    controller: controller,
+                    maxLength: 100,
+                    maxLines: 4,
+                    minLines: 2,
+                    textInputAction: TextInputAction.newline,
+                    onChanged: (value) {
+                      // Allow only single newlines
+                      final filtered = value.replaceAll(RegExp(r'\n{2,}'), '\n');
+                      if (filtered != value) {
+                        controller.value = controller.value.copyWith(
+                          text: filtered,
+                          selection: TextSelection.collapsed(offset: filtered.length),
+                        );
+                      }
+                      setDialogState(() {});
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'bio_hint'.tr(),
+                      border: const OutlineInputBorder(),
+                      counterText: '${controller.text.length}/100',
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('cancel'.tr()),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, controller.text),
+                  child: Text('save'.tr()),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (result != null) {
+      final filtered = result.replaceAll(RegExp(r'\n{2,}'), '\n').trim();
+      await userService.updateBio(filtered);
+      await _refreshData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isOwnProfile = currentUserId == widget.userId;
@@ -247,10 +307,10 @@ class _ProfilePageState extends State<ProfilePage> {
         title: UsernameDisplay(
           userId: widget.userId,
           username: widget.username,
-          style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 20),
-          iconSize: 20,
+          style: TextStyle(color: Theme.of(context).colorScheme.inversePrimary, fontSize: 18, fontWeight: FontWeight.w700),
+          iconSize: 18,
         ),
-        foregroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           if (isOwnProfile) ...[
             IconButton(
@@ -437,24 +497,29 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.block,
-                            size: 64,
-                            color: Colors.redAccent.withValues(alpha: 0.5),
+                          Container(
+                            width: 80, height: 80,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.redAccent.withValues(alpha: 0.08),
+                              border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.35), width: 0.5),
+                            ),
+                            child: const Icon(Icons.block, size: 36, color: Colors.redAccent),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'user_blocked_you'.tr(),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.inversePrimary,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'cannot_view_profile'.tr(),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.grey, fontSize: 14),
+                            style: TextStyle(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.65), fontSize: 14),
                           ),
                         ],
                       ),
@@ -467,10 +532,14 @@ class _ProfilePageState extends State<ProfilePage> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.block,
-                                size: 64,
-                                color: Theme.of(context).primaryColor.withValues(alpha: 0.5),
+                              Container(
+                                width: 80, height: 80,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.redAccent.withValues(alpha: 0.08),
+                                  border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.35), width: 0.5),
+                                ),
+                                child: const Icon(Icons.block, size: 36, color: Colors.redAccent),
                               ),
                               const SizedBox(height: 16),
                               Text(
@@ -517,313 +586,435 @@ class _ProfilePageState extends State<ProfilePage> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     child: Column(
                       children: [
-                        const SizedBox(height: 24),
-
-                        // Profile picture
-                        ProfileAvatar(
-                          userId: widget.userId,
-                          username: widget.username,
-                          radius: 45,
-                          showEditIcon: isOwnProfile,
-                          onTap: isOwnProfile
-                              ? () => _changeProfilePicture()
-                              : () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => Dialog(
-                                      backgroundColor: Colors.transparent,
-                                      elevation: 0,
-                                      child: GestureDetector(
-                                        behavior: HitTestBehavior.opaque,
-                                        onTap: () => Navigator.pop(context),
-                                        child: FutureBuilder<String?>(
-                                          future: ImageService().getProfilePictureUrl(widget.userId),
-                                          builder: (context, snapshot) {
-                                            final url = snapshot.data;
-                                            final size = MediaQuery.of(context).size.width * 0.65;
-                                            if (url != null && url.isNotEmpty) {
-                                              return Center(
-                                                child: ClipRRect(
-                                                  borderRadius: BorderRadius.circular(20),
-                                                  child: SizedBox(
-                                                    width: size,
-                                                    height: size,
-                                                    child: SafeNetworkImage(
-                                                      url: url,
-                                                      fit: BoxFit.cover,
-                                                    ),
-                                                  ),
-                                                ),
-                                              );
-                                            } else {
-                                              return Center(
-                                                child: CircleAvatar(
-                                                  radius: size / 2,
-                                                  backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-                                                  child: Text(
-                                                    widget.username.isNotEmpty ? widget.username[0].toUpperCase() : '?',
-                                                    style: TextStyle(
-                                                      fontSize: size * 0.4,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Theme.of(context).primaryColor,
-                                                    ),
-                                                  ),
-                                                ),
-                                              );
-                                            }
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        // Username
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            UsernameDisplay(
-                              userId: widget.userId,
-                              username: widget.username,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              iconSize: 20,
-                            ),
-                            if (userData!['isSuspended'] == true) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.redAccent.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.redAccent, width: 1),
-                                ),
-                                child: Text(
-                                  'suspended_account_label'.tr(),
-                                  style: TextStyle(
-                                    color: Colors.redAccent,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Followers / Following counts
+                        // Profile header card
                         Builder(builder: (context) {
+                          final isDark = Theme.of(context).brightness == Brightness.dark;
+                          final cardShadow = isDark
+                              ? BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 8, offset: const Offset(0, 2))
+                              : BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2));
                           final canSeeFollowLists = isOwnProfile ||
                               (userData!['public_account'] ?? false) ||
                               isFollowing ||
                               widget.isAdminView;
-                          return Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            GestureDetector(
-                              onTap: canSeeFollowLists
-                                  ? () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => FollowListPage(
-                                            userId: widget.userId,
-                                            title: 'followers'.tr(),
-                                            isFollowers: true,
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  : null,
-                              child: Column(
-                                children: [
-                                  Text(
-                                    '${(userData!['followers'] as List? ?? []).length}',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    'followers'.tr(),
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              width: 1,
-                              height: 30,
+
+                          return Container(
+                            margin: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                            padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                            decoration: BoxDecoration(
                               color: Theme.of(context).colorScheme.secondary,
-                              margin: const EdgeInsets.symmetric(horizontal: 24),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.30),
+                                width: 0.5,
+                              ),
+                              boxShadow: [cardShadow],
                             ),
-                            GestureDetector(
-                              onTap: canSeeFollowLists
-                                  ? () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => FollowListPage(
-                                            userId: widget.userId,
-                                            title: 'following'.tr(),
-                                            isFollowers: false,
+                            child: Column(
+                              children: [
+                                // Avatar (left) + Bio (right)
+                                Builder(builder: (context) {
+                                  final bio = userData!['bio'] as String? ?? '';
+                                  final isPublic = userData!['public_account'] ?? false;
+                                  final canSeeBio = isOwnProfile || isPublic || isFollowing || widget.isAdminView;
+
+                                  return Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      // Avatar with gradient ring
+                                      Container(
+                                        padding: const EdgeInsets.all(3),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          gradient: SweepGradient(
+                                            colors: [
+                                              Theme.of(context).primaryColor.withValues(alpha: 0.70),
+                                              Theme.of(context).primaryColor.withValues(alpha: 0.20),
+                                              Theme.of(context).primaryColor.withValues(alpha: 0.70),
+                                            ],
                                           ),
                                         ),
-                                      );
-                                    }
-                                  : null,
-                              child: Column(
-                                children: [
-                                  Text(
-                                    '${(userData!['following'] as List? ?? []).length}',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    'following'.tr(),
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                        }),
+                                        child: ProfileAvatar(
+                                          userId: widget.userId,
+                                          username: widget.username,
+                                          radius: 44,
+                                          showEditIcon: isOwnProfile,
+                                          onTap: isOwnProfile
+                                              ? () => _changeProfilePicture()
+                                              : () {
+                                                  showDialog(
+                                                    context: context,
+                                                    builder: (context) => Dialog(
+                                                      backgroundColor: Colors.transparent,
+                                                      elevation: 0,
+                                                      child: GestureDetector(
+                                                        behavior: HitTestBehavior.opaque,
+                                                        onTap: () => Navigator.pop(context),
+                                                        child: FutureBuilder<String?>(
+                                                          future: ImageService().getProfilePictureUrl(widget.userId),
+                                                          builder: (context, snapshot) {
+                                                            final url = snapshot.data;
+                                                            final size = MediaQuery.of(context).size.width * 0.65;
+                                                            if (url != null && url.isNotEmpty) {
+                                                              return Center(
+                                                                child: ClipRRect(
+                                                                  borderRadius: BorderRadius.circular(20),
+                                                                  child: SizedBox(
+                                                                    width: size,
+                                                                    height: size,
+                                                                    child: SafeNetworkImage(url: url, fit: BoxFit.cover),
+                                                                  ),
+                                                                ),
+                                                              );
+                                                            } else {
+                                                              return Center(
+                                                                child: CircleAvatar(
+                                                                  radius: size / 2,
+                                                                  backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                                                                  child: Text(
+                                                                    widget.username.isNotEmpty ? widget.username[0].toUpperCase() : '?',
+                                                                    style: TextStyle(
+                                                                      fontSize: size * 0.4,
+                                                                      fontWeight: FontWeight.bold,
+                                                                      color: Theme.of(context).primaryColor,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              );
+                                                            }
+                                                          },
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                        ),
+                                      ),
 
-                        const SizedBox(height: 16),
+                                      const SizedBox(width: 16),
 
-                        // Follow/Unfollow button (only on other profiles)
-                        if (!isOwnProfile && userData!['isSuspended'] != true)
-                          Builder(
-                            builder: (context) {
-                              final isPublic = userData!['public_account'] ?? false;
+                                      // Bio zone
+                                      Expanded(
+                                        child: canSeeBio
+                                            ? Row(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Expanded(
+                                                    child: bio.isNotEmpty
+                                                        ? Text(
+                                                            bio,
+                                                            style: TextStyle(
+                                                              fontSize: 13,
+                                                              color: Theme.of(context).colorScheme.inversePrimary.withValues(alpha: 0.85),
+                                                              height: 1.4,
+                                                            ),
+                                                          )
+                                                        : isOwnProfile
+                                                            ? Text(
+                                                                'bio_placeholder'.tr(),
+                                                                style: TextStyle(
+                                                                  fontSize: 13,
+                                                                  fontStyle: FontStyle.italic,
+                                                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.40),
+                                                                ),
+                                                              )
+                                                            : const SizedBox.shrink(),
+                                                  ),
+                                                  if (isOwnProfile)
+                                                    GestureDetector(
+                                                      onTap: () => _editBio(bio),
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.only(left: 6, top: 1),
+                                                        child: Icon(
+                                                          Icons.edit_outlined,
+                                                          size: 15,
+                                                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.45),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
+                                              )
+                                            : const SizedBox.shrink(),
+                                      ),
+                                    ],
+                                  );
+                                }),
 
-                              String buttonText = 'follow'.tr();
-                              Color buttonColor = Theme.of(context).primaryColor;
-                              Color textColor = Colors.white;
+                                const SizedBox(height: 14),
 
-                              if (isFollowing) {
-                                buttonText = 'unfollow'.tr();
-                                buttonColor = Theme.of(context).colorScheme.secondary;
-                                textColor = Theme.of(context).colorScheme.inversePrimary;
-                              } else if (hasRequested) {
-                                buttonText = 'requested'.tr();
-                                buttonColor = Theme.of(context).colorScheme.secondary;
-                                textColor = Theme.of(context).colorScheme.inversePrimary;
-                              }
-
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 40),
-                                child: Row(
+                                // Username + suspended badge
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Expanded(
-                                      child: ElevatedButton(
-                                        onPressed: () async {
-                                          if (isFollowing) {
-                                            if (!isPublic) {
-                                              final confirm = await showDialog<bool>(
-                                                context: context,
-                                                builder: (context) => AlertDialog(
-                                                  title: Text('unfollow_private_account'.tr()),
-                                                  content: Text('Are you sure you want to unfollow @${widget.username}? They will have to accept your request again if you want to follow them later.'),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed: () => Navigator.pop(context, false),
-                                                      child: Text('cancel'.tr()),
-                                                    ),
-                                                    TextButton(
-                                                      onPressed: () => Navigator.pop(context, true),
-                                                      child: Text('Unfollow', style: TextStyle(color: Colors.red)),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                              if (confirm != true) return;
-                                            }
-                                            await userService.unfollowUser(widget.userId);
-                                          } else if (hasRequested) {
-                                            await userService.cancelFollowRequest(widget.userId);
-                                          } else {
-                                            if (isPublic) {
-                                              await userService.followUser(widget.userId);
-                                            } else {
-                                              await userService.requestFollow(widget.userId);
-                                            }
-                                          }
-                                          _refreshData();
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: buttonColor,
-                                          foregroundColor: textColor,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                    Text(
+                                      widget.username,
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w700,
+                                        color: Theme.of(context).colorScheme.inversePrimary,
+                                      ),
+                                    ),
+                                    if (userData!['isSuspended'] == true) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: Colors.redAccent.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.redAccent, width: 0.5),
                                         ),
                                         child: Text(
-                                          buttonText,
+                                          'suspended_account_label'.tr(),
                                           style: const TextStyle(
+                                            color: Colors.redAccent,
+                                            fontSize: 10,
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 15,
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.secondary,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: IconButton(
-                                        onPressed: () {
-                                          if (!isPublic && !isFollowing) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('this_account_is_private_follow'.tr())),
-                                            );
-                                            return;
-                                          }
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => ChatPage(
-                                                receiverUsername: widget.username,
-                                                receiverID: widget.userId,
+                                    ],
+                                  ],
+                                ),
+
+                                const SizedBox(height: 18),
+
+                                // Followers / Following counts
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(8),
+                                      onTap: canSeeFollowLists
+                                          ? () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => FollowListPage(
+                                                    userId: widget.userId,
+                                                    title: 'followers'.tr(),
+                                                    isFollowers: true,
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          : null,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8),
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              '${(userData!['followers'] as List? ?? []).length}',
+                                              style: TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.w700,
+                                                color: Theme.of(context).colorScheme.inversePrimary,
                                               ),
                                             ),
-                                          );
-                                        },
-                                        icon: const Icon(Icons.mail_outline),
-                                        color: Theme.of(context).colorScheme.primary,
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'followers'.tr(),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.65),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 1,
+                                      height: 32,
+                                      margin: const EdgeInsets.symmetric(horizontal: 28),
+                                      color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.40),
+                                    ),
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(8),
+                                      onTap: canSeeFollowLists
+                                          ? () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => FollowListPage(
+                                                    userId: widget.userId,
+                                                    title: 'following'.tr(),
+                                                    isFollowers: false,
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          : null,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8),
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              '${(userData!['following'] as List? ?? []).length}',
+                                              style: TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.w700,
+                                                color: Theme.of(context).colorScheme.inversePrimary,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'following'.tr(),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.65),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
-                              );
-                            },
+
+                                // Follow/Message buttons (only on other profiles)
+                                if (!isOwnProfile && userData!['isSuspended'] != true)
+                                  Builder(
+                                    builder: (context) {
+                                      final isPublic = userData!['public_account'] ?? false;
+
+                                      String buttonText = 'follow'.tr();
+                                      Color buttonColor = Theme.of(context).primaryColor;
+                                      Color textColor = Colors.white;
+                                      BorderSide? buttonBorder;
+
+                                      if (isFollowing) {
+                                        buttonText = 'unfollow'.tr();
+                                        buttonColor = Theme.of(context).colorScheme.secondary;
+                                        textColor = Theme.of(context).colorScheme.inversePrimary;
+                                        buttonBorder = BorderSide(
+                                          color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.40),
+                                          width: 0.5,
+                                        );
+                                      } else if (hasRequested) {
+                                        buttonText = 'requested'.tr();
+                                        buttonColor = Theme.of(context).colorScheme.secondary;
+                                        textColor = Theme.of(context).colorScheme.inversePrimary;
+                                        buttonBorder = BorderSide(
+                                          color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.40),
+                                          width: 0.5,
+                                        );
+                                      }
+
+                                      return Padding(
+                                        padding: const EdgeInsets.only(top: 16),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: ElevatedButton(
+                                                onPressed: () async {
+                                                  if (isFollowing) {
+                                                    if (!isPublic) {
+                                                      final confirm = await showDialog<bool>(
+                                                        context: context,
+                                                        builder: (context) => AlertDialog(
+                                                          title: Text('unfollow_private_account'.tr()),
+                                                          content: Text('Are you sure you want to unfollow @${widget.username}? They will have to accept your request again if you want to follow them later.'),
+                                                          actions: [
+                                                            TextButton(
+                                                              onPressed: () => Navigator.pop(context, false),
+                                                              child: Text('cancel'.tr()),
+                                                            ),
+                                                            TextButton(
+                                                              onPressed: () => Navigator.pop(context, true),
+                                                              child: Text('Unfollow', style: TextStyle(color: Colors.red)),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      );
+                                                      if (confirm != true) return;
+                                                    }
+                                                    await userService.unfollowUser(widget.userId);
+                                                  } else if (hasRequested) {
+                                                    await userService.cancelFollowRequest(widget.userId);
+                                                  } else {
+                                                    if (isPublic) {
+                                                      await userService.followUser(widget.userId);
+                                                    } else {
+                                                      await userService.requestFollow(widget.userId);
+                                                    }
+                                                  }
+                                                  _refreshData();
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: buttonColor,
+                                                  foregroundColor: textColor,
+                                                  elevation: 0,
+                                                  shadowColor: Colors.transparent,
+                                                  side: buttonBorder,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                  ),
+                                                  padding: const EdgeInsets.symmetric(vertical: 13),
+                                                  textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                                                ),
+                                                child: Text(buttonText),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Container(
+                                              height: 46,
+                                              width: 46,
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context).colorScheme.surface,
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.40),
+                                                  width: 0.5,
+                                                ),
+                                              ),
+                                              child: IconButton(
+                                                onPressed: () {
+                                                  if (!isPublic && !isFollowing) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text('this_account_is_private_follow'.tr())),
+                                                    );
+                                                    return;
+                                                  }
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) => ChatPage(
+                                                        receiverUsername: widget.username,
+                                                        receiverID: widget.userId,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                icon: const Icon(Icons.mail_outline_rounded, size: 20),
+                                                color: Theme.of(context).colorScheme.primary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                              ],
+                            ),
+                          );
+                        }),
+
+                        // Posts section header
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Posts',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
+                              ),
+                            ),
                           ),
-
-                        const SizedBox(height: 20),
-
-                        // Divider
-                        Divider(
-                          color: Theme.of(context).colorScheme.secondary,
-                          height: 1,
                         ),
 
                         // Posts
@@ -833,10 +1024,14 @@ class _ProfilePageState extends State<ProfilePage> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.gavel_rounded,
-                                  size: 64,
-                                  color: Colors.redAccent.withValues(alpha: 0.8),
+                                Container(
+                                  width: 80, height: 80,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.redAccent.withValues(alpha: 0.08),
+                                    border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.35), width: 0.5),
+                                  ),
+                                  child: const Icon(Icons.gavel_rounded, size: 36, color: Colors.redAccent),
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
@@ -844,6 +1039,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).colorScheme.inversePrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -851,7 +1047,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   'This user has been suspended for violating our community guidelines.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.65),
                                     fontSize: 14,
                                   ),
                                 ),
@@ -864,10 +1060,14 @@ class _ProfilePageState extends State<ProfilePage> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.lock_outline_rounded,
-                                  size: 64,
-                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                                Container(
+                                  width: 80, height: 80,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Theme.of(context).colorScheme.secondary,
+                                    border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.35), width: 0.5),
+                                  ),
+                                  child: Icon(Icons.lock_outline_rounded, size: 36, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55)),
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
@@ -875,6 +1075,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).colorScheme.inversePrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -882,7 +1083,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   'Follow this account to see their posts and send them messages.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.65),
                                     fontSize: 14,
                                   ),
                                 ),
@@ -903,6 +1104,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
+                            padding: const EdgeInsets.only(bottom: 24),
                             itemCount: posts.length,
                             itemBuilder: (context, index) {
                               return ProfilePostCard(

@@ -9,6 +9,7 @@ class UserTile extends StatelessWidget {
   final Widget? trailing;
   final Widget? subtitle;
   final Widget? leading;
+  final double avatarRadius;
 
   const UserTile({
     super.key,
@@ -18,20 +19,21 @@ class UserTile extends StatelessWidget {
     this.trailing,
     this.subtitle,
     this.leading,
+    this.avatarRadius = 20,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: leading ?? 
-          ((userId != null && userId!.isNotEmpty) 
-              ? ProfileAvatar(userId: userId!, username: text, radius: 20)
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      leading: leading ??
+          ((userId != null && userId!.isNotEmpty)
+              ? ProfileAvatar(userId: userId!, username: text, radius: avatarRadius)
               : CircleAvatar(
                   backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   child: Icon(
-                    Icons.person,
+                    Icons.person_outline_rounded,
                     color: Theme.of(context).colorScheme.primary,
                   ),
                 )),

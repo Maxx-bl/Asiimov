@@ -63,19 +63,29 @@ class PostCard extends StatelessWidget {
       scoreColor = Colors.grey;
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardShadow = isDark
+        ? BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 8, offset: const Offset(0, 2))
+        : BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2));
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: Theme.of(context).colorScheme.secondary,
-              width: 0.5,
-            ),
+          color: Theme.of(context).colorScheme.secondary,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.30),
+            width: 0.5,
           ),
+          boxShadow: [cardShadow],
         ),
-        child: Column(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header: username + time + 3-dot menu
@@ -107,17 +117,21 @@ class PostCard extends StatelessWidget {
                           UsernameDisplay(
                             userId: post.authorID,
                             username: post.authorUsername,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.inversePrimary,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Text(
-                      '· ${_timeAgo(post.timestamp.toDate())}',
+                      _timeAgo(post.timestamp.toDate()),
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontSize: 13,
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.50),
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -161,10 +175,10 @@ class PostCard extends StatelessWidget {
                       const SizedBox(width: 4),
                     ],
                     PopupMenuButton<String>(
-                      icon: const Icon(
-                        Icons.more_vert_rounded,
+                      icon: Icon(
+                        Icons.more_horiz_rounded,
                         size: 20,
-                        color: Colors.grey,
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.45),
                       ),
                       color: Theme.of(context).colorScheme.secondary,
                       shape: RoundedRectangleBorder(
@@ -288,10 +302,11 @@ class PostCard extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.secondary,
-                        width: 1,
+                        color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.40),
+                        width: 0.5,
                       ),
                     ),
                     child: Column(
@@ -425,7 +440,7 @@ class PostCard extends StatelessWidget {
                       text: post.content,
                       style: TextStyle(
                         fontSize: 15,
-                        height: 1.4,
+                        height: 1.5,
                         color: Theme.of(context).colorScheme.primary,
                       ),
                       linkStyle: TextStyle(
@@ -442,87 +457,100 @@ class PostCard extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            // Action bar: votes + comments
+            // Action bar: votes + comments + share
             Padding(
               padding: const EdgeInsets.only(left: 46),
               child: Row(
                 children: [
-                  // Upvote
-                  GestureDetector(
-                    onTap: () async {
-                      final path = docPath ?? 'posts/${post.id}';
-                      await postService.upvoteComment(path);
-                      if (onAction != null) onAction!();
-                    },
-                    onLongPress: () {
-                      showModalBottomSheet(
-                        context: context,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => VotersListSheet(
-                          userIds: post.upvotes,
-                          title: 'upvotes'.tr(),
-                        ),
-                      );
-                    },
-                    child: Icon(
-                      Icons.arrow_upward_rounded,
-                      size: 20,
-                      color: hasUpvoted ? Theme.of(context).primaryColor : Colors.grey,
-                    ),
-                  ),
-
-                  // Score
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Text(
-                      '$score',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: scoreColor,
-                        fontSize: 14,
+                  // Vote pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.35),
+                        width: 0.5,
                       ),
                     ),
-                  ),
-
-                  // Downvote
-                  GestureDetector(
-                    onTap: () async {
-                      final path = docPath ?? 'posts/${post.id}';
-                      await postService.downvoteComment(path);
-                      if (onAction != null) onAction!();
-                    },
-                    onLongPress: () {
-                      showModalBottomSheet(
-                        context: context,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => VotersListSheet(
-                          userIds: post.downvotes,
-                          title: 'downvotes'.tr(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () async {
+                            final path = docPath ?? 'posts/${post.id}';
+                            await postService.upvoteComment(path);
+                            if (onAction != null) onAction!();
+                          },
+                          onLongPress: () {
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => VotersListSheet(
+                                userIds: post.upvotes,
+                                title: 'upvotes'.tr(),
+                              ),
+                            );
+                          },
+                          child: Icon(
+                            Icons.arrow_upward_rounded,
+                            size: 18,
+                            color: hasUpvoted ? Theme.of(context).primaryColor : Colors.grey,
+                          ),
                         ),
-                      );
-                    },
-                    child: Icon(
-                      Icons.arrow_downward_rounded,
-                      size: 20,
-                      color:
-                          hasDownvoted ? Colors.blue.shade400 : Colors.grey,
+                        const SizedBox(width: 5),
+                        Text(
+                          '$score',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: scoreColor,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        GestureDetector(
+                          onTap: () async {
+                            final path = docPath ?? 'posts/${post.id}';
+                            await postService.downvoteComment(path);
+                            if (onAction != null) onAction!();
+                          },
+                          onLongPress: () {
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => VotersListSheet(
+                                userIds: post.downvotes,
+                                title: 'downvotes'.tr(),
+                              ),
+                            );
+                          },
+                          child: Icon(
+                            Icons.arrow_downward_rounded,
+                            size: 18,
+                            color: hasDownvoted ? Colors.blue.shade400 : Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
-                  const SizedBox(width: 24),
+                  const SizedBox(width: 14),
 
                   // Comments
                   GestureDetector(
                     onTap: onTap,
                     child: Row(
                       children: [
-                        const Icon(Icons.chat_bubble_outline,
-                            size: 18, color: Colors.grey),
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '${post.commentCount}',
-                          style: const TextStyle(
-                            color: Colors.grey,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
                             fontSize: 13,
                           ),
                         ),
@@ -530,7 +558,7 @@ class PostCard extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(width: 24),
+                  const SizedBox(width: 20),
 
                   // Share
                   GestureDetector(
@@ -555,13 +583,16 @@ class PostCard extends StatelessWidget {
                     },
                     child: Row(
                       children: [
-                        const Icon(Icons.send_rounded,
-                            size: 18, color: Colors.grey),
+                        Icon(
+                          Icons.send_rounded,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '${post.shareCount}',
-                          style: const TextStyle(
-                            color: Colors.grey,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
                             fontSize: 13,
                           ),
                         ),
@@ -572,6 +603,8 @@ class PostCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
         ),
       ),
     );

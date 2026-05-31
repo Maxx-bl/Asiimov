@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -14,13 +15,20 @@ import 'package:asiimov/pages/pinned_messages_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
+import 'package:asiimov/services/encryption/conversation_key_service.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
+import 'package:asiimov/services/encryption/user_key_service.dart';
+import 'package:asiimov/services/secure_window_service.dart';
+import 'package:cryptography/cryptography.dart' as crypto;
 import 'package:asiimov/services/file/file_service.dart';
+import 'package:encrypt/encrypt.dart' as enc;
 import 'package:asiimov/services/image/image_service.dart';
 import 'package:asiimov/services/draft_service.dart';
 import 'package:asiimov/services/notifications/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -78,6 +86,15 @@ class _ChatPageState extends State<ChatPage> {
       _chatRoomId = ids.join('_');
     }
 
+    // Prevent screenshots and screen recording on this page (Android)
+    SecureWindowService.enable();
+
+    // Compute safety number once (private chats only)
+    _safetyNumberFuture = widget.isGroup ? Future.value('') : _computeSafetyNumber();
+
+    // Load E2EE conversation key asynchronously
+    _loadConversationKey(currentUid);
+
     NotificationService().setActiveChatUser(widget.receiverID);
     chatService.markMessageAsRead(widget.receiverID, isGroup: widget.isGroup);
     // Clear any stale typing status left from a previous session
@@ -134,7 +151,7 @@ class _ChatPageState extends State<ChatPage> {
         .listen((snapshot) {
       if (snapshot.docs.isNotEmpty) {
         final lastMessageData = snapshot.docs.first.data() as Map<String, dynamic>;
-        
+
         // Mark as read if it's a private chat from the other user OR if it's a group chat
         if (widget.isGroup) {
           chatService.markMessageAsRead(widget.receiverID, isGroup: true);
@@ -142,6 +159,10 @@ class _ChatPageState extends State<ChatPage> {
             lastMessageData['isRead'] == false) {
           chatService.markMessageAsRead(widget.receiverID, isGroup: false);
         }
+
+        // Re-check the conversation key on each new message: detects key rotations
+        // (e.g. another device regenerated the key) and reloads if the version changed.
+        _loadConversationKey(authService.getCurrentUser()!.uid);
       }
     });
   }
@@ -177,11 +198,147 @@ class _ChatPageState extends State<ChatPage> {
     messageController.dispose();
     scrollController.dispose();
     _mentionQueryNotifier.dispose();
+    // Re-enable screenshots when leaving the chat
+    SecureWindowService.disable();
     super.dispose();
   }
 
   // Chat room ID (computed once in initState)
   late final String _chatRoomId;
+
+  // Per-conversation E2EE key (null until loaded, or if user lacks E2EE keys)
+  enc.Key? _conversationKey;
+
+  // Safety number future — computed once, never re-fetched on rebuild
+  late final Future<String> _safetyNumberFuture;
+
+  Future<void> _loadConversationKey(String currentUid) async {
+    try {
+      List<String> participantIds;
+      if (widget.isGroup) {
+        final groupDoc = await chatService.firestore.collection('chats').doc(_chatRoomId).get();
+        participantIds = List<String>.from(groupDoc.data()?['members'] ?? []);
+      } else {
+        participantIds = [currentUid, widget.receiverID];
+      }
+      final key = await ConversationKeyService.getOrCreateConversationKey(_chatRoomId, participantIds);
+      if (mounted) setState(() => _conversationKey = key);
+    } catch (_) {
+      // Fallback: use global key (for users without E2EE keys yet)
+    }
+  }
+
+  String _decryptMessage(String encrypted) {
+    if (encrypted.isEmpty) return '';
+    if (_conversationKey != null) {
+      try {
+        return EncryptionService.decryptWithKey(encrypted, _conversationKey!);
+      } catch (_) {}
+    }
+    // Fallback: try legacy global key (old messages pre-E2EE)
+    try {
+      return encryptionService.decrypt(encrypted);
+    } catch (_) {
+      // Key not yet loaded or message truly unreadable — show blank, will re-render on key arrival
+      return '';
+    }
+  }
+
+  // ── Safety Number ─────────────────────────────────────────────────────────────
+
+  /// Returns SHA-256(sorted(myPubKey || theirPubKey)) as 16 groups of 4 hex chars.
+  Future<String> _computeSafetyNumber() async {
+    final myKeyPair = await UserKeyService.getMyKeyPair();
+    final myPub = myKeyPair.publicKey.bytes;
+    final theirPubKey = await UserKeyService.getPublicKey(widget.receiverID);
+    if (theirPubKey == null) throw Exception('no_key');
+
+    final theirPub = theirPubKey.bytes;
+
+    // Sort so both sides produce the same hash regardless of who computes it
+    final List<int> first, second;
+    bool myIsSmaller = true;
+    for (int i = 0; i < min(myPub.length, theirPub.length); i++) {
+      if (myPub[i] < theirPub[i]) { myIsSmaller = true; break; }
+      if (myPub[i] > theirPub[i]) { myIsSmaller = false; break; }
+    }
+    first  = myIsSmaller ? myPub  : theirPub;
+    second = myIsSmaller ? theirPub : myPub;
+
+    final hash = await crypto.Sha256().hash([...first, ...second]);
+    final hex = hash.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+    // Format as 4 rows × 4 groups of 4 hex chars
+    final groups = List.generate(16, (i) => hex.substring(i * 4, i * 4 + 4));
+    final rows = List.generate(4, (r) => groups.sublist(r * 4, r * 4 + 4).join(' '));
+    return rows.join('\n');
+  }
+
+  /// Widget shown at the very top of the message list (visible when scrolled to beginning).
+  Widget _buildSafetyNumberHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
+      child: Column(
+        children: [
+          Icon(Icons.verified_user,
+              size: 36, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(height: 10),
+          Text(
+            'safety_number_title'.tr(),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'safety_number_explanation'.tr(args: [widget.receiverUsername]),
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 16),
+          FutureBuilder<String>(
+            future: _safetyNumberFuture,
+            builder: (ctx, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const SizedBox(
+                  height: 24, width: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                );
+              }
+              if (snap.hasError || !snap.hasData) {
+                return Text(
+                  'safety_number_unavailable'.tr(args: [widget.receiverUsername]),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                );
+              }
+              return Container(
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  snap.data!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    letterSpacing: 1.5,
+                    height: 2.0,
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'safety_number_hint'.tr(),
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+          ),
+        ],
+      ),
+    );
+  }
 
   // Reply state
   String? _replyToMessageId;
@@ -467,11 +624,19 @@ class _ChatPageState extends State<ChatPage> {
       ids.sort();
       final chatRoomId = widget.isGroup ? widget.receiverID : ids.join('_');
 
-      for (final file in filesToUpload) {
-        final result = await _fileService.uploadChatAttachment(file, chatRoomId);
-        if (result != null) {
-          attachments.add(result);
+      try {
+        for (final file in filesToUpload) {
+          final result = await _fileService.uploadChatAttachment(file, chatRoomId);
+          if (result != null) {
+            attachments.add(result);
+          }
         }
+      } on QuotaExceededException {
+        if (mounted) {
+          setState(() => _isUploading = false);
+          _showQuotaExceededDialog();
+        }
+        return;
       }
       if (mounted) setState(() => _isUploading = false);
 
@@ -876,6 +1041,49 @@ class _ChatPageState extends State<ChatPage> {
   // ──────────────────────────────────────────────
   // 📝 TO CHANGE THE INFO TEXT: Edit the string below
   // ──────────────────────────────────────────────
+  void _showQuotaExceededDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('upload_quota_title'.tr()),
+        content: Text('upload_quota_body'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _clearChatFilesWithFeedback();
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: Text('upload_quota_clear_files'.tr()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _clearChatFilesWithFeedback() async {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('upload_quota_clearing'.tr())),
+    );
+    final success = await _fileService.clearMyChatFiles();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success ? 'upload_quota_cleared'.tr() : 'upload_quota_clear_error'.tr(),
+        ),
+      ),
+    );
+  }
+
   void _showDeletionInfoDialog() {
     if (_showingInfoDialog) return;
     _showingInfoDialog = true;
@@ -1033,13 +1241,19 @@ class _ChatPageState extends State<ChatPage> {
                 },
                 child: ListView.builder(
                   controller: scrollController,
-                  itemCount: docs.length,
+                  // +1 for the safety number header at top (private chats only)
+                  itemCount: docs.length + (widget.isGroup ? 0 : 1),
                   reverse: true,
                   itemBuilder: (context, index) {
+                    // Topmost item in reverse list = safety number header (private chats)
+                    if (!widget.isGroup && index == docs.length) {
+                      return _buildSafetyNumberHeader();
+                    }
+
                     final data = docs[index].data() as Map<String, dynamic>;
                     bool showUsername = widget.isGroup;
                     bool showAvatar = widget.isGroup;
-                    
+
                     // Don't show username if previous message (index + 1) was from same sender
                     if (widget.isGroup && index < docs.length - 1) {
                       final prevData = docs[index + 1].data() as Map<String, dynamic>;
@@ -1097,21 +1311,12 @@ class _ChatPageState extends State<ChatPage> {
     final currentUid = authService.getCurrentUser()!.uid;
     bool isCurrentUser = data['senderID'] == currentUid;
 
-    String decryptedMessage;
-    try {
-      decryptedMessage = encryptionService.decrypt(data['message']);
-    } catch (e) {
-      decryptedMessage = data['message'];
-    }
+    final String decryptedMessage = _decryptMessage(data['message'] as String? ?? '');
 
     // Decrypt reply preview
     String? decryptedReply;
     if (data['replyToMessage'] != null) {
-      try {
-        decryptedReply = encryptionService.decrypt(data['replyToMessage']);
-      } catch (e) {
-        decryptedReply = data['replyToMessage'];
-      }
+      decryptedReply = _decryptMessage(data['replyToMessage'] as String);
     }
     
     // Fallback if the replied message had no text (e.g. only attachment)
@@ -1211,7 +1416,7 @@ class _ChatPageState extends State<ChatPage> {
     return Column(
       crossAxisAlignment: isCurrentUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
-        if (showUsername && !isCurrentUser)
+        if (showUsername && !isCurrentUser && !isReply)
           Padding(
             padding: EdgeInsets.only(left: showGroupAvatar ? 48 : 25, bottom: 2, top: 8),
             child: Text(
@@ -1380,7 +1585,7 @@ class _ChatPageState extends State<ChatPage> {
     ids.sort();
     final chatRoomId = widget.isGroup ? widget.receiverID : ids.join('_');
 
-    final uploadResult = await _fileService.uploadChatAttachment(fileToUpload, chatRoomId);
+    final uploadResult = await _fileService.uploadChatAttachment(fileToUpload, chatRoomId, skipQuota: true);
     if (mounted) setState(() => _isUploading = false);
 
     if (uploadResult == null) {
@@ -1468,7 +1673,16 @@ class _ChatPageState extends State<ChatPage> {
 
     setState(() => _isUploading = true);
 
-    final uploadResult = await _fileService.uploadChatAttachment(file, 'voice');
+    Map<String, dynamic>? uploadResult;
+    try {
+      uploadResult = await _fileService.uploadChatAttachment(file, 'voice');
+    } on QuotaExceededException {
+      if (mounted) {
+        setState(() => _isUploading = false);
+        _showQuotaExceededDialog();
+      }
+      return;
+    }
     if (mounted) setState(() => _isUploading = false);
 
     if (uploadResult == null) {
@@ -1620,37 +1834,64 @@ class _ChatPageState extends State<ChatPage> {
                               const SizedBox(width: 12),
                             ],
                             Expanded(
-                              child: TextField(
-                                controller: messageController,
-                                focusNode: myFocusNode,
-                                maxLines: 4,
-                                minLines: 1,
-                                maxLength: 1000,
-                                buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
-                                  if (currentLength < 900) return null;
-                                  return Text(
-                                    '$currentLength / $maxLength',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                              child: CallbackShortcuts(
+                                bindings: (kIsWeb || defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)
+                                    ? {
+                                        const SingleActivator(LogicalKeyboardKey.enter): () {
+                                          sendMessage();
+                                        },
+                                        const SingleActivator(LogicalKeyboardKey.enter, shift: true): () {
+                                          final ctrl = messageController;
+                                          final pos = ctrl.selection.base.offset;
+                                          final text = ctrl.text;
+                                          ctrl.value = ctrl.value.copyWith(
+                                            text: text.substring(0, pos) + '\n' + text.substring(pos),
+                                            selection: TextSelection.collapsed(offset: pos + 1),
+                                          );
+                                        },
+                                        const SingleActivator(LogicalKeyboardKey.enter, control: true): () {
+                                          final ctrl = messageController;
+                                          final pos = ctrl.selection.base.offset;
+                                          final text = ctrl.text;
+                                          ctrl.value = ctrl.value.copyWith(
+                                            text: text.substring(0, pos) + '\n' + text.substring(pos),
+                                            selection: TextSelection.collapsed(offset: pos + 1),
+                                          );
+                                        },
+                                      }
+                                    : {},
+                                child: TextField(
+                                  controller: messageController,
+                                  focusNode: myFocusNode,
+                                  maxLines: 4,
+                                  minLines: 1,
+                                  maxLength: 1000,
+                                  buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
+                                    if (currentLength < 900) return null;
+                                    return Text(
+                                      '$currentLength / $maxLength',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                                      ),
+                                    );
+                                  },
+                                  textInputAction: TextInputAction.newline,
+                                  textCapitalization: TextCapitalization.sentences,
+                                  decoration: InputDecoration(
+                                    hintText: _stagedFiles.isNotEmpty ? 'Add a caption...' : 'Message...',
+                                    hintStyle: TextStyle(
+                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
                                     ),
-                                  );
-                                },
-                                textInputAction: TextInputAction.newline,
-                                textCapitalization: TextCapitalization.sentences,
-                                decoration: InputDecoration(
-                                  hintText: _stagedFiles.isNotEmpty ? 'Add a caption...' : 'Message...',
-                                  hintStyle: TextStyle(
-                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                    isDense: true,
                                   ),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                  isDense: true,
-                                ),
-                                style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.white
-                                      : Colors.black,
+                                  style: TextStyle(
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1669,35 +1910,51 @@ class _ChatPageState extends State<ChatPage> {
                     child: const Icon(Icons.send_rounded, color: Colors.white, size: 24),
                   ),
                 )
-              else if (showSendButton)
-                GestureDetector(
-                  onTap: sendMessage,
-                  child: Container(
-                    height: 48,
-                    width: 48,
-                    decoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
-                    child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 26),
-                  ),
-                )
               else ...[
-                GestureDetector(
-                  onTap: _showAttachmentPicker,
-                  child: Container(
-                    height: 48,
-                    width: 48,
-                    decoration: BoxDecoration(color: Colors.grey.shade600, shape: BoxShape.circle),
-                    child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
-                  ),
+                // Attachment + mic buttons slide out when typing starts
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  child: showSendButton
+                      ? const SizedBox.shrink()
+                      : Row(
+                          children: [
+                            GestureDetector(
+                              onTap: _showAttachmentPicker,
+                              child: Container(
+                                height: 48,
+                                width: 48,
+                                decoration: BoxDecoration(color: Colors.grey.shade600, shape: BoxShape.circle),
+                                child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                        ),
                 ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => _startRecording(),
-                  child: Container(
-                    height: 48,
-                    width: 48,
-                    decoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
-                    child: const Icon(Icons.mic, color: Colors.white, size: 26),
-                  ),
+                // Send button slides in when typing starts
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  child: showSendButton
+                      ? GestureDetector(
+                          onTap: sendMessage,
+                          child: Container(
+                            height: 48,
+                            width: 48,
+                            decoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
+                            child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 26),
+                          ),
+                        )
+                      : GestureDetector(
+                          onTap: () => _startRecording(),
+                          child: Container(
+                            height: 48,
+                            width: 48,
+                            decoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
+                            child: const Icon(Icons.mic, color: Colors.white, size: 26),
+                          ),
+                        ),
                 ),
               ],
             ],

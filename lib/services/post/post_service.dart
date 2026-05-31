@@ -1,4 +1,5 @@
 import 'package:asiimov/services/chat/chat_service.dart';
+import 'package:asiimov/services/encryption/post_key_service.dart';
 import 'package:asiimov/services/file/file_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -40,10 +41,27 @@ class PostService extends ChangeNotifier {
       }
     }
 
-    await _firestore.collection('posts').add({
+    final docRef = _firestore.collection('posts').doc(); // pre-generate ID
+
+    String encryptedContent;
+    if (isCloseFriendsOnly && visibleTo != null && visibleTo.isNotEmpty) {
+      // E2EE per-post key — distribute to each visible user + author via RSA
+      encryptedContent = await PostKeyService.encryptPostContent(
+        postId: docRef.id,
+        content: content,
+        visibleTo: visibleTo,
+        authorId: user.uid,
+      );
+    } else {
+      // Public posts: global symmetric key (any follower can read)
+      encryptedContent = _encryption.encrypt(content);
+    }
+
+    await docRef.set({
       'authorID': user.uid,
       'authorUsername': user.displayName ?? 'Anonymous',
-      'content': _encryption.encrypt(content),
+      'content': encryptedContent,
+      'encryptionVersion': (isCloseFriendsOnly && visibleTo != null && visibleTo.isNotEmpty) ? 2 : 1,
       'timestamp': FieldValue.serverTimestamp(),
       'upvotes': [],
       'downvotes': [],

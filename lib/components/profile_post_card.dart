@@ -38,6 +38,11 @@ class ProfilePostCard extends StatelessWidget {
       totalColor = Colors.grey;
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardShadow = isDark
+        ? BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 8, offset: const Offset(0, 2))
+        : BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2));
+
     return GestureDetector(
       onTap: onTap,
       onLongPress: () {
@@ -66,104 +71,135 @@ class ProfilePostCard extends StatelessWidget {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: Theme.of(context).colorScheme.secondary,
-              width: 0.5,
+          color: Theme.of(context).colorScheme.secondary,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.30),
+            width: 0.5,
+          ),
+          boxShadow: [cardShadow],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Timestamp top-right + close friends badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (post.isCloseFriendsOnly)
+                      Icon(Icons.people_alt_rounded,
+                          size: 14, color: Colors.greenAccent.shade400)
+                    else
+                      const SizedBox.shrink(),
+                    Text(
+                      _timeAgo(post.timestamp.toDate()),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.45),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+
+                // Content
+                Text(
+                  post.content,
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.5,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Divider(
+                    color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.30),
+                    thickness: 0.5,
+                    height: 0,
+                  ),
+                ),
+
+                // Detailed vote stats
+                Row(
+                  children: [
+                    // Upvotes
+                    Icon(Icons.arrow_upward_rounded,
+                        size: 15, color: Theme.of(context).primaryColor.withValues(alpha: 0.8)),
+                    const SizedBox(width: 2),
+                    Text(
+                      '$upCount',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Theme.of(context).primaryColor.withValues(alpha: 0.8),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    // Downvotes
+                    Icon(Icons.arrow_downward_rounded,
+                        size: 15, color: Colors.blue.shade300),
+                    const SizedBox(width: 2),
+                    Text(
+                      '$downCount',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.blue.shade300,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    // Total
+                    Text(
+                      'total_label'.tr(),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.65),
+                      ),
+                    ),
+                    Text(
+                      '$total',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: totalColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    const SizedBox(width: 20),
+
+                    // Comments
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 15,
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${post.commentCount}',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Timestamp
-            Row(
-              children: [
-                Text(
-                  _timeAgo(post.timestamp.toDate()),
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            // Content
-            Text(
-              post.content,
-              style: const TextStyle(fontSize: 15, height: 1.4),
-            ),
-
-            const SizedBox(height: 10),
-
-            // Detailed vote stats
-            Row(
-              children: [
-                // Upvotes
-                Icon(Icons.arrow_upward_rounded,
-                    size: 16, color: Theme.of(context).primaryColor.withValues(alpha: 0.8)),
-                const SizedBox(width: 2),
-                Text(
-                  '$upCount',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.8),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                // Downvotes
-                Icon(Icons.arrow_downward_rounded,
-                    size: 16, color: Colors.blue.shade300),
-                const SizedBox(width: 2),
-                Text(
-                  '$downCount',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.blue.shade300,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                // Total
-                Text(
-                  'total_label'.tr(),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                Text(
-                  '$total',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: totalColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(width: 20),
-
-                // Comments
-                const Icon(Icons.chat_bubble_outline,
-                    size: 15, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(
-                  '${post.commentCount}',
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-              ],
-            ),
-          ],
         ),
       ),
     );
