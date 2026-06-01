@@ -442,15 +442,12 @@ class _HomePageState extends State<HomePage> {
           final chatRoomId = conv.isGroup
               ? conv.id
               : ([myUid, conv.id]..sort()).join('_');
-          // Use the ECDH-derived key for decryption.
-          // Old messages (ECIES/legacy) will show blank — only new messages matter.
+          // getKey is synchronous — call it directly, no cache needed.
           decrypted = '';
-          final ecdhKey = ConversationKeyService.getCachedEcdhKey(chatRoomId);
-          if (ecdhKey != null) {
-            try {
-              decrypted = EncryptionService.decryptWithKey(rawMsg, ecdhKey);
-            } catch (_) {}
-          }
+          try {
+            final key = ConversationKeyService.getKey(chatRoomId: chatRoomId);
+            decrypted = EncryptionService.decryptWithKey(rawMsg, key);
+          } catch (_) {}
           final senderName =
               lastMsg['senderID'] == authService.getCurrentUser()!.uid
                   ? 'you'.tr()
