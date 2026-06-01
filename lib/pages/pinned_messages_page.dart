@@ -53,18 +53,9 @@ class _PinnedMessagesPageState extends State<PinnedMessagesPage> {
     _loadConversationKey(currentUserId);
   }
 
-  Future<void> _loadConversationKey(String currentUserId) async {
-    try {
-      List<String> participantIds;
-      if (widget.isGroup) {
-        final groupDoc = await FirebaseFirestore.instance.collection('chats').doc(_chatRoomId).get();
-        participantIds = List<String>.from(groupDoc.data()?['members'] ?? []);
-      } else {
-        participantIds = [currentUserId, widget.receiverID];
-      }
-      final key = await ConversationKeyService.getOrCreateConversationKey(_chatRoomId, participantIds);
-      if (mounted) setState(() => _conversationKey = key);
-    } catch (_) {}
+  void _loadConversationKey(String currentUserId) {
+    final key = ConversationKeyService.getKey(chatRoomId: _chatRoomId);
+    setState(() => _conversationKey = key);
   }
 
   String _decryptMessage(String encrypted) {

@@ -5,7 +5,8 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Max\\\\Documents\\\\Projects\\\\Mobile\\\\asiimov\" -Recurse -Directory -Depth 3)",
       "Bash(Select-Object FullName)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Max\\\\Documents\\\\Projects\\\\Mobile\\\\asiimov\" -Recurse -Filter \"*.dart\")",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Max\\\\Documents\\\\Projects\\\\Mobile\\\\asiimov\\\\lib\" -Recurse -File)"
     ]
   }
 }

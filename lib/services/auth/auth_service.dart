@@ -1,3 +1,4 @@
+import 'package:asiimov/services/encryption/user_key_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -30,8 +31,10 @@ class AuthService {
         email: email,
         password: password,
       );
-      isNewLoginFlow = true; // Mark as new login flow for A2F gating
+      isNewLoginFlow = true;
       saveUserToken();
+      // Derive E2EE key pair from password (deterministic — same password = same keys)
+      UserKeyService.initFromPassword(password as String, userCredential.user!.uid);
       return userCredential;
     } on FirebaseAuthException catch (e) {
       switch (e.code) {
@@ -77,6 +80,9 @@ class AuthService {
 
       UserCredential userCredential = await auth.createUserWithEmailAndPassword(
           email: email, password: password);
+
+      // Derive E2EE key pair from password at registration time
+      UserKeyService.initFromPassword(password, userCredential.user!.uid);
 
       await userCredential.user!.updateProfile(
         displayName: username,

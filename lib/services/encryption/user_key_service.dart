@@ -3,25 +3,96 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cryptography/cryptography.dart';
+import 'package:cryptography/dart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:pointycastle/export.dart' as pc;
+
+/// Top-level function required by compute() — runs PBKDF2 in a background isolate.
+Uint8List _runPbkdf2(Map<String, String> args) {
+  final password = args['password']!;
+  final userId   = args['userId']!;
+  final pbkdf2 = pc.PBKDF2KeyDerivator(pc.HMac(pc.SHA256Digest(), 64));
+  pbkdf2.init(pc.Pbkdf2Parameters(
+    Uint8List.fromList(utf8.encode('asiimov:e2ee:$userId')),
+    100000,
+    32,
+  ));
+  return pbkdf2.process(Uint8List.fromList(utf8.encode(password)));
+}
 
 /// Manages per-user X25519 key pairs for E2EE.
-/// Key generation takes microseconds — no isolate needed, works on web.
 class UserKeyService {
   static const FlutterSecureStorage _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
   static const String _privateKeyStorageKey = 'e2ee_x25519_private_key_v2';
-  static const String _publicKeyStorageKey = 'e2ee_x25519_public_key_v2';
+  static const String _publicKeyStorageKey  = 'e2ee_x25519_public_key_v2';
+  // Stored in secure storage to persist across app restarts
+  static const String _keyTypeStorageKey    = 'e2ee_key_type_v2';
+  static const String _keyTypePbkdf2        = 'pbkdf2';
+
+  // In-memory flag: true only when PBKDF2-derived keys are loaded this session
+  static bool _isPasswordDerived = false;
+  static bool get isPasswordDerived => _isPasswordDerived;
 
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
   static final Set<String> _initialized = {};
-  // Completer used so concurrent callers wait for the same init instead of returning early
   static Completer<void>? _initCompleter;
+
+  /// Derives a deterministic X25519 key pair from [password] + [userId].
+  ///
+  /// PBKDF2-SHA256(password, salt=userId, 100 000 iterations) → 32-byte seed
+  /// DartX25519.newKeyPairFromSeed(seed) → deterministic key pair
+  ///
+  /// The private key is **never transmitted**. Same password always gives the
+  /// same key pair on any device — no secure storage required for recovery.
+  static Future<void> initFromPassword(String password, String userId) async {
+    try {
+      late Uint8List seed;
+
+      if (kIsWeb) {
+        // Web workers don't support pointycastle — use SHA-256 (instant, pure Dart).
+        // Web localStorage is not E2EE-safe anyway; this is a best-effort approach.
+        final digest = pc.SHA256Digest();
+        seed = digest.process(
+            Uint8List.fromList(utf8.encode('asiimov:e2ee:$userId:$password')));
+      } else {
+        // Mobile/desktop: PBKDF2 (100 000 iterations) in a background isolate.
+        seed = await compute(
+          _runPbkdf2,
+          {'password': password, 'userId': userId},
+        );
+      }
+
+      // 2. Deterministic X25519 key pair from seed (pure Dart, debug == release)
+      final keyPair = await DartX25519().newKeyPairFromSeed(seed);
+      final publicKey = await keyPair.extractPublicKey();
+      final privateKeyBytes = await keyPair.extractPrivateKeyBytes();
+
+      final pubB64  = base64Encode(publicKey.bytes);
+      final privB64 = base64Encode(privateKeyBytes);
+
+      // 3. Cache locally so app restarts reuse these keys without the password
+      await _storage.write(key: _privateKeyStorageKey, value: privB64);
+      await _storage.write(key: _publicKeyStorageKey,  value: pubB64);
+      await _storage.write(key: _keyTypeStorageKey,    value: _keyTypePbkdf2);
+
+      // 4. Publish public key to Firestore (keyType distinguishes pbkdf2 from random)
+      await _firestore.collection('users').doc(userId).set({
+        'publicKey': pubB64,
+        'keyType': 'x25519-pbkdf2',
+      }, SetOptions(merge: true));
+
+      _isPasswordDerived = true;
+      _initialized.add(userId);
+    } catch (e) {
+      debugPrint('[E2EE] initFromPassword error: $e');
+    }
+  }
 
   /// Initializes E2EE keys for the current user (idempotent).
   /// Concurrent callers all wait for the same in-flight initialization.
@@ -42,15 +113,17 @@ class UserKeyService {
       final existingPub = await _storage.read(key: _publicKeyStorageKey);
 
       if (existingPriv != null && existingPub != null) {
-        // Keys exist locally — ensure Firestore has the SAME public key.
-        // If they differ (e.g. Firestore was written by a different session),
-        // republish so ECDH always computes from a consistent pair.
+        // Restore in-memory flag if keys were PBKDF2-derived in a previous session
+        final storedType = await _storage.read(key: _keyTypeStorageKey);
+        if (storedType == _keyTypePbkdf2) _isPasswordDerived = true;
+
+        // Ensure Firestore has the matching public key
         final doc = await _firestore.collection('users').doc(userId).get();
         final firestorePub = doc.data()?['publicKey'] as String?;
         if (firestorePub != existingPub) {
           await _firestore.collection('users').doc(userId).set({
             'publicKey': existingPub,
-            'keyType': 'x25519',
+            'keyType': _isPasswordDerived ? 'x25519-pbkdf2' : 'x25519',
           }, SetOptions(merge: true));
         }
         _initialized.add(userId);
@@ -106,15 +179,21 @@ class UserKeyService {
     );
   }
 
-  /// Fetches a user's X25519 public key from Firestore. Returns null if not found.
+  /// Fetches a user's PBKDF2-derived X25519 public key from Firestore.
+  /// Returns null if the user hasn't logged in with the new E2EE version yet
+  /// (keyType != 'x25519-pbkdf2'), which triggers a safe SHA-256 fallback.
   static Future<SimplePublicKey?> getPublicKey(String userId) async {
     final doc = await _firestore.collection('users').doc(userId).get();
-    final pubB64 = doc.data()?['publicKey'] as String?;
-    if (pubB64 == null) return null;
+    final data = doc.data();
+    if (data == null) return null;
+    final pubB64   = data['publicKey']  as String?;
+    final keyType  = data['keyType']    as String?;
+    // Only use ECDH when both parties have password-derived keys
+    if (pubB64 == null || keyType != 'x25519-pbkdf2') return null;
     try {
       return SimplePublicKey(base64Decode(pubB64), type: KeyPairType.x25519);
     } catch (_) {
-      return null; // Old RSA key format — user hasn't migrated yet
+      return null;
     }
   }
 

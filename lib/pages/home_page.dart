@@ -42,39 +42,10 @@ class _HomePageState extends State<HomePage> {
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
       GlobalKey<RefreshIndicatorState>();
 
-  // Tracks chatRoomIds currently being fetched to avoid duplicate requests
-  final Set<String> _loadingKeys = {};
-
   @override
   void initState() {
     super.initState();
     _searchScrollController.addListener(_onSearchScroll);
-  }
-
-  /// Loads the conversation key for preview if not already cached.
-  /// Private chats: ECDH. Groups: derived from all members' public keys.
-  void _ensureKeyLoaded(String chatRoomId,
-      {required bool isGroup, String? otherUserId, List<String>? memberIds}) {
-    if (ConversationKeyService.getCachedEcdhKey(chatRoomId) != null) return;
-    if (ConversationKeyService.getCachedKey(chatRoomId) != null) return;
-    if (_loadingKeys.contains(chatRoomId)) return;
-    _loadingKeys.add(chatRoomId);
-
-    Future<dynamic> future;
-    if (isGroup && memberIds != null && memberIds.isNotEmpty) {
-      future = ConversationKeyService.getDerivedGroupChatKey(chatRoomId, memberIds);
-    } else if (!isGroup && otherUserId != null) {
-      future = ConversationKeyService.getDerivedPrivateChatKey(chatRoomId, otherUserId);
-    } else {
-      future = ConversationKeyService.fetchKeyIfExists(chatRoomId);
-    }
-
-    future.then((key) {
-      _loadingKeys.remove(chatRoomId);
-      if (key != null && mounted) setState(() {});
-    }).catchError((_) {
-      _loadingKeys.remove(chatRoomId);
-    });
   }
 
   void _onSearchScroll() {
@@ -440,12 +411,6 @@ class _HomePageState extends State<HomePage> {
       final ids = [currentUid, conv.id]..sort();
       chatRoomId = ids.join('_');
     }
-
-    // Trigger async key load so the preview decrypts on next rebuild
-    _ensureKeyLoaded(chatRoomId,
-        isGroup: conv.isGroup,
-        otherUserId: conv.isGroup ? null : conv.id,
-        memberIds: conv.isGroup ? conv.members : null);
 
     // Format date
     String dateString = '';

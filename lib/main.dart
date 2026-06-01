@@ -7,7 +7,9 @@ import 'package:asiimov/pages/follow_requests_page.dart';
 import 'package:asiimov/pages/support_tickets_page.dart';
 import 'package:asiimov/pages/ticket_detail_page.dart';
 import 'package:asiimov/services/draft_service.dart';
+import 'package:asiimov/services/encryption/conversation_key_service.dart';
 import 'package:asiimov/services/notifications/notification_service.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:asiimov/pages/suspended_account_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,6 +18,7 @@ import 'package:asiimov/themes/theme_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:asiimov/services/update/update_gate.dart';
+import 'package:cryptography_flutter/cryptography_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -25,11 +28,23 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Use platform-native crypto in release mode (prevents AOT tree-shaking issues)
+  FlutterCryptography.enable();
   await EasyLocalization.ensureInitialized();
 
   try {
     await dotenv.load(fileName: "assets/env");
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+    // Fetch ENCRYPTION_KEY from Remote Config (not compiled into the APK)
+    final remoteConfig = FirebaseRemoteConfig.instance;
+    await remoteConfig.setConfigSettings(RemoteConfigSettings(
+      fetchTimeout: const Duration(seconds: 10),
+      minimumFetchInterval: const Duration(hours: 1),
+    ));
+    await remoteConfig.fetchAndActivate();
+    ConversationKeyService.setEncryptionKey(
+        remoteConfig.getString('ENCRYPTION_KEY'));
 
     // Register background message handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

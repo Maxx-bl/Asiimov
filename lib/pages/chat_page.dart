@@ -211,41 +211,9 @@ class _ChatPageState extends State<ChatPage> {
   // Safety number future — computed once, never re-fetched on rebuild
   late final Future<String> _safetyNumberFuture;
 
-  Future<void> _loadConversationKey(String currentUid) async {
-    try {
-      await UserKeyService.initUserKeys();
-
-      if (!widget.isGroup) {
-        // Private chat: derive key via ECDH — no distribution, no race conditions.
-        final key = await ConversationKeyService.getDerivedPrivateChatKey(
-            _chatRoomId, widget.receiverID);
-        if (key != null && mounted) {
-          setState(() => _conversationKey = key);
-          return;
-        }
-        // Other user has no public key yet — fall through to distributed key.
-      }
-
-      // Groups: derive key from all members' public keys (deterministic, no distribution).
-      if (widget.isGroup) {
-        final groupDoc = await chatService.firestore.collection('chats').doc(_chatRoomId).get();
-        final memberIds = List<String>.from(groupDoc.data()?['members'] ?? []);
-        final key = await ConversationKeyService.getDerivedGroupChatKey(_chatRoomId, memberIds);
-        if (key != null && mounted) {
-          setState(() => _conversationKey = key);
-          return;
-        }
-        // Fallback: one or more members have no public key yet — use distributed key.
-        final fallbackKey = await ConversationKeyService.getOrCreateConversationKey(_chatRoomId, memberIds);
-        if (mounted) setState(() => _conversationKey = fallbackKey);
-        return;
-      }
-
-      // Private chat ECDH unavailable: use distributed key.
-      final fallbackKey = await ConversationKeyService.getOrCreateConversationKey(
-          _chatRoomId, [currentUid, widget.receiverID]);
-      if (mounted) setState(() => _conversationKey = fallbackKey);
-    } catch (_) {}
+  void _loadConversationKey(String currentUid) {
+    final key = ConversationKeyService.getKey(chatRoomId: _chatRoomId);
+    setState(() => _conversationKey = key);
   }
 
   String _decryptMessage(String encrypted) {

@@ -4,7 +4,6 @@ import 'package:asiimov/models/conversation.dart';
 import 'package:asiimov/models/message.dart';
 import 'package:asiimov/services/encryption/conversation_key_service.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
-import 'package:encrypt/encrypt.dart' as enc;
 import 'package:asiimov/services/file/file_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -314,18 +313,6 @@ class ChatService extends ChangeNotifier {
 
       conversations.sort((a, b) => b.lastActive.compareTo(a.lastActive));
 
-      // Pre-load conversation keys for preview decryption.
-      // Uses fetchKeyIfExists (read-only) — never creates or overwrites keys.
-      await Future.wait(conversations.map((conv) async {
-        final chatRoomId = conv.isGroup
-            ? conv.id
-            : ([currentUserId, conv.id]..sort()).join('_');
-        if (ConversationKeyService.getCachedKey(chatRoomId) != null) return;
-        try {
-          await ConversationKeyService.fetchKeyIfExists(chatRoomId);
-        } catch (_) {}
-      }));
-
       return conversations;
     });
   }
@@ -467,18 +454,7 @@ class ChatService extends ChangeNotifier {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    // Distribute conversation E2EE key to newly added members
-    if (added.isNotEmpty) {
-      try {
-        // Load key from cache or Firestore before distributing
-        final convKey = ConversationKeyService.getCachedKey(groupId) ??
-            await ConversationKeyService.getOrCreateConversationKey(
-              groupId, [currentUserId, ...newMemberIds]);
-        for (final uid in added) {
-          await ConversationKeyService.addParticipant(groupId, uid, convKey);
-        }
-      } catch (_) {}
-    }
+    // No key distribution needed — group key is derived deterministically.
 
     // Send system messages
     if (added.isNotEmpty) {
@@ -612,15 +588,11 @@ class ChatService extends ChangeNotifier {
     // For groups, fetch the doc ONCE and reuse for unread + notifications
     Map<String, dynamic>? groupData;
     List<String> unreadBy = [];
-    List<String> participantIds;
     if (isGroup) {
       final groupDoc = await firestore.collection('chats').doc(receiverID).get();
       groupData = groupDoc.data();
       final List<String> members = List<String>.from(groupData?['members'] ?? []);
       unreadBy = members.where((id) => id != currentUserId).toList();
-      participantIds = members;
-    } else {
-      participantIds = [currentUserId, receiverID];
     }
 
     // Construct chat room ID
@@ -633,25 +605,10 @@ class ChatService extends ChangeNotifier {
       chatRoomID = ids.join('_');
     }
 
-    // Encrypt with per-conversation key (E2EE), fallback to global key if user has no E2EE keys yet
     String encryptedMessage;
     String? encryptedReplyToMessage;
     try {
-      // Private chats: ECDH-derived key (no distribution needed).
-      // Groups: key derived from all members' public keys (deterministic).
-      // Fallback for both: distributed ECIES key.
-      final enc.Key convKey;
-      if (!isGroup) {
-        convKey = await ConversationKeyService.getDerivedPrivateChatKey(
-                chatRoomID, receiverID) ??
-            await ConversationKeyService.getOrCreateConversationKey(
-                chatRoomID, participantIds);
-      } else {
-        convKey = await ConversationKeyService.getDerivedGroupChatKey(
-                chatRoomID, participantIds) ??
-            await ConversationKeyService.getOrCreateConversationKey(
-                chatRoomID, participantIds);
-      }
+      final convKey = ConversationKeyService.getKey(chatRoomId: chatRoomID);
       encryptedMessage = EncryptionService.encryptWithKey(message, convKey);
       if (replyToMessage != null) {
         encryptedReplyToMessage =
@@ -1447,23 +1404,9 @@ class ChatService extends ChangeNotifier {
       chatRoomID = ids.join('_');
     }
 
-    // Encrypt with per-conversation key, fallback to global key
     String encryptedMessage;
     try {
-      final enc.Key convKey;
-      if (!isGroup) {
-        convKey = await ConversationKeyService.getDerivedPrivateChatKey(
-                chatRoomID, otherUserId) ??
-            ConversationKeyService.getCachedKey(chatRoomID) ??
-            await ConversationKeyService.getOrCreateConversationKey(
-                chatRoomID, [currentUserId, otherUserId]);
-      } else {
-        // Group: use cached derived key first, then fallback to ECIES
-        convKey = ConversationKeyService.getCachedEcdhKey(chatRoomID) ??
-            ConversationKeyService.getCachedKey(chatRoomID) ??
-            await ConversationKeyService.getOrCreateConversationKey(
-                chatRoomID, [currentUserId, otherUserId]);
-      }
+      final convKey = ConversationKeyService.getKey(chatRoomId: chatRoomID);
       encryptedMessage = EncryptionService.encryptWithKey(newMessage, convKey);
     } catch (_) {
       encryptedMessage = encryption.encrypt(newMessage);
