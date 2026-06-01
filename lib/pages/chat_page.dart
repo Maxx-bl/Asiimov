@@ -160,9 +160,8 @@ class _ChatPageState extends State<ChatPage> {
           chatService.markMessageAsRead(widget.receiverID, isGroup: false);
         }
 
-        // Re-check the conversation key on each new message: detects key rotations
-        // (e.g. another device regenerated the key) and reloads if the version changed.
-        _loadConversationKey(authService.getCurrentUser()!.uid);
+        // Both private and group chats now use stable ECDH-derived keys.
+        // No Firestore key refresh needed — the derived key never rotates.
       }
     });
   }
@@ -214,18 +213,39 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _loadConversationKey(String currentUid) async {
     try {
-      List<String> participantIds;
+      await UserKeyService.initUserKeys();
+
+      if (!widget.isGroup) {
+        // Private chat: derive key via ECDH — no distribution, no race conditions.
+        final key = await ConversationKeyService.getDerivedPrivateChatKey(
+            _chatRoomId, widget.receiverID);
+        if (key != null && mounted) {
+          setState(() => _conversationKey = key);
+          return;
+        }
+        // Other user has no public key yet — fall through to distributed key.
+      }
+
+      // Groups: derive key from all members' public keys (deterministic, no distribution).
       if (widget.isGroup) {
         final groupDoc = await chatService.firestore.collection('chats').doc(_chatRoomId).get();
-        participantIds = List<String>.from(groupDoc.data()?['members'] ?? []);
-      } else {
-        participantIds = [currentUid, widget.receiverID];
+        final memberIds = List<String>.from(groupDoc.data()?['members'] ?? []);
+        final key = await ConversationKeyService.getDerivedGroupChatKey(_chatRoomId, memberIds);
+        if (key != null && mounted) {
+          setState(() => _conversationKey = key);
+          return;
+        }
+        // Fallback: one or more members have no public key yet — use distributed key.
+        final fallbackKey = await ConversationKeyService.getOrCreateConversationKey(_chatRoomId, memberIds);
+        if (mounted) setState(() => _conversationKey = fallbackKey);
+        return;
       }
-      final key = await ConversationKeyService.getOrCreateConversationKey(_chatRoomId, participantIds);
-      if (mounted) setState(() => _conversationKey = key);
-    } catch (_) {
-      // Fallback: use global key (for users without E2EE keys yet)
-    }
+
+      // Private chat ECDH unavailable: use distributed key.
+      final fallbackKey = await ConversationKeyService.getOrCreateConversationKey(
+          _chatRoomId, [currentUid, widget.receiverID]);
+      if (mounted) setState(() => _conversationKey = fallbackKey);
+    } catch (_) {}
   }
 
   String _decryptMessage(String encrypted) {
@@ -235,13 +255,8 @@ class _ChatPageState extends State<ChatPage> {
         return EncryptionService.decryptWithKey(encrypted, _conversationKey!);
       } catch (_) {}
     }
-    // Fallback: try legacy global key (old messages pre-E2EE)
-    try {
-      return encryptionService.decrypt(encrypted);
-    } catch (_) {
-      // Key not yet loaded or message truly unreadable — show blank, will re-render on key arrival
-      return '';
-    }
+    if (EncryptionService.isEncrypted(encrypted)) return '🔒';
+    return encrypted;
   }
 
   // ── Safety Number ─────────────────────────────────────────────────────────────

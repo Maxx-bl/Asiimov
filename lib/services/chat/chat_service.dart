@@ -4,6 +4,7 @@ import 'package:asiimov/models/conversation.dart';
 import 'package:asiimov/models/message.dart';
 import 'package:asiimov/services/encryption/conversation_key_service.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
+import 'package:encrypt/encrypt.dart' as enc;
 import 'package:asiimov/services/file/file_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -313,19 +314,15 @@ class ChatService extends ChangeNotifier {
 
       conversations.sort((a, b) => b.lastActive.compareTo(a.lastActive));
 
-      // Pre-load conversation keys so the home page can decrypt message previews
-      // without needing to open each conversation first.
+      // Pre-load conversation keys for preview decryption.
+      // Uses fetchKeyIfExists (read-only) — never creates or overwrites keys.
       await Future.wait(conversations.map((conv) async {
         final chatRoomId = conv.isGroup
             ? conv.id
             : ([currentUserId, conv.id]..sort()).join('_');
         if (ConversationKeyService.getCachedKey(chatRoomId) != null) return;
         try {
-          final participantIds = conv.isGroup
-              ? (conv.members ?? [currentUserId])
-              : [currentUserId, conv.id];
-          await ConversationKeyService.getOrCreateConversationKey(
-              chatRoomId, participantIds);
+          await ConversationKeyService.fetchKeyIfExists(chatRoomId);
         } catch (_) {}
       }));
 
@@ -640,10 +637,25 @@ class ChatService extends ChangeNotifier {
     String encryptedMessage;
     String? encryptedReplyToMessage;
     try {
-      final convKey = await ConversationKeyService.getOrCreateConversationKey(chatRoomID, participantIds);
+      // Private chats: ECDH-derived key (no distribution needed).
+      // Groups: key derived from all members' public keys (deterministic).
+      // Fallback for both: distributed ECIES key.
+      final enc.Key convKey;
+      if (!isGroup) {
+        convKey = await ConversationKeyService.getDerivedPrivateChatKey(
+                chatRoomID, receiverID) ??
+            await ConversationKeyService.getOrCreateConversationKey(
+                chatRoomID, participantIds);
+      } else {
+        convKey = await ConversationKeyService.getDerivedGroupChatKey(
+                chatRoomID, participantIds) ??
+            await ConversationKeyService.getOrCreateConversationKey(
+                chatRoomID, participantIds);
+      }
       encryptedMessage = EncryptionService.encryptWithKey(message, convKey);
       if (replyToMessage != null) {
-        encryptedReplyToMessage = EncryptionService.encryptWithKey(replyToMessage, convKey);
+        encryptedReplyToMessage =
+            EncryptionService.encryptWithKey(replyToMessage, convKey);
       }
     } catch (_) {
       encryptedMessage = encryption.encrypt(message);
@@ -1438,9 +1450,20 @@ class ChatService extends ChangeNotifier {
     // Encrypt with per-conversation key, fallback to global key
     String encryptedMessage;
     try {
-      final convKey = ConversationKeyService.getCachedKey(chatRoomID) ??
-          await ConversationKeyService.getOrCreateConversationKey(
-              chatRoomID, [currentUserId, otherUserId]);
+      final enc.Key convKey;
+      if (!isGroup) {
+        convKey = await ConversationKeyService.getDerivedPrivateChatKey(
+                chatRoomID, otherUserId) ??
+            ConversationKeyService.getCachedKey(chatRoomID) ??
+            await ConversationKeyService.getOrCreateConversationKey(
+                chatRoomID, [currentUserId, otherUserId]);
+      } else {
+        // Group: use cached derived key first, then fallback to ECIES
+        convKey = ConversationKeyService.getCachedEcdhKey(chatRoomID) ??
+            ConversationKeyService.getCachedKey(chatRoomID) ??
+            await ConversationKeyService.getOrCreateConversationKey(
+                chatRoomID, [currentUserId, otherUserId]);
+      }
       encryptedMessage = EncryptionService.encryptWithKey(newMessage, convKey);
     } catch (_) {
       encryptedMessage = encryption.encrypt(newMessage);

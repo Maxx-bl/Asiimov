@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,30 +20,41 @@ class UserKeyService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
   static final Set<String> _initialized = {};
-  static bool _isInitializing = false;
+  // Completer used so concurrent callers wait for the same init instead of returning early
+  static Completer<void>? _initCompleter;
 
-  /// Initializes E2EE keys for the current user (idempotent, non-blocking).
+  /// Initializes E2EE keys for the current user (idempotent).
+  /// Concurrent callers all wait for the same in-flight initialization.
   static Future<void> initUserKeys() async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) return;
     if (_initialized.contains(userId)) return;
-    if (_isInitializing) return;
-    _isInitializing = true;
+
+    if (_initCompleter != null) {
+      // Another caller already started — wait for it instead of returning early
+      return _initCompleter!.future;
+    }
+
+    _initCompleter = Completer<void>();
 
     try {
       final existingPriv = await _storage.read(key: _privateKeyStorageKey);
       final existingPub = await _storage.read(key: _publicKeyStorageKey);
 
       if (existingPriv != null && existingPub != null) {
-        // Keys exist locally — ensure public key is published
+        // Keys exist locally — ensure Firestore has the SAME public key.
+        // If they differ (e.g. Firestore was written by a different session),
+        // republish so ECDH always computes from a consistent pair.
         final doc = await _firestore.collection('users').doc(userId).get();
-        if (doc.data()?['publicKey'] == null) {
-          await _firestore.collection('users').doc(userId).update({
+        final firestorePub = doc.data()?['publicKey'] as String?;
+        if (firestorePub != existingPub) {
+          await _firestore.collection('users').doc(userId).set({
             'publicKey': existingPub,
             'keyType': 'x25519',
-          });
+          }, SetOptions(merge: true));
         }
         _initialized.add(userId);
+        _initCompleter!.complete();
         return;
       }
 
@@ -59,17 +71,19 @@ class UserKeyService {
       await _storage.write(key: _privateKeyStorageKey, value: privB64);
       await _storage.write(key: _publicKeyStorageKey, value: pubB64);
 
-      // Publish public key to Firestore
-      await _firestore.collection('users').doc(userId).update({
+      // Use set+merge so it works even if the document/field doesn't exist yet
+      await _firestore.collection('users').doc(userId).set({
         'publicKey': pubB64,
         'keyType': 'x25519',
-      });
+      }, SetOptions(merge: true));
 
       _initialized.add(userId);
+      _initCompleter!.complete();
     } catch (e) {
       debugPrint('E2EE initUserKeys error: $e');
+      _initCompleter!.completeError(e);
     } finally {
-      _isInitializing = false;
+      _initCompleter = null;
     }
   }
 
@@ -180,6 +194,6 @@ class UserKeyService {
   /// Call on logout to reset initialization state.
   static void resetForLogout() {
     _initialized.clear();
-    _isInitializing = false;
+    _initCompleter = null;
   }
 }

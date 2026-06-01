@@ -226,14 +226,6 @@ class _ShareSheetState extends State<ShareSheet> {
             return CustomScrollView(
               slivers: [
                 if (groups.isNotEmpty) ...[
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                      child: Text('groups'.tr(),
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 12)),
-                    ),
-                  ),
                   SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
