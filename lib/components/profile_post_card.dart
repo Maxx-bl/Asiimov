@@ -1,4 +1,5 @@
 import 'package:asiimov/models/post.dart';
+import 'package:asiimov/utils/time_ago.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -14,14 +15,7 @@ class ProfilePostCard extends StatelessWidget {
     this.onDelete,
   });
 
-  String _timeAgo(DateTime dateTime) {
-    final diff = DateTime.now().difference(dateTime);
-    if (diff.inSeconds < 60) return '${diff.inSeconds}s';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}min';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    if (diff.inDays < 7) return '${diff.inDays}d';
-    return '${(diff.inDays / 7).floor()}w';
-  }
+  String _timeAgo(DateTime dateTime) => formatTimeAgo(dateTime);
 
   @override
   Widget build(BuildContext context) {

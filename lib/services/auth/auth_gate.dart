@@ -12,8 +12,28 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  // Cached per-uid so the StreamBuilder below doesn't get a brand new Stream
+  // (and thus a spurious ConnectionState.waiting) on every unrelated rebuild
+  // of this widget — that used to unmount MainScaffold and reset its tab.
+  String? _cachedUid;
+  Stream<DocumentSnapshot>? _cachedUserDocStream;
+
+  Stream<DocumentSnapshot> _userDocStream(String uid) {
+    if (_cachedUid != uid) {
+      _cachedUid = uid;
+      _cachedUserDocStream =
+          FirebaseFirestore.instance.collection('users').doc(uid).snapshots();
+    }
+    return _cachedUserDocStream!;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,13 +49,13 @@ class AuthGate extends StatelessWidget {
                 }
                 // Initialize E2EE keys for this user (idempotent — fast no-op if already done)
                 UserKeyService.initUserKeys();
-                
+
                 // Listen reactively to A2F validation status changes
                 return ValueListenableBuilder<bool>(
                   valueListenable: AuthService.isTwoFactorVerifiedNotifier,
                   builder: (context, isVerified, child) {
                     return StreamBuilder<DocumentSnapshot>(
-                      stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
+                      stream: _userDocStream(user.uid),
                       builder: (context, userSnapshot) {
                         if (userSnapshot.connectionState == ConnectionState.waiting) {
                           return Center(child: CircularProgressIndicator());

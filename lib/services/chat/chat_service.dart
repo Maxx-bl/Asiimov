@@ -1420,7 +1420,29 @@ class ChatService extends ChangeNotifier {
         .update({
           'message': encryptedMessage,
           'isEdited': true,
+          'notifBody': newMessage,
         });
+
+    // If the edited message is the chat's current last message, refresh the
+    // conversation list preview so it doesn't keep showing the old text.
+    final chatDoc = await firestore.collection('chats').doc(chatRoomID).get();
+    final chatData = chatDoc.data();
+    if (chatData != null && chatData['lastSenderID'] == currentUserId) {
+      final latestMessagesSnapshot = await firestore
+          .collection('chats')
+          .doc(chatRoomID)
+          .collection('messages')
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get();
+
+      if (latestMessagesSnapshot.docs.isNotEmpty &&
+          latestMessagesSnapshot.docs.first.id == messageId) {
+        await firestore.collection('chats').doc(chatRoomID).update({
+          'lastMessage': encryptedMessage,
+        });
+      }
+    }
   }
 
   //toggle pin message

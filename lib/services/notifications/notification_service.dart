@@ -115,11 +115,16 @@ class NotificationService {
     // Cancel local notification by integer ID (foreground-shown)
     await androidPlugin.cancel(userId.hashCode);
 
-    // Cancel FCM-managed background notifications that carry the same tag
+    // Cancel FCM-managed background notifications for this conversation.
+    // The server tags each push as "<userId>::<unique>" so multiple messages
+    // stack instead of replacing one another — match by prefix here.
     try {
       final activeNotifs = await androidPlugin.getActiveNotifications();
       for (final notif in activeNotifs) {
-        if (notif.tag == userId || notif.id == userId.hashCode) {
+        final tag = notif.tag;
+        if (tag == userId ||
+            (tag?.startsWith('$userId::') ?? false) ||
+            notif.id == userId.hashCode) {
           await androidPlugin.cancel(notif.id ?? 0, tag: notif.tag);
         }
       }
@@ -137,12 +142,15 @@ class NotificationService {
             AndroidFlutterLocalNotificationsPlugin>();
     if (androidPlugin == null) return;
     await androidPlugin.cancel(id, tag: tag);
-    // Also scan active notifications to catch FCM-managed ones with matching tag
+    // Also scan active notifications to catch FCM-managed ones with matching
+    // tag — the server appends "::<unique>" to its tag so pushes stack
+    // instead of replacing each other, so match by prefix too.
     if (tag != null) {
       try {
         final activeNotifs = await androidPlugin.getActiveNotifications();
         for (final notif in activeNotifs) {
-          if (notif.tag == tag) {
+          final notifTag = notif.tag;
+          if (notifTag == tag || (notifTag?.startsWith('$tag::') ?? false)) {
             await androidPlugin.cancel(notif.id ?? 0, tag: notif.tag);
           }
         }

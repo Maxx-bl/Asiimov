@@ -8,6 +8,7 @@ import 'package:asiimov/models/post.dart';
 import 'package:asiimov/pages/post_detail_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/post/post_service.dart';
+import 'package:asiimov/utils/time_ago.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -37,14 +38,7 @@ class PostCard extends StatelessWidget {
     this.isAdminView = false,
   });
 
-  String _timeAgo(DateTime dateTime) {
-    final diff = DateTime.now().difference(dateTime);
-    if (diff.inSeconds < 60) return '${diff.inSeconds}s';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}min';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    if (diff.inDays < 7) return '${diff.inDays}d';
-    return '${(diff.inDays / 7).floor()}w';
-  }
+  String _timeAgo(DateTime dateTime) => formatTimeAgo(dateTime);
 
   @override
   Widget build(BuildContext context) {

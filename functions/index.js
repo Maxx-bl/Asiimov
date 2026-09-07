@@ -1,4 +1,4 @@
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
@@ -45,6 +45,16 @@ async function deliverNotification(userId, title, body, data, androidTag) {
   const truncatedBody =
     body.length > 200 ? body.substring(0, 200) + "..." : body;
 
+  // Android's FCM SDK auto-displays this notification using a fixed
+  // notification id (0). Without a unique tag, every notification we send
+  // — regardless of conversation or type — shares that (tag, id) pair, so
+  // each new push silently REPLACES whatever is currently showing instead
+  // of stacking alongside it. Always give each push a unique tag; keep
+  // androidTag as a stable prefix so per-conversation cleanup can still
+  // find and clear every notification for that conversation by prefix.
+  const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const tag = androidTag ? `${androidTag}::${uniqueSuffix}` : `notif::${uniqueSuffix}`;
+
   const message = {
     token: fcmToken,
     notification: { title, body: truncatedBody },
@@ -54,7 +64,7 @@ async function deliverNotification(userId, title, body, data, androidTag) {
         channelId: "chat_messages",
         priority: "high",
         color: "#A8C4D8",
-        ...(androidTag ? { tag: androidTag } : {}),
+        tag,
       },
     },
   };
@@ -126,6 +136,70 @@ exports.onNewMessage = onDocumentCreated(
       );
     } else {
       const receiverID = msg.receiverID;
+      if (!receiverID) return;
+      await deliverNotification(
+        receiverID,
+        senderUsername,
+        notifBody,
+        { senderID, senderUsername, type: "chat_message" },
+        senderID
+      );
+    }
+  }
+);
+
+// Firestore trigger: fires when a chat message is edited, so the pushed
+// notification reflects the updated text instead of the original one
+exports.onMessageEdited = onDocumentUpdated(
+  "chats/{chatId}/messages/{messageId}",
+  async (event) => {
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    const { chatId } = event.params;
+
+    if (!after || after.isSystemMessage === true) return;
+    if (before.isEdited === true || after.isEdited !== true) return;
+
+    const senderID = after.senderID;
+    const senderUsername = after.senderUsername || "Someone";
+    const notifBody = after.notifBody || "New message";
+
+    const chatDoc = await db.collection("chats").doc(chatId).get();
+    const chatData = chatDoc.exists ? chatDoc.data() : {};
+    const isGroup = chatData.type === "group";
+
+    if (isGroup) {
+      const members = chatData.members || [];
+      const mutedBy = chatData.mutedBy || [];
+      const groupName = chatData.groupName || "Group";
+      const creatorId = chatData.creatorId || "";
+      const mentionedIds = Array.isArray(after.mentionedIds) ? after.mentionedIds : [];
+
+      const recipients = members.filter(
+        (id) => id !== senderID && (!mutedBy.includes(id) || mentionedIds.includes(id))
+      );
+
+      await Promise.allSettled(
+        recipients.map((memberId) =>
+          deliverNotification(
+            memberId,
+            groupName,
+            `${senderUsername}: ${notifBody}`,
+            {
+              senderID,
+              senderUsername,
+              type: "chat_message",
+              isGroup: "true",
+              groupId: chatId,
+              groupName,
+              creatorId,
+            },
+            chatId
+          )
+        )
+      );
+    } else {
+      const receiverID = after.receiverID;
       if (!receiverID) return;
       await deliverNotification(
         receiverID,
