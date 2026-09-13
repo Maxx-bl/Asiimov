@@ -45,29 +45,49 @@ async function deliverNotification(userId, title, body, data, androidTag) {
   const truncatedBody =
     body.length > 200 ? body.substring(0, 200) + "..." : body;
 
-  // Android's FCM SDK auto-displays this notification using a fixed
-  // notification id (0). Without a unique tag, every notification we send
-  // — regardless of conversation or type — shares that (tag, id) pair, so
-  // each new push silently REPLACES whatever is currently showing instead
-  // of stacking alongside it. Always give each push a unique tag; keep
-  // androidTag as a stable prefix so per-conversation cleanup can still
-  // find and clear every notification for that conversation by prefix.
-  const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const tag = androidTag ? `${androidTag}::${uniqueSuffix}` : `notif::${uniqueSuffix}`;
+  // Chat messages are delivered as data-only pushes on Android so the app
+  // itself builds a single collapsing MessagingStyle notification per
+  // conversation (Instagram-style stacking) instead of letting FCM
+  // auto-display a separate card per message. iOS keeps native display via
+  // the explicit apns payload below, which is unaffected by this.
+  const isChatMessage = data.type === "chat_message";
 
   const message = {
     token: fcmToken,
-    notification: { title, body: truncatedBody },
-    data,
-    android: {
+    data: { ...data, title, body: truncatedBody },
+    apns: {
+      payload: {
+        aps: {
+          alert: { title, body: truncatedBody },
+          sound: "default",
+        },
+      },
+    },
+  };
+
+  if (isChatMessage) {
+    message.android = { priority: "high" };
+  } else {
+    // Android's FCM SDK auto-displays this notification using a fixed
+    // notification id (0). Without a unique tag, every notification we send
+    // — regardless of conversation or type — shares that (tag, id) pair, so
+    // each new push silently REPLACES whatever is currently showing instead
+    // of stacking alongside it. Always give each push a unique tag; keep
+    // androidTag as a stable prefix so per-conversation cleanup can still
+    // find and clear every notification for that conversation by prefix.
+    const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const tag = androidTag ? `${androidTag}::${uniqueSuffix}` : `notif::${uniqueSuffix}`;
+
+    message.notification = { title, body: truncatedBody };
+    message.android = {
       notification: {
         channelId: "chat_messages",
         priority: "high",
         color: "#A8C4D8",
         tag,
       },
-    },
-  };
+    };
+  }
 
   try {
     await getMessaging().send(message);
@@ -89,7 +109,7 @@ exports.onNewMessage = onDocumentCreated(
   "chats/{chatId}/messages/{messageId}",
   async (event) => {
     const msg = event.data.data();
-    const { chatId } = event.params;
+    const { chatId, messageId } = event.params;
 
     if (!msg || msg.isSystemMessage === true) return;
 
@@ -129,6 +149,7 @@ exports.onNewMessage = onDocumentCreated(
               groupId: chatId,
               groupName,
               creatorId,
+              messageId,
             },
             chatId
           )
@@ -141,7 +162,7 @@ exports.onNewMessage = onDocumentCreated(
         receiverID,
         senderUsername,
         notifBody,
-        { senderID, senderUsername, type: "chat_message" },
+        { senderID, senderUsername, type: "chat_message", messageId },
         senderID
       );
     }
@@ -155,7 +176,7 @@ exports.onMessageEdited = onDocumentUpdated(
   async (event) => {
     const before = event.data.before.data();
     const after = event.data.after.data();
-    const { chatId } = event.params;
+    const { chatId, messageId } = event.params;
 
     if (!after || after.isSystemMessage === true) return;
     if (before.isEdited === true || after.isEdited !== true) return;
@@ -193,6 +214,8 @@ exports.onMessageEdited = onDocumentUpdated(
               groupId: chatId,
               groupName,
               creatorId,
+              messageId,
+              isEdit: "true",
             },
             chatId
           )
@@ -205,7 +228,7 @@ exports.onMessageEdited = onDocumentUpdated(
         receiverID,
         senderUsername,
         notifBody,
-        { senderID, senderUsername, type: "chat_message" },
+        { senderID, senderUsername, type: "chat_message", messageId, isEdit: "true" },
         senderID
       );
     }

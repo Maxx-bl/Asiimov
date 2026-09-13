@@ -6,7 +6,20 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class MainScaffold extends StatefulWidget {
-  const MainScaffold({super.key});
+  MainScaffold({Key? key}) : super(key: key ?? globalKey);
+
+  // Shared across the AuthGate/VerifyEmailPage instantiation sites — only one
+  // of them is ever mounted at a time, so a single static key lets any page
+  // (e.g. a pushed ChatPage) reach the live MainScaffold to switch tabs.
+  static final GlobalKey<State<MainScaffold>> globalKey =
+      GlobalKey<State<MainScaffold>>();
+
+  /// Switches the mounted MainScaffold to the conversations list tab.
+  /// No-op if MainScaffold isn't currently in the tree.
+  static void showMessagesTab() {
+    final state = globalKey.currentState;
+    if (state is _MainScaffoldState) state._selectTab(1);
+  }
 
   @override
   State<MainScaffold> createState() => _MainScaffoldState();
@@ -16,6 +29,14 @@ class _MainScaffoldState extends State<MainScaffold> {
   int _currentIndex = 0;
   final PageController _pageController = PageController();
   late final List<Widget> _pages;
+
+  void _selectTab(int index) {
+    if (!_pageController.hasClients) {
+      setState(() => _currentIndex = index);
+      return;
+    }
+    _pageController.jumpToPage(index);
+  }
 
   @override
   void initState() {

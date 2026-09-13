@@ -118,7 +118,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
   @override
   Widget build(BuildContext context) {
     if (isEmailVerified) {
-      return const MainScaffold();
+      return MainScaffold();
     }
 
     final email = FirebaseAuth.instance.currentUser?.email ?? 'your email';

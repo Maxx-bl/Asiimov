@@ -11,6 +11,7 @@ import 'package:asiimov/components/profile_avatar.dart';
 import 'package:asiimov/components/typing_dots.dart';
 import 'package:asiimov/components/username_display.dart';
 import 'package:asiimov/pages/group_settings_page.dart';
+import 'package:asiimov/pages/main_scaffold.dart';
 import 'package:asiimov/pages/pinned_messages_page.dart';
 import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
@@ -726,10 +727,27 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  // A conversation is always considered opened "from" the conversations list —
+  // whether we actually got here via that list, a push notification, or a
+  // profile's message button. So both the phone's system back gesture and the
+  // AppBar's back arrow (both funnel through Navigator.maybePop, intercepted
+  // here via PopScope) collapse the stack back down to MainScaffold and select
+  // its messages tab, instead of landing wherever happened to be underneath.
+  void _returnToConversationsList() {
+    MainScaffold.showMessagesTab();
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _returnToConversationsList();
+      },
+      child: Scaffold(
+        appBar: AppBar(
         title: widget.isGroup
             ? Text(
                 widget.receiverUsername,
@@ -821,6 +839,7 @@ class _ChatPageState extends State<ChatPage> {
             _buildStagedFilesPreview(),
           buildUserInput(),
         ],
+      ),
       ),
     );
   }

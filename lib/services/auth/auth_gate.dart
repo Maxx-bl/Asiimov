@@ -80,7 +80,7 @@ class _AuthGateState extends State<AuthGate> {
                           return const TwoFactorVerificationPage();
                         }
                         
-                        return const MainScaffold();
+                        return MainScaffold();
                       }
                     );
                   }
