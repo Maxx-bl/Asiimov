@@ -341,5 +341,13 @@
   "safety_number_title": "Security Verification",
   "safety_number_explanation": "Compare this code with {} in person or via a trusted channel. If the codes match, your conversation is fully end-to-end encrypted and no one is intercepting your messages.",
   "safety_number_unavailable": "Security code unavailable — {} has not yet enabled E2EE.",
-  "safety_number_hint": "This code is unique to this conversation. Any change means the encryption keys have been rotated."
+  "safety_number_hint": "This code is unique to this conversation. Any change means the encryption keys have been rotated.",
+  "time_ago_second": "{} second ago",
+  "time_ago_seconds": "{} seconds ago",
+  "time_ago_minute": "{} minute ago",
+  "time_ago_minutes": "{} minutes ago",
+  "time_ago_hour": "{} hour ago",
+  "time_ago_hours": "{} hours ago",
+  "time_ago_day": "{} day ago",
+  "time_ago_days": "{} days ago"
 }

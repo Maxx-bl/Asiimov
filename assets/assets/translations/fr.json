@@ -341,5 +341,13 @@
   "safety_number_title": "Vérification de sécurité",
   "safety_number_explanation": "Comparez ce code avec {} en personne ou via un canal de confiance. S'ils correspondent, votre conversation est entièrement chiffrée de bout en bout et personne ne peut intercepter vos messages.",
   "safety_number_unavailable": "Code de sécurité indisponible — {} n'a pas encore activé le chiffrement E2EE.",
-  "safety_number_hint": "Ce code est unique à cette conversation. Tout changement signifie que les clés de chiffrement ont été régénérées."
+  "safety_number_hint": "Ce code est unique à cette conversation. Tout changement signifie que les clés de chiffrement ont été régénérées.",
+  "time_ago_second": "il y a {} seconde",
+  "time_ago_seconds": "il y a {} secondes",
+  "time_ago_minute": "il y a {} minute",
+  "time_ago_minutes": "il y a {} minutes",
+  "time_ago_hour": "il y a {} heure",
+  "time_ago_hours": "il y a {} heures",
+  "time_ago_day": "il y a {} jour",
+  "time_ago_days": "il y a {} jours"
 }
