@@ -6,6 +6,7 @@ import 'package:asiimov/pages/suspended_account_page.dart';
 import 'package:asiimov/pages/user_warning_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/encryption/conversation_key_service.dart';
+import 'package:asiimov/services/encryption/dm_key_service.dart';
 import 'package:asiimov/services/encryption/user_key_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -90,6 +91,7 @@ class _AuthGateState extends State<AuthGate> {
               else {
                 // Clear all E2EE state on logout
                 ConversationKeyService.clearAll();
+                DmKeyService.clearAll();
                 UserKeyService.resetForLogout();
                 return const LoginOrRegister();
               }

@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -17,10 +17,13 @@ import 'package:asiimov/pages/profile_page.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/services/encryption/conversation_key_service.dart';
+import 'package:asiimov/services/encryption/dm_key_service.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
+import 'package:asiimov/services/encryption/safety_number_service.dart';
 import 'package:asiimov/services/encryption/user_key_service.dart';
+import 'package:asiimov/pages/safety_number_page.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:asiimov/services/secure_window_service.dart';
-import 'package:cryptography/cryptography.dart' as crypto;
 import 'package:asiimov/services/file/file_service.dart';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:asiimov/services/image/image_service.dart';
@@ -95,6 +98,10 @@ class _ChatPageState extends State<ChatPage> {
 
     // Load E2EE conversation key asynchronously
     _loadConversationKey(currentUid);
+    if (!widget.isGroup) {
+      _loadDmKey();
+      _checkKeyChange();
+    }
 
     NotificationService().setActiveChatUser(widget.receiverID);
     chatService.markMessageAsRead(widget.receiverID, isGroup: widget.isGroup);
@@ -209,19 +216,65 @@ class _ChatPageState extends State<ChatPage> {
   // Per-conversation E2EE key (null until loaded, or if user lacks E2EE keys)
   enc.Key? _conversationKey;
 
+  // Real X25519 ECDH-derived key for this DM (null until loaded, or if the
+  // other participant hasn't published a password-derived key yet).
+  enc.Key? _dmKey;
+
   // Safety number future — computed once, never re-fetched on rebuild
   late final Future<String> _safetyNumberFuture;
+
+  // True once we've detected the other participant's public key changed
+  // since the last time this device saw/verified it (possible MITM, or a
+  // legitimate reinstall/key rotation on their side).
+  bool _keyChanged = false;
+
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   void _loadConversationKey(String currentUid) {
     final key = ConversationKeyService.getKey(chatRoomId: _chatRoomId);
     setState(() => _conversationKey = key);
   }
 
-  String _decryptMessage(String encrypted) {
+  Future<void> _loadDmKey() async {
+    final key = await DmKeyService.getKey(
+      chatRoomId: _chatRoomId,
+      otherUid: widget.receiverID,
+    );
+    if (mounted) setState(() => _dmKey = key);
+  }
+
+  String _seenPubKeyStorageKey() => 'e2ee_seen_pubkey_${widget.receiverID}';
+
+  /// Compares the other participant's current public key against the one
+  /// last seen on this device for this contact. Flags [_keyChanged] (a
+  /// non-blocking warning banner) without touching the stored value —
+  /// the user must open the safety-number screen to "accept" the new key.
+  Future<void> _checkKeyChange() async {
+    try {
+      final theirPubKey = await UserKeyService.getPublicKey(widget.receiverID);
+      if (theirPubKey == null) return;
+      final currentB64 = base64Encode(theirPubKey.bytes);
+      final seenB64 = await _secureStorage.read(key: _seenPubKeyStorageKey());
+      if (seenB64 != null && seenB64 != currentB64) {
+        if (mounted) setState(() => _keyChanged = true);
+      } else if (seenB64 == null) {
+        // First time we see this contact's key — remember it silently so a
+        // *future* change can be detected (nothing to warn about yet).
+        await _secureStorage.write(key: _seenPubKeyStorageKey(), value: currentB64);
+      }
+    } catch (_) {}
+  }
+
+  String _decryptMessage(String encrypted, {String? keyScheme}) {
     if (encrypted.isEmpty) return '';
-    if (_conversationKey != null) {
+    // Try the key the message says it was encrypted with first, then fall
+    // back to the other one — handles mixed-scheme history gracefully.
+    final preferred = keyScheme == 'ecdh-v1' ? _dmKey : _conversationKey;
+    final fallback = keyScheme == 'ecdh-v1' ? _conversationKey : _dmKey;
+    for (final key in [preferred, fallback]) {
+      if (key == null) continue;
       try {
-        return EncryptionService.decryptWithKey(encrypted, _conversationKey!);
+        return EncryptionService.decryptWithKey(encrypted, key);
       } catch (_) {}
     }
     if (EncryptionService.isEncrypted(encrypted)) return '🔒';
@@ -231,31 +284,70 @@ class _ChatPageState extends State<ChatPage> {
   // ── Safety Number ─────────────────────────────────────────────────────────────
 
   /// Returns SHA-256(sorted(myPubKey || theirPubKey)) as 16 groups of 4 hex chars.
+  /// Only meaningful once BOTH sides have stable, password-derived keys —
+  /// same requirement as [DmKeyService] — otherwise the code would appear
+  /// to "change" every reinstall for reasons unrelated to a MITM attack.
   Future<String> _computeSafetyNumber() async {
     final myKeyPair = await UserKeyService.getMyKeyPair();
+    if (!UserKeyService.isPasswordDerived) throw Exception('no_key');
     final myPub = myKeyPair.publicKey.bytes;
     final theirPubKey = await UserKeyService.getPublicKey(widget.receiverID);
     if (theirPubKey == null) throw Exception('no_key');
 
-    final theirPub = theirPubKey.bytes;
+    return SafetyNumberService.computeSafetyNumber(myPub, theirPubKey.bytes);
+  }
 
-    // Sort so both sides produce the same hash regardless of who computes it
-    final List<int> first, second;
-    bool myIsSmaller = true;
-    for (int i = 0; i < min(myPub.length, theirPub.length); i++) {
-      if (myPub[i] < theirPub[i]) { myIsSmaller = true; break; }
-      if (myPub[i] > theirPub[i]) { myIsSmaller = false; break; }
-    }
-    first  = myIsSmaller ? myPub  : theirPub;
-    second = myIsSmaller ? theirPub : myPub;
+  /// Marks the other participant's current public key as verified/seen,
+  /// clearing the key-change warning banner. Called from [SafetyNumberPage].
+  Future<void> _markKeyAsVerified() async {
+    final theirPubKey = await UserKeyService.getPublicKey(widget.receiverID);
+    if (theirPubKey == null) return;
+    await _secureStorage.write(
+      key: _seenPubKeyStorageKey(),
+      value: base64Encode(theirPubKey.bytes),
+    );
+    if (mounted) setState(() => _keyChanged = false);
+  }
 
-    final hash = await crypto.Sha256().hash([...first, ...second]);
-    final hex = hash.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-
-    // Format as 4 rows × 4 groups of 4 hex chars
-    final groups = List.generate(16, (i) => hex.substring(i * 4, i * 4 + 4));
-    final rows = List.generate(4, (r) => groups.sublist(r * 4, r * 4 + 4).join(' '));
-    return rows.join('\n');
+  /// Non-blocking banner shown when the other participant's public key
+  /// changed since this device last saw it — possible MITM, or a
+  /// legitimate reinstall/key rotation on their side. Tapping it opens the
+  /// safety-number screen so the user can compare the new code.
+  Widget _buildKeyChangedBanner() {
+    return Material(
+      color: Colors.orange.withValues(alpha: 0.15),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SafetyNumberPage(
+                receiverID: widget.receiverID,
+                receiverUsername: widget.receiverUsername,
+                safetyNumberFuture: _computeSafetyNumber(),
+                onVerified: _markKeyAsVerified,
+              ),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              const Icon(Icons.gpp_maybe, color: Colors.orange, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'security_key_changed_warning'.tr(args: [widget.receiverUsername]),
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+              ),
+              const Icon(Icons.chevron_right, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// Widget shown at the very top of the message list (visible when scrolled to beginning).
@@ -775,6 +867,27 @@ class _ChatPageState extends State<ChatPage> {
               ),
         centerTitle: true,
         actions: [
+          if (!widget.isGroup)
+            IconButton(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SafetyNumberPage(
+                      receiverID: widget.receiverID,
+                      receiverUsername: widget.receiverUsername,
+                      safetyNumberFuture: _safetyNumberFuture,
+                      onVerified: _markKeyAsVerified,
+                    ),
+                  ),
+                );
+              },
+              icon: Icon(
+                _keyChanged ? Icons.gpp_maybe : Icons.verified_user,
+                color: _keyChanged ? Colors.orange : null,
+              ),
+              tooltip: 'safety_number_title'.tr(),
+            ),
           IconButton(
             onPressed: () {
               Navigator.push(
@@ -811,6 +924,7 @@ class _ChatPageState extends State<ChatPage> {
       ),
       body: Column(
         children: [
+          if (_keyChanged) _buildKeyChangedBanner(),
           Expanded(
             child: buildMessageList(),
           ),
@@ -1313,12 +1427,15 @@ class _ChatPageState extends State<ChatPage> {
     final currentUid = authService.getCurrentUser()!.uid;
     bool isCurrentUser = data['senderID'] == currentUid;
 
-    final String decryptedMessage = _decryptMessage(data['message'] as String? ?? '');
+    final String? keyScheme = data['keyScheme'] as String?;
+    final String decryptedMessage =
+        _decryptMessage(data['message'] as String? ?? '', keyScheme: keyScheme);
 
     // Decrypt reply preview
     String? decryptedReply;
     if (data['replyToMessage'] != null) {
-      decryptedReply = _decryptMessage(data['replyToMessage'] as String);
+      decryptedReply =
+          _decryptMessage(data['replyToMessage'] as String, keyScheme: keyScheme);
     }
     
     // Fallback if the replied message had no text (e.g. only attachment)

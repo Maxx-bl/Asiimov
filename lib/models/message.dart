@@ -28,6 +28,11 @@ class Message {
   // Instant Attachment: {url, type, name, size}
   final Map<String, dynamic>? instantAttachment;
 
+  // Which key derivation scheme encrypted `message`/`replyToMessage`.
+  // null = legacy (ConversationKeyService or global key). 'ecdh-v1' = real
+  // X25519 ECDH-derived key between the two participants.
+  final String? keyScheme;
+
   Message({
     required this.senderID,
     required this.senderEmail,
@@ -45,6 +50,7 @@ class Message {
     this.mentions,
     this.attachments,
     this.instantAttachment,
+    this.keyScheme,
   });
 
   //convert to map
@@ -87,6 +93,10 @@ class Message {
 
     if (instantAttachment != null) {
       map['instantAttachment'] = instantAttachment;
+    }
+
+    if (keyScheme != null) {
+      map['keyScheme'] = keyScheme;
     }
 
     return map;

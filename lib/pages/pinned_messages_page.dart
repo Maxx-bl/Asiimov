@@ -1,6 +1,7 @@
 import 'package:asiimov/components/chat_bubble.dart';
 import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/encryption/conversation_key_service.dart';
+import 'package:asiimov/services/encryption/dm_key_service.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:encrypt/encrypt.dart' as enc;
@@ -30,6 +31,7 @@ class _PinnedMessagesPageState extends State<PinnedMessagesPage> {
 
   late final String _chatRoomId;
   enc.Key? _conversationKey;
+  enc.Key? _dmKey;
   late Stream<QuerySnapshot> _pinnedMessagesStream;
 
   @override
@@ -51,6 +53,7 @@ class _PinnedMessagesPageState extends State<PinnedMessagesPage> {
         .snapshots();
 
     _loadConversationKey(currentUserId);
+    if (!widget.isGroup) _loadDmKey();
   }
 
   void _loadConversationKey(String currentUserId) {
@@ -58,11 +61,22 @@ class _PinnedMessagesPageState extends State<PinnedMessagesPage> {
     setState(() => _conversationKey = key);
   }
 
-  String _decryptMessage(String encrypted) {
+  Future<void> _loadDmKey() async {
+    final key = await DmKeyService.getKey(
+      chatRoomId: _chatRoomId,
+      otherUid: widget.receiverID,
+    );
+    if (mounted) setState(() => _dmKey = key);
+  }
+
+  String _decryptMessage(String encrypted, {String? keyScheme}) {
     if (encrypted.isEmpty) return '';
-    if (_conversationKey != null) {
+    final preferred = keyScheme == 'ecdh-v1' ? _dmKey : _conversationKey;
+    final fallback = keyScheme == 'ecdh-v1' ? _conversationKey : _dmKey;
+    for (final key in [preferred, fallback]) {
+      if (key == null) continue;
       try {
-        return EncryptionService.decryptWithKey(encrypted, _conversationKey!);
+        return EncryptionService.decryptWithKey(encrypted, key);
       } catch (_) {}
     }
     try {
@@ -109,7 +123,10 @@ class _PinnedMessagesPageState extends State<PinnedMessagesPage> {
             itemBuilder: (context, index) {
               final doc = messages[index];
               final data = doc.data() as Map<String, dynamic>;
-              final decryptedMessage = _decryptMessage(data['message'] as String? ?? '');
+              final decryptedMessage = _decryptMessage(
+                data['message'] as String? ?? '',
+                keyScheme: data['keyScheme'] as String?,
+              );
               final isCurrentUser = data['senderID'] == _authService.getCurrentUser()!.uid;
 
               return Padding(

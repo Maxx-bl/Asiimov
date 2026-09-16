@@ -12,6 +12,7 @@ import 'package:asiimov/services/auth/auth_service.dart';
 import 'package:asiimov/services/chat/chat_service.dart';
 import 'package:asiimov/services/draft_service.dart';
 import 'package:asiimov/services/encryption/conversation_key_service.dart';
+import 'package:asiimov/services/encryption/dm_key_service.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
 import 'package:asiimov/services/user/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -442,12 +443,28 @@ class _HomePageState extends State<HomePage> {
           final chatRoomId = conv.isGroup
               ? conv.id
               : ([myUid, conv.id]..sort()).join('_');
-          // getKey is synchronous — call it directly, no cache needed.
           decrypted = '';
-          try {
-            final key = ConversationKeyService.getKey(chatRoomId: chatRoomId);
-            decrypted = EncryptionService.decryptWithKey(rawMsg, key);
-          } catch (_) {}
+          // Prefer the real ECDH key if it's already cached (populated by
+          // ChatPage/DmKeyService elsewhere); kick off a background compute
+          // otherwise so the next rebuild can use it. Never block this
+          // synchronous preview render on the async ECDH derivation.
+          final keyScheme = lastMsg['keyScheme'] as String?;
+          if (!conv.isGroup) {
+            final cachedEcdhKey = DmKeyService.getCachedKey(chatRoomId);
+            if (cachedEcdhKey != null && keyScheme == 'ecdh-v1') {
+              try {
+                decrypted = EncryptionService.decryptWithKey(rawMsg, cachedEcdhKey);
+              } catch (_) {}
+            } else if (keyScheme == 'ecdh-v1') {
+              DmKeyService.getKey(chatRoomId: chatRoomId, otherUid: conv.id);
+            }
+          }
+          if (decrypted.isEmpty) {
+            try {
+              final key = ConversationKeyService.getKey(chatRoomId: chatRoomId);
+              decrypted = EncryptionService.decryptWithKey(rawMsg, key);
+            } catch (_) {}
+          }
           final senderName =
               lastMsg['senderID'] == authService.getCurrentUser()!.uid
                   ? 'you'.tr()

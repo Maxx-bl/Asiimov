@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:asiimov/models/conversation.dart';
 import 'package:asiimov/models/message.dart';
 import 'package:asiimov/services/encryption/conversation_key_service.dart';
+import 'package:asiimov/services/encryption/dm_key_service.dart';
 import 'package:asiimov/services/encryption/encryption_service.dart';
 import 'package:asiimov/services/file/file_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -296,6 +297,7 @@ class ChatService extends ChangeNotifier {
           groupIconUrl: chatData['groupIconUrl'],
           lastMessage: chatData['lastMessage'] != null ? {
             'message': chatData['lastMessage'],
+            'keyScheme': chatData['lastMessageKeyScheme'],
             'senderID': chatData['lastSenderID'],
             'senderUsername': chatData['lastSenderUsername'],
             'timestamp': chatData['lastTimestamp'],
@@ -607,14 +609,20 @@ class ChatService extends ChangeNotifier {
 
     String encryptedMessage;
     String? encryptedReplyToMessage;
+    String? keyScheme;
     try {
-      final convKey = ConversationKeyService.getKey(chatRoomId: chatRoomID);
+      final ecdhKey = isGroup
+          ? null
+          : await DmKeyService.getKey(chatRoomId: chatRoomID, otherUid: receiverID);
+      final convKey = ecdhKey ?? ConversationKeyService.getKey(chatRoomId: chatRoomID);
+      keyScheme = ecdhKey != null ? 'ecdh-v1' : null;
       encryptedMessage = EncryptionService.encryptWithKey(message, convKey);
       if (replyToMessage != null) {
         encryptedReplyToMessage =
             EncryptionService.encryptWithKey(replyToMessage, convKey);
       }
     } catch (_) {
+      keyScheme = null;
       encryptedMessage = encryption.encrypt(message);
       if (replyToMessage != null) {
         encryptedReplyToMessage = encryption.encrypt(replyToMessage);
@@ -635,6 +643,7 @@ class ChatService extends ChangeNotifier {
       replyToMessage: encryptedReplyToMessage,
       replyToSenderID: replyToSenderID,
       replyToSenderUsername: replyToSenderUsername,
+      keyScheme: keyScheme,
       attachments: attachments,
       instantAttachment: instantAttachment,
       mentions: mentions,
@@ -704,6 +713,7 @@ class ChatService extends ChangeNotifier {
     // Update conversation metadata
     final updateData = {
       'lastMessage': encryptedMessage,
+      'lastMessageKeyScheme': keyScheme,
       'lastSenderID': currentUserId,
       'lastSenderUsername': senderName,
       'lastTimestamp': timestamp,
@@ -1264,6 +1274,7 @@ class ChatService extends ChangeNotifier {
         final latestMessage = latestMessagesSnapshot.docs.first.data();
         await firestore.collection('chats').doc(chatRoomID).update({
           'lastMessage': latestMessage['message'] ?? '',
+          'lastMessageKeyScheme': latestMessage['keyScheme'],
           'lastSenderID': latestMessage['senderID'] ?? '',
           'lastSenderUsername': latestMessage['senderUsername'] ?? '',
           'lastTimestamp': latestMessage['timestamp'],
@@ -1273,6 +1284,7 @@ class ChatService extends ChangeNotifier {
       } else {
         await firestore.collection('chats').doc(chatRoomID).update({
           'lastMessage': '',
+          'lastMessageKeyScheme': null,
           'lastSenderID': '',
           'lastSenderUsername': '',
           'lastTimestamp': FieldValue.serverTimestamp(),
@@ -1405,10 +1417,16 @@ class ChatService extends ChangeNotifier {
     }
 
     String encryptedMessage;
+    String? keyScheme;
     try {
-      final convKey = ConversationKeyService.getKey(chatRoomId: chatRoomID);
+      final ecdhKey = isGroup
+          ? null
+          : await DmKeyService.getKey(chatRoomId: chatRoomID, otherUid: otherUserId);
+      final convKey = ecdhKey ?? ConversationKeyService.getKey(chatRoomId: chatRoomID);
+      keyScheme = ecdhKey != null ? 'ecdh-v1' : null;
       encryptedMessage = EncryptionService.encryptWithKey(newMessage, convKey);
     } catch (_) {
+      keyScheme = null;
       encryptedMessage = encryption.encrypt(newMessage);
     }
 
@@ -1421,6 +1439,7 @@ class ChatService extends ChangeNotifier {
           'message': encryptedMessage,
           'isEdited': true,
           'notifBody': newMessage,
+          'keyScheme': keyScheme,
         });
 
     // If the edited message is the chat's current last message, refresh the
@@ -1440,6 +1459,7 @@ class ChatService extends ChangeNotifier {
           latestMessagesSnapshot.docs.first.id == messageId) {
         await firestore.collection('chats').doc(chatRoomID).update({
           'lastMessage': encryptedMessage,
+          'lastMessageKeyScheme': keyScheme,
         });
       }
     }
